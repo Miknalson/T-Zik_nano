@@ -1,20 +1,44 @@
 # Signaux quotidiens
 
-Analyse chaque soir 10 marchés (crypto, gaz, pétrole, or, CAC 40, S&P 500, EUR/USD, GBP/USD)
+Analyse chaque nuit 10 marchés (crypto, gaz, pétrole, or, CAC 40, S&P 500, EUR/USD, GBP/USD)
 avec 3 règles simples, et n'affiche un signal que si la règle a battu le hasard sur
-l'historique, **frais et financement overnight compris**. Sinon : « pas de signal fiable ».
+l'historique en simulant **exactement les consignes affichées** : entrée à l'ouverture,
+stop-loss chez le courtier, frais et financement overnight compris. Sinon : « pas de signal fiable ».
 
 ## Sur le téléphone (rien à installer)
 
-GitHub lance le programme tout seul chaque soir (vers 23 h 30 l'été, 22 h 30 l'hiver)
-et publie le rapport sur https://miknalson.github.io/T-Zik_nano/. Dans Safari :
-bouton Partager → « Sur l'écran d'accueil » pour l'avoir comme une app.
+GitHub lance le programme tout seul chaque nuit (vers 2 h 40 l'été, 1 h 40 l'hiver, heure
+de Paris), une fois toutes les séances de la veille terminées, et publie le rapport sur
+https://miknalson.github.io/T-Zik_nano/. Dans Safari : bouton Partager →
+« Sur l'écran d'accueil » pour l'avoir comme une app.
 
 La page est publique : le capital n'y apparaît pas, les tailles sont exprimées en
-multiple de ton capital. Le journal des signaux est enregistré chaque soir dans
+multiple de ton capital. Le journal des signaux est enregistré chaque nuit dans
 `journal_signaux.csv`.
 
 Pour relancer à la main : onglet Actions du dépôt → « Signaux quotidiens » → Run workflow.
+
+## Que faire selon la carte
+
+Seules les règles validées donnent une consigne. Consulte la page le matin.
+
+| Carte | Quoi faire |
+|---|---|
+| **ENTRER — ACHAT / VENTE** | Entre à l'ouverture de la prochaine séance. Pose aussitôt le stop-loss indiqué chez ton courtier. Pas de take-profit. |
+| **EN COURS** | Si tu es dedans : ne touche à rien. Si tu n'y es pas : n'entre pas en cours de route, attends le prochain ENTRER. |
+| **SORTIR** | Ferme la position à l'ouverture de la prochaine séance. |
+| **INVERSER** | Ferme la position et entre dans l'autre sens à l'ouverture, avec le nouveau stop. |
+| **STOP TOUCHÉ** | La position a été fermée par le stop. Attends le prochain ENTRER. |
+| **Pas de signal fiable** | Ne trade pas ce marché avec cette règle. |
+
+- **Stop-loss** : 2 × l'ATR (variation moyenne d'une séance sur 14 jours), fixé à l'entrée
+  et jamais déplacé. Il est affiché en % de ton prix d'entrée : si tu entres à un autre
+  prix que celui estimé, garde le même %.
+- **Take-profit** : aucun. Les règles de tendance gagnent sur quelques grands mouvements ;
+  un take-profit fixe les couperait. La sortie vient de la règle (carte SORTIR) ou du stop.
+- **Taille max** : calculée pour qu'un stop touché ne coûte que 1 % du capital.
+- Le test historique suppose une entrée au prix d'ouverture. Entrer des heures plus tard
+  (par exemple sur le forex ou les matières premières, qui rouvrent la nuit) change le résultat.
 
 ## Sur PC — installation (une seule fois)
 
@@ -24,8 +48,6 @@ Pour relancer à la main : onglet Actions du dépôt → « Signaux quotidiens �
    pip install -r requirements.txt
    ```
 
-## Utilisation
-
 ```
 python signaux.py --capital 1000 --risque 1
 ```
@@ -34,21 +56,7 @@ python signaux.py --capital 1000 --risque 1
 - `--risque` : % du capital perdu si le stop est touché (1 % recommandé).
 - `--demo` : données simulées sans Internet (doit afficher 0 signal : c'est voulu).
 
-Lance-le **le soir, après la clôture** (après 22 h 30 pour les marchés US).
-
-Le programme produit :
-- `rapport_signaux.html` : à ouvrir sur le téléphone (iCloud Drive, AirDrop, e-mail…) ;
-- `journal_signaux.csv` : historique de tous les signaux, pour vérifier après coup
-  s'ils auraient vraiment gagné avant d'y mettre de l'argent.
-
-## Lire un signal
-
-| Champ | Sens |
-|---|---|
-| ACHAT / VENTE | position proposée pour la séance suivante |
-| stop | niveau de sortie si le marché va contre toi |
-| nominal max | taille de position pour ne perdre que `--risque` % au stop |
-| p | probabilité que le résultat historique soit dû au hasard (< 0,01 exigé) |
+Lance-le le matin : la séance du jour, jamais complète, est toujours ignorée.
 
 ## Frais
 
@@ -61,5 +69,6 @@ des frais sous-estimés font valider des règles qui perdent en réalité.
 ```
 python test_validation.py
 ```
-Vérifie que le filtre rejette le hasard pur, reconnaît un vrai avantage, et qu'aucune
-règle n'utilise de données futures.
+Vérifie que le filtre rejette le hasard pur et reconnaît un vrai avantage, que le stop-loss
+est exécuté au bon prix (y compris en cas de gap), que les entrées et sorties se font à
+l'ouverture suivante, et qu'aucune règle n'utilise de données futures.

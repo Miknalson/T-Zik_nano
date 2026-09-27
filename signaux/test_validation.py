@@ -46,8 +46,66 @@ def test_avantage_reel_reconnu():
 
 def test_position_toujours_identique_rejetee():
     df = marche_a_tendances(0)
-    pos = pd.Series(1.0, index=df.index)
-    assert s.p_valeur(pos.shift(1).fillna(0).values, df["Close"].pct_change().fillna(0).values) > s.P_MAX
+    assert s.evaluer(df, pd.Series(1.0, index=df.index), FRAIS_TEST)["p"] > s.P_MAX
+
+
+def marche_plat(n=40):
+    # Cours à 100, séances de 99 à 101 : ATR = 2, donc stop à 2 × 2 = 4 points.
+    index = pd.bdate_range("2024-01-01", periods=n)
+    return pd.DataFrame({"Open": 100.0, "High": 101.0, "Low": 99.0, "Close": 100.0}, index=index)
+
+
+def signal_achat_depuis(df, i):
+    voulu = pd.Series(0.0, index=df.index)
+    voulu.iloc[i:] = 1
+    return voulu
+
+
+SANS_FRAIS = {"aller_retour": 0.0, "financement_jour": 0.0}
+
+
+def marche_qui_monte_a_103():
+    # Signal à la clôture 24 ; à partir de la séance 25, le cours tourne autour de 103.
+    df = marche_plat()
+    df.iloc[25:] = [103.0, 104.0, 102.0, 103.0]
+    return df
+
+
+def test_entree_a_l_ouverture_suivante_et_stop_au_bon_prix():
+    df = marche_qui_monte_a_103()
+    df.iloc[27, df.columns.get_loc("Low")] = 90.0       # plonge sous le stop
+    x = s.executer(df, signal_achat_depuis(df, 24), SANS_FRAIS)
+    assert x["operations"][0] == (25, "entree", 1.0, 103.0)
+    assert x["operations"][1] == (27, "stop", 1.0, 99.0)  # 103 - 2 × ATR(2)
+    assert abs(x["net"].sum() - (99 / 103 - 1)) < 1e-4
+    assert x["sens"] == 0 and len(x["operations"]) == 2  # pas de nouvelle entrée sans nouveau signal
+
+
+def test_gap_sous_le_stop_execute_a_l_ouverture():
+    df = marche_qui_monte_a_103()
+    df.iloc[27] = [95.0, 96.0, 90.0, 92.0]
+    x = s.executer(df, signal_achat_depuis(df, 24), SANS_FRAIS)
+    assert x["operations"][1] == (27, "stop", 1.0, 95.0)
+
+
+def test_sortie_a_l_ouverture_quand_le_signal_s_arrete():
+    df = marche_plat()
+    voulu = signal_achat_depuis(df, 24)
+    voulu.iloc[30:] = 0
+    df.iloc[31, df.columns.get_loc("Open")] = 100.5
+    x = s.executer(df, voulu, SANS_FRAIS)
+    assert x["operations"][-1] == (31, "sortie", 1.0, 100.5)
+    c = s.conseil_du_jour(df.iloc[:31], voulu.iloc[:31],
+                          s.executer(df.iloc[:31], voulu.iloc[:31], SANS_FRAIS), 1000, 1)
+    assert c["action"] == "SORTIR"
+
+
+def test_conseil_entrer_sur_nouveau_signal():
+    df = marche_plat()
+    voulu = signal_achat_depuis(df, len(df) - 1)
+    c = s.conseil_du_jour(df, voulu, s.executer(df, voulu, SANS_FRAIS), 1000, 1)
+    assert c["action"] == "ENTRER" and c["sens"] == 1
+    assert abs(c["stop_pct"] - 0.04) < 1e-9 and abs(c["nominal"] - 250) < 1e-6  # 10 € / 4 %
 
 
 def test_aucune_regle_ne_voit_le_futur():

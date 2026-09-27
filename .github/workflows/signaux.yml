@@ -2,7 +2,7 @@ name: Signaux quotidiens
 
 on:
   schedule:
-    - cron: "37 21 * * *"   # 23h37 à Paris l'été, 22h37 l'hiver : après la clôture US
+    - cron: "37 0 * * *"    # 2h37 à Paris l'été, 1h37 l'hiver : toutes les séances de la veille sont closes
   workflow_dispatch:
 
 permissions:

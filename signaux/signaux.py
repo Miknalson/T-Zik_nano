@@ -1,10 +1,10 @@
 """Signaux de trading quotidiens, avec un contrôle de fiabilité avant affichage.
 
-Chaque règle est d'abord testée sur tout l'historique, frais et financement
-compris, puis comparée à la même règle décalée dans le temps (même exposition,
-mêmes durées de position, mais au hasard des dates). Un signal n'est affiché
-que si la règle bat nettement ce hasard ET reste gagnante sur les deux moitiés
-de l'historique. Sinon : « pas de signal fiable ».
+Chaque règle est d'abord rejouée sur tout l'historique exactement comme tu la
+suivrais (entrée à l'ouverture, stop-loss chez le courtier, frais et
+financement compris), puis comparée à la même règle décalée dans le temps.
+Un signal n'est affiché que si la règle bat nettement ce hasard ET reste
+gagnante sur les deux moitiés de l'historique. Sinon : « pas de signal fiable ».
 
 Usage :
     python signaux.py                     # données réelles (Yahoo Finance)
@@ -45,9 +45,11 @@ FRAIS = {
     "forex":   {"aller_retour": 0.0002, "financement_jour": 0.0001},
 }
 
+K_STOP = 2.0          # stop-loss à 2 × l'ATR (variation moyenne d'une séance)
 P_MAX = 0.01          # probabilité max que le résultat soit dû au hasard
 TRADES_MIN = 30       # en dessous, trop peu de trades pour conclure
 DECALAGE_MIN = 20     # décalages trop proches de la vraie date exclus du test
+NB_DECALAGES = 400    # nombre de versions « hasard » de chaque règle
 BARRES_MIN = 400
 
 DOSSIER = os.path.dirname(os.path.abspath(__file__))
@@ -75,8 +77,8 @@ def atr(df, n=14):
 
 # ------------------------------------------------------------------------ règles
 # Chaque règle renvoie la position voulue à la clôture de chaque jour :
-# +1 acheteur, -1 vendeur, 0 neutre. Elle n'est appliquée qu'à la séance
-# suivante (voir `evaluer`), donc aucune règle ne voit le futur.
+# +1 acheteur, -1 vendeur, 0 neutre. Elle n'est exécutée qu'à l'ouverture
+# suivante (voir `executer`), donc aucune règle ne voit le futur.
 def regle_tendance(df):
     c = df["Close"]
     m50, m200 = sma(c, 50), sma(c, 200)
@@ -129,67 +131,117 @@ REGLES = {
 
 
 # ------------------------------------------------------------------- évaluation
-def p_valeur(p, r):
-    """Part des décalages temporels de la position qui font au moins aussi bien.
+def executer(df, voulu, frais, decalages=()):
+    """Rejoue les trades exactement comme tu les passerais.
 
-    Décaler la série de positions garde exactement l'exposition, le nombre et
-    la durée des trades : seul le choix des dates change. On mesure donc si le
-    timing de la règle apporte quelque chose, au-delà d'être simplement exposé.
+    - entrée à l'ouverture de la séance qui suit un NOUVEAU signal ;
+    - stop-loss posé chez le courtier dès l'entrée, à K_STOP × ATR du prix
+      d'entrée, déclenché dans la séance (au prix d'ouverture si le marché
+      ouvre déjà au-delà du stop) ;
+    - sortie à l'ouverture qui suit la fin du signal ;
+    - après un stop, pas de nouvelle entrée avant un nouveau signal.
+
+    Les versions décalées dans le temps (`decalages`) passent par la même
+    mécanique : seul le moment des signaux change, ce qui sert de référence
+    « hasard » pour juger la règle.
     """
-    n = len(p)
-    corr = np.fft.irfft(np.conj(np.fft.rfft(p)) * np.fft.rfft(r), n)
-    nul = corr[DECALAGE_MIN:n - DECALAGE_MIN]
-    return (1 + np.sum(nul >= corr[0] - 1e-12)) / (1 + len(nul))
+    o, h, l, c = (df[k].to_numpy(float) for k in ("Open", "High", "Low", "Close"))
+    a = atr(df).to_numpy(float)
+    jours = df.index.to_series().diff().dt.days.fillna(1).to_numpy(float)
+    v0 = voulu.to_numpy(float)
+    V = np.vstack([v0] + [np.roll(v0, int(k)) for k in decalages])
+    nb, n = V.shape
+    demi = frais["aller_retour"] / 2
+    financement = frais["financement_jour"]
+
+    sens, stop, nb_entrees = np.zeros(nb), np.zeros(nb), np.zeros(nb, dtype=int)
+    ret = np.zeros((nb, n))
+    operations = []  # scénario réel uniquement : (séance, type, sens, prix)
+    for t in range(1, n):
+        prec = V[:, t - 1]
+        avant = V[:, t - 2] if t >= 2 else np.zeros(nb)
+
+        sortie = (sens != 0) & (prec != sens)
+        ret[sortie, t] += sens[sortie] * (o[t] / c[t - 1] - 1) - demi
+        if sortie[0]:
+            operations.append((t, "sortie", sens[0], o[t]))
+        sens[sortie] = 0
+
+        entre = (sens == 0) & (prec != 0) & (prec != avant) & (not np.isnan(a[t - 1]))
+        sens[entre] = prec[entre]
+        stop[entre] = o[t] - sens[entre] * K_STOP * a[t - 1]
+        ret[entre, t] -= demi
+        nb_entrees += entre
+        if entre[0]:
+            operations.append((t, "entree", sens[0], o[t]))
+
+        tenu = sens != 0
+        base = np.where(entre, o[t], c[t - 1])
+        touche = tenu & (((sens > 0) & (l[t] <= stop)) | ((sens < 0) & (h[t] >= stop)))
+        prix_stop = np.where(sens > 0, np.minimum(o[t], stop), np.maximum(o[t], stop))
+        fin_seance = np.where(touche, prix_stop, c[t])
+        ret[tenu, t] += sens[tenu] * (fin_seance[tenu] / base[tenu] - 1)
+        ret[tenu & ~entre, t] -= financement * jours[t]
+        ret[touche, t] -= demi
+        if touche[0]:
+            operations.append((t, "stop", sens[0], prix_stop[0]))
+        sens[touche] = 0
+
+    return {"net": ret[0], "hasard": ret[1:].sum(axis=1), "nb_trades": int(nb_entrees[0]),
+            "operations": operations, "sens": float(sens[0]), "stop": float(stop[0])}
 
 
-def evaluer(df, pos, frais):
-    r = df["Close"].pct_change().fillna(0).values
-    p = pos.shift(1).fillna(0).values
-    jours = df.index.to_series().diff().dt.days.fillna(1).values
-    rotation = np.abs(np.diff(p, prepend=0))
-    brut = p * r
-    net = brut - rotation * frais["aller_retour"] / 2 - np.abs(p) * jours * frais["financement_jour"]
-
-    precedente = np.concatenate([[0], p[:-1]])
-    nb_trades = int(np.sum((p != 0) & (p != precedente)))
+def evaluer(df, voulu, frais, nb_decalages=NB_DECALAGES):
+    n = len(df)
+    decalages = np.unique(np.linspace(DECALAGE_MIN, n - DECALAGE_MIN, nb_decalages).astype(int))
+    x = executer(df, voulu, frais, decalages)
+    net = x["net"]
+    pval = (1 + np.sum(x["hasard"] >= net.sum() - 1e-12)) / (1 + len(x["hasard"]))
     annees = max((df.index[-1] - df.index[0]).days / 365.25, 1e-9)
-    moitie = len(net) // 2
-    courbe = np.cumsum(net)
-    pval = p_valeur(p, r)
+    moitie = n // 2
 
     raisons = []
-    if nb_trades < TRADES_MIN:
-        raisons.append(f"trop peu de trades ({nb_trades} < {TRADES_MIN})")
+    if x["nb_trades"] < TRADES_MIN:
+        raisons.append(f"trop peu de trades ({x['nb_trades']} < {TRADES_MIN})")
     if pval >= P_MAX:
         raisons.append(f"pas mieux que le hasard (p = {pval:.2f})")
     if net[:moitie].sum() <= 0 or net[moitie:].sum() <= 0:
         raisons.append("perdant sur une des deux moitiés de l'historique")
 
-    return {
-        "nb_trades": nb_trades,
-        "rendement_annuel": net.sum() / annees,
-        "exposition": float(np.mean(p != 0)),
-        "perte_max": float(np.max(np.maximum.accumulate(courbe) - courbe)) if len(courbe) else 0.0,
-        "p": pval,
-        "valide": not raisons,
-        "raisons": raisons,
-    }
+    return {"nb_trades": x["nb_trades"], "rendement_annuel": net.sum() / annees, "p": pval,
+            "valide": not raisons, "raisons": raisons, "execution": x}
 
 
-def signal_du_jour(df, pos, capital, risque_pct):
-    actuelle = pos.iloc[-1]
-    changements = pos.index[pos.ne(pos.shift(1))]
-    depuis = changements[-1] if len(changements) else pos.index[0]
+def conseil_du_jour(df, voulu, execution, capital, risque_pct):
+    """Traduit l'état de la règle à la dernière clôture en consigne pour demain."""
+    v, v_prec = voulu.iloc[-1], voulu.iloc[-2]
+    ops = execution["operations"]
+    derniere = len(df) - 1
+    entrees = [op for op in ops if op[1] == "entree"]
     cloture = float(df["Close"].iloc[-1])
-    a = float(atr(df).iloc[-1])
-    distance = 2 * a / cloture
-    nominal = capital * risque_pct / 100 / distance if distance > 0 else 0.0
+    distance = K_STOP * float(atr(df).iloc[-1])
+    nominal = capital * risque_pct / 100 * cloture / distance if distance > 0 else 0.0
+    nouveau = v != 0 and v != v_prec
+
+    if execution["sens"] != 0:
+        action = "EN COURS" if v == execution["sens"] else ("INVERSER" if nouveau else "SORTIR")
+    elif nouveau:
+        action = "ENTRER"
+    elif ops and ops[-1][0] == derniere and ops[-1][1] == "stop":
+        action = "STOP TOUCHÉ"
+    else:
+        action = "RIEN"
+
     return {
-        "sens": {1: "ACHAT", -1: "VENTE", 0: "NEUTRE"}[int(actuelle)],
-        "nouveau": depuis == pos.index[-1] and actuelle != 0,
-        "depuis": depuis,
+        "action": action,
+        "sens": int(v) if action in ("ENTRER", "INVERSER") else int(execution["sens"]),
+        "position_sens": int(execution["sens"]),
+        "depuis": df.index[entrees[-1][0]] if entrees else None,
+        "prix_entree": entrees[-1][3] if entrees else None,
+        "stop_position": execution["stop"],
         "cloture": cloture,
-        "stop": cloture - 2 * a if actuelle > 0 else cloture + 2 * a,
+        "stop_pct": distance / cloture,
+        "stop_estime": cloture - v * distance,
         "nominal": nominal,
         "levier": nominal / capital if capital else 0.0,
     }
@@ -231,11 +283,13 @@ def simuler(ticker, jours=2500):
                          "Low": np.minimum(ouverture, close) - ecart}, index=index)
 
 
-def retirer_barre_en_cours(df, classe):
-    # Une crypto cote 24h/24 : la barre du jour n'est complète qu'à minuit UTC.
-    if classe == "crypto":
-        aujourd_hui = pd.Timestamp(dt.datetime.now(dt.timezone.utc).date())
-        df = df[df.index < aujourd_hui]
+def seances_terminees(df, classe):
+    # La séance du jour n'est jamais complète, et Yahoo invente parfois des
+    # séances le week-end pour le forex et les contrats à terme.
+    aujourd_hui = pd.Timestamp(dt.datetime.now(dt.timezone.utc).date())
+    df = df[df.index < aujourd_hui]
+    if classe != "crypto":
+        df = df[df.index.dayofweek < 5]
     return df
 
 
@@ -244,48 +298,76 @@ def eur(x):
     return f"{x:,.0f} €".replace(",", " ")
 
 
+SENS = {1: "ACHAT", -1: "VENTE"}
+
+
+def consigne(r, public=False):
+    """Renvoie (titre, lignes de détail, style) pour une règle et un marché."""
+    if r["erreur"]:
+        return "Données indisponibles", [r["erreur"]], "gris"
+    e = r["eval"]
+    if not e["valide"]:
+        return "Pas de signal fiable", [", ".join(e["raisons"])], "gris"
+
+    c = r["conseil"]
+    historique = f"Historique : {e['rendement_annuel']:+.1%}/an, {e['nb_trades']} trades, p = {e['p']:.3f}"
+    taille = (f"Taille max : {c['levier']:.2f} × ton capital." if public
+              else f"Taille max : {eur(c['nominal'])} (levier {c['levier']:.1f}).")
+    ouverture = [
+        f"Stop-loss : à {c['stop_pct']:.1%} de ton prix d'entrée (≈ {c['stop_estime']:.4g}), "
+        "à poser chez ton courtier dès l'entrée.",
+        "Take-profit : aucun. Sors quand cette page affiche SORTIR.",
+        taille,
+    ]
+    style = {1: "achat", -1: "vente", 0: "gris"}[c["sens"]]
+    depuis = f"{c['depuis']:%d/%m/%Y}" if c["depuis"] is not None else "?"
+
+    if c["action"] == "ENTRER":
+        return (f"ENTRER — {SENS[c['sens']]}",
+                ["Quand : à l'ouverture de la prochaine séance."] + ouverture + [historique], style)
+    if c["action"] == "INVERSER":
+        return (f"INVERSER → {SENS[c['sens']]}",
+                [f"À l'ouverture : ferme ta position {SENS[c['position_sens']]} et entre en "
+                 f"{SENS[c['sens']]}."] + ouverture + [historique], style)
+    if c["action"] == "SORTIR":
+        return ("SORTIR",
+                [f"Ferme la position {SENS[c['position_sens']]} ouverte le {depuis}, "
+                 "à l'ouverture de la prochaine séance.", historique], "sortir")
+    if c["action"] == "EN COURS":
+        return (f"EN COURS — {SENS[c['sens']]} depuis le {depuis}",
+                [f"Entrée à {c['prix_entree']:.4g}, stop-loss à {c['stop_position']:.4g}.",
+                 "Pas encore dedans ? N'entre pas en cours de route : attends le prochain ENTRER.",
+                 historique], style)
+    if c["action"] == "STOP TOUCHÉ":
+        return ("STOP TOUCHÉ",
+                ["La position a été fermée par le stop-loss. Attends le prochain ENTRER.", historique],
+                "gris")
+    return "Rien à faire", ["Pas de position, pas de nouveau signal.", historique], "gris"
+
+
 def afficher_console(resultats, nb_tests):
     valides = [r for r in resultats if r["eval"] and r["eval"]["valide"]]
     print()
     for r in resultats:
-        tete = f"{r['nom']:<13} {r['regle']:<30}"
-        if r["erreur"]:
-            print(f"{tete} ✗ {r['erreur']}")
-        elif not r["eval"]["valide"]:
-            print(f"{tete} — pas de signal fiable : {', '.join(r['eval']['raisons'])}")
+        titre, lignes, _ = consigne(r)
+        print(f"{r['nom']:<13} {r['regle']:<30} {titre}")
+        if r["eval"] and r["eval"]["valide"]:
+            for ligne in lignes:
+                print(f"{'':<45}{ligne}")
         else:
-            s, e = r["signal"], r["eval"]
-            neuf = " (NOUVEAU)" if s["nouveau"] else f" (depuis le {s['depuis']:%d/%m/%Y})"
-            print(f"{tete} ✓ {s['sens']}{neuf}")
-            if s["sens"] != "NEUTRE":
-                print(f"{'':<45}stop {s['stop']:.4g}  |  nominal max {eur(s['nominal'])} "
-                      f"(levier {s['levier']:.1f})  |  historique {e['rendement_annuel']:+.1%}/an, "
-                      f"{e['nb_trades']} trades, p = {e['p']:.3f}")
+            print(f"{'':<45}{lignes[0]}")
     print(f"\n{len(valides)} règle(s) validée(s) sur {nb_tests} testées. "
           f"Par pur hasard, on en attendrait environ {nb_tests * P_MAX:.1f}.")
 
 
 def ecrire_html(resultats, chemin, capital, risque, demo, public=False):
-    lignes = []
+    cartes = []
     for r in resultats:
-        if r["erreur"]:
-            statut, detail, classe = "Données indisponibles", html.escape(r["erreur"]), "gris"
-        elif not r["eval"]["valide"]:
-            statut, classe = "Pas de signal fiable", "gris"
-            detail = html.escape(", ".join(r["eval"]["raisons"]))
-        else:
-            s, e = r["signal"], r["eval"]
-            classe = {"ACHAT": "achat", "VENTE": "vente", "NEUTRE": "gris"}[s["sens"]]
-            statut = s["sens"] + (" — nouveau" if s["nouveau"] else f" — depuis le {s['depuis']:%d/%m/%Y}")
-            detail = (f"Historique : {e['rendement_annuel']:+.1%}/an, {e['nb_trades']} trades, "
-                      f"p = {e['p']:.3f}")
-            if s["sens"] != "NEUTRE":
-                taille = (f"position max {s['levier']:.2f} × ton capital" if public
-                          else f"nominal max {eur(s['nominal'])} (levier {s['levier']:.1f})")
-                detail = f"Clôture {s['cloture']:.4g} · stop {s['stop']:.4g} · {taille}<br>" + detail
-        lignes.append(f'<div class="carte {classe}"><div class="marche">{html.escape(r["nom"])}'
+        titre, lignes, style = consigne(r, public)
+        detail = "<br>".join(html.escape(ligne) for ligne in lignes)
+        cartes.append(f'<div class="carte {style}"><div class="marche">{html.escape(r["nom"])}'
                       f'<span>{html.escape(r["regle"])}</span></div>'
-                      f'<div class="statut">{html.escape(statut)}</div>'
+                      f'<div class="statut">{html.escape(titre)}</div>'
                       f'<div class="detail">{detail}</div></div>')
 
     avert = '<p class="demo">MODE DÉMO — données simulées, aucun signal réel.</p>' if demo else ""
@@ -299,24 +381,26 @@ def ecrire_html(resultats, chemin, capital, risque, demo, public=False):
 <meta name="apple-mobile-web-app-title" content="Signaux">
 <link rel="apple-touch-icon" href="icone.png">
 <style>
-:root{{--fond:#f6f6f4;--carte:#fff;--texte:#1d1d1b;--doux:#6b6b66;--achat:#1f7a4d;--vente:#b3261e;--bord:#e2e2dd}}
-@media (prefers-color-scheme:dark){{:root{{--fond:#141413;--carte:#1f1f1d;--texte:#ededea;--doux:#9b9b95;--achat:#4fbf85;--vente:#f2766c;--bord:#33332f}}}}
+:root{{--fond:#f6f6f4;--carte:#fff;--texte:#1d1d1b;--doux:#6b6b66;--achat:#1f7a4d;--vente:#b3261e;--sortir:#9a6700;--bord:#e2e2dd}}
+@media (prefers-color-scheme:dark){{:root{{--fond:#141413;--carte:#1f1f1d;--texte:#ededea;--doux:#9b9b95;--achat:#4fbf85;--vente:#f2766c;--sortir:#e3b341;--bord:#33332f}}}}
 body{{margin:0;background:var(--fond);color:var(--texte);font:15px/1.45 -apple-system,system-ui,sans-serif}}
 main{{max-width:640px;margin:0 auto;padding:16px}}
 h1{{font-size:20px;margin:4px 0}} .sous{{color:var(--doux);font-size:13px;margin:0 0 14px}}
 .carte{{background:var(--carte);border:1px solid var(--bord);border-left:4px solid var(--bord);border-radius:8px;padding:10px 12px;margin:8px 0}}
-.carte.achat{{border-left-color:var(--achat)}} .carte.vente{{border-left-color:var(--vente)}}
+.carte.achat{{border-left-color:var(--achat)}} .carte.vente{{border-left-color:var(--vente)}} .carte.sortir{{border-left-color:var(--sortir)}}
 .marche{{font-weight:600}} .marche span{{font-weight:400;color:var(--doux);font-size:13px;margin-left:6px}}
-.achat .statut{{color:var(--achat);font-weight:600}} .vente .statut{{color:var(--vente);font-weight:600}}
+.achat .statut{{color:var(--achat);font-weight:600}} .vente .statut{{color:var(--vente);font-weight:600}} .sortir .statut{{color:var(--sortir);font-weight:600}}
 .gris .statut{{color:var(--doux)}} .detail{{color:var(--doux);font-size:13px;margin-top:2px}}
 .demo{{background:#fff3cd;color:#664d03;padding:8px 10px;border-radius:6px}}
 .note{{color:var(--doux);font-size:12px;margin-top:18px}}
 </style></head><body><main>
 <h1>Signaux du jour</h1>
 <p class="sous">Mis à jour le {maintenant:%d/%m/%Y à %H:%M}{cloture}{compte} · risque {risque} % par trade</p>
-{avert}{''.join(lignes)}
-<p class="note">Un signal validé a battu le hasard sur l'historique, frais compris. Cela ne garantit
-pas l'avenir. La taille max est calculée pour qu'un stop touché coûte {risque} % du capital.</p>
+{avert}{''.join(cartes)}
+<p class="note">Un signal validé a battu le hasard sur l'historique, en simulant exactement ces
+consignes : entrée à l'ouverture, stop-loss chez le courtier, frais compris. Cela ne garantit pas
+l'avenir. Entrer plus tard que l'ouverture change le résultat. La taille max est calculée pour qu'un
+stop touché coûte {risque} % du capital.</p>
 </main></body></html>"""
     with open(chemin, "w", encoding="utf-8") as f:
         f.write(page)
@@ -335,10 +419,13 @@ def journaliser(resultats, chemin):
         for r in resultats:
             if r["erreur"] or (f"{r['date_cloture']:%Y-%m-%d}", r["ticker"], r["regle"]) in deja:
                 continue
-            s = r["signal"]
+            c = r["conseil"]
+            stop = {"ENTRER": c["stop_estime"], "INVERSER": c["stop_estime"],
+                    "EN COURS": c["stop_position"]}.get(c["action"])
             w.writerow([dt.date.today().isoformat(), f"{r['date_cloture']:%Y-%m-%d}",
-                        r["ticker"], r["regle"], int(r["eval"]["valide"]), s["sens"],
-                        f"{s['cloture']:.6g}", f"{s['stop']:.6g}" if s["sens"] != "NEUTRE" else ""])
+                        r["ticker"], r["regle"], int(r["eval"]["valide"]),
+                        f"{c['action']} {SENS.get(c['sens'], '')}".strip(),
+                        f"{c['cloture']:.6g}", f"{stop:.6g}" if stop is not None else ""])
 
 
 # -------------------------------------------------------------------------- main
@@ -347,7 +434,7 @@ def analyser(demo, annees, capital, risque):
     for ticker, nom, classe in MARCHES:
         try:
             df = simuler(ticker) if demo else telecharger(ticker, annees)
-            df = retirer_barre_en_cours(df, classe)
+            df = seances_terminees(df, classe)
             if len(df) < BARRES_MIN:
                 raise ValueError(f"historique trop court ({len(df)} jours)")
             erreur = None
@@ -355,11 +442,11 @@ def analyser(demo, annees, capital, risque):
             df, erreur = None, str(exc) or exc.__class__.__name__
         for nom_regle, regle in REGLES.items():
             base = {"ticker": ticker, "nom": nom, "regle": nom_regle, "erreur": erreur,
-                    "eval": None, "signal": None, "date_cloture": None}
+                    "eval": None, "conseil": None, "date_cloture": None}
             if df is not None:
-                pos = regle(df)
-                base["eval"] = evaluer(df, pos, FRAIS[classe])
-                base["signal"] = signal_du_jour(df, pos, capital, risque)
+                voulu = regle(df)
+                base["eval"] = evaluer(df, voulu, FRAIS[classe])
+                base["conseil"] = conseil_du_jour(df, voulu, base["eval"]["execution"], capital, risque)
                 base["date_cloture"] = df.index[-1]
             resultats.append(base)
     return resultats
