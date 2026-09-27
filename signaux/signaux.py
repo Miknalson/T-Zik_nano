@@ -132,6 +132,21 @@ REGLES = {
     "Retour à la moyenne (RSI 2)": regle_retour_moyenne,
 }
 
+# Une seule méthode par marché pour le test sur compte démo, fixée le 27/09/2026 :
+# la plus probante parmi celles restées gagnantes sur les deux moitiés de
+# l'historique (frais Libertex). Les marchés sans candidate ne sont pas suivis.
+# Figé volontairement : changer de méthode au gré des résultats fausserait le test.
+METHODE_SUIVIE = {
+    "BTC-USD": "Cassure 20 jours",
+    "ETH-USD": "Cassure 20 jours",
+    "XRP-USD": "Cassure 20 jours",
+    "^GSPC": "Retour à la moyenne (RSI 2)",
+}
+
+
+def suivie(r):
+    return METHODE_SUIVIE.get(r["ticker"]) == r["regle"]
+
 
 # ------------------------------------------------------------------- évaluation
 def executer(df, voulu, frais, decalages=()):
@@ -420,20 +435,27 @@ def priorite(r):
     return 4
 
 
+def carte_html(r):
+    titre, lignes, style = consigne(r)
+    detail = "<br>".join(html.escape(ligne) for ligne in lignes)
+    badge = ""
+    if r["conseil"]:
+        texte, couleur = ORIENTATION[r["conseil"]["orientation"]]
+        badge = f'<b class="badge {couleur}">{texte}</b>'
+    etoile = '<div class="suivie">★ Méthode suivie</div>' if suivie(r) else ""
+    return (f'<div class="carte {style}">{etoile}<div class="marche">{html.escape(r["nom"])}'
+            f'<span>{html.escape(r["regle"])}</span>{badge}</div>'
+            f'<div class="statut">{html.escape(titre)}</div>'
+            f'<div class="detail">{detail}</div></div>')
+
+
 def ecrire_html(resultats, chemin, capital, risque, demo):
-    cartes = []
-    a_faire = sum(priorite(r) <= 1 for r in resultats)
-    for r in sorted(resultats, key=priorite):
-        titre, lignes, style = consigne(r)
-        detail = "<br>".join(html.escape(ligne) for ligne in lignes)
-        badge = ""
-        if r["conseil"]:
-            texte, couleur = ORIENTATION[r["conseil"]["orientation"]]
-            badge = f'<b class="badge {couleur}">{texte}</b>'
-        cartes.append(f'<div class="carte {style}"><div class="marche">{html.escape(r["nom"])}'
-                      f'<span>{html.escape(r["regle"])}</span>{badge}</div>'
-                      f'<div class="statut">{html.escape(titre)}</div>'
-                      f'<div class="detail">{detail}</div></div>')
+    suivies = sorted((r for r in resultats if suivie(r)), key=priorite)
+    autres = sorted((r for r in resultats if not suivie(r)), key=priorite)
+    a_faire = sum(priorite(r) <= 1 for r in suivies)
+    cartes = ([carte_html(r) for r in suivies]
+              + ['<h2>Autres méthodes (pour information)</h2>']
+              + [carte_html(r) for r in autres])
 
     avert = '<p class="demo">MODE DÉMO — données simulées, aucun signal réel.</p>' if demo else ""
     maintenant = dt.datetime.now(ZoneInfo("Europe/Paris"))
@@ -460,10 +482,12 @@ h1{{font-size:20px;margin:4px 0}} .sous{{color:var(--doux);font-size:13px;margin
 .badge{{font-size:12px;font-weight:700;white-space:nowrap}} .badge.achat{{color:var(--achat)}} .badge.vente{{color:var(--vente)}} .badge.gris{{color:var(--doux)}}
 .demo{{background:#fff3cd;color:#664d03;padding:8px 10px;border-radius:6px}}
 .note{{color:var(--doux);font-size:12px;margin-top:18px}} .resume{{font-weight:600;margin:0 0 6px}}
+.suivie{{font-size:12px;font-weight:700;color:var(--sortir);margin-bottom:2px}}
+h2{{font-size:15px;color:var(--doux);margin:22px 0 4px}}
 </style></head><body><main>
 <h1>Signaux du jour</h1>
 <p class="sous">Mis à jour le {maintenant:%d/%m/%Y à %H:%M}{cloture}{compte} · risque {risque} % par trade</p>
-{avert}<p class="resume">À faire aujourd'hui : {a_faire} consigne(s) (entrer, inverser ou sortir), en tête de page.</p>
+{avert}<p class="resume">À faire aujourd'hui : {a_faire} consigne(s) sur les méthodes suivies (★).</p>
 {''.join(cartes)}
 <p class="note">Un signal validé a battu le hasard sur l'historique, en simulant exactement ces
 consignes : entrée à l'ouverture, stop-loss chez le courtier, frais compris. Cela ne garantit pas
@@ -496,6 +520,53 @@ def journaliser(resultats, chemin):
                         r["ticker"], r["regle"], int(r["eval"]["valide"]),
                         f"{c['action']} {SENS.get(c['sens'], '')}".strip(),
                         f"{c['cloture']:.6g}", f"{stop:.6g}" if stop is not None else ""])
+
+
+def notifications(resultats):
+    """Messages à envoyer sur le téléphone : uniquement ce qui demande d'agir."""
+    messages = []
+    for r in resultats:
+        if r["erreur"] or not suivie(r):
+            continue
+        c = r["conseil"]
+        if c["action"] in ("ENTRER", "INVERSER"):
+            verbe = "ACHÈTE" if c["sens"] > 0 else "VENDS"
+            avant = (f"Ferme d'abord ta position {SENS[c['position_sens']]}.\n"
+                     if c["action"] == "INVERSER" else "")
+            messages.append({
+                "title": f"{r['nom']} : {verbe} (démo)",
+                "message": (f"{avant}{verbe.capitalize()} maintenant, vers {prix(c['cloture'])}.\n"
+                            f"Stop-loss : {prix(c['stop_estime'])}\n"
+                            "Take-profit : aucun, attends la notification SORS.\n"
+                            f"Taille : {eur(c['nominal'])} (ex. {eur(c['nominal'] / 2)} × 2)"),
+                "priority": 4,
+                "tags": ["chart_with_upwards_trend" if c["sens"] > 0 else "chart_with_downwards_trend"],
+            })
+        elif c["action"] == "SORTIR":
+            messages.append({
+                "title": f"{r['nom']} : SORS (démo)",
+                "message": f"Ferme ta position {SENS[c['position_sens']]} maintenant.",
+                "priority": 4,
+                "tags": ["warning"],
+            })
+        elif c["action"] == "STOP TOUCHÉ":
+            messages.append({
+                "title": f"{r['nom']} : stop touché (démo)",
+                "message": "Ta position a été fermée par le stop-loss. Rien à faire.",
+                "priority": 3,
+                "tags": ["information_source"],
+            })
+    return messages
+
+
+def envoyer(sujet, message):
+    import json
+    import urllib.request
+    corps = json.dumps({"topic": sujet, "click": "https://miknalson.github.io/T-Zik_nano/",
+                        **message}).encode("utf-8")
+    requete = urllib.request.Request("https://ntfy.sh/", data=corps,
+                                     headers={"Content-Type": "application/json"})
+    urllib.request.urlopen(requete, timeout=20).read()
 
 
 # -------------------------------------------------------------------------- main
@@ -531,7 +602,10 @@ def main():
     ap.add_argument("--demo", action="store_true", help="données simulées, sans Internet")
     ap.add_argument("--sortie", default=os.path.join(DOSSIER, "rapport_signaux.html"),
                     help="chemin du rapport HTML")
+    ap.add_argument("--notif-test", action="store_true",
+                    help="envoie une notification de test (sujet ntfy dans NTFY_TOPIC)")
     args = ap.parse_args()
+    sujet = os.environ.get("NTFY_TOPIC", "").strip()
 
     resultats = analyser(args.demo, args.annees, args.capital, args.risque)
     if all(r["erreur"] for r in resultats):
@@ -545,6 +619,20 @@ def main():
     if not args.demo:
         journaliser(resultats, os.path.join(DOSSIER, "journal_signaux.csv"))
     print(f"Rapport pour le téléphone : {rapport}")
+
+    messages = [] if args.demo else notifications(resultats)
+    if args.notif_test:
+        messages.insert(0, {"title": "Test des notifications",
+                            "message": "Ça marche ! Tu recevras ici les consignes ENTRER et SORS.",
+                            "priority": 3, "tags": ["white_check_mark"]})
+    if messages and not sujet:
+        print("Notifications non envoyées : NTFY_TOPIC n'est pas défini.")
+    for m in messages if sujet else []:
+        try:
+            envoyer(sujet, m)
+            print(f"Notification envoyée : {m['title']}")
+        except Exception as exc:  # la page doit être publiée même si ntfy est en panne
+            print(f"::warning::Notification non envoyée ({m['title']}) : {exc}")
 
 
 if __name__ == "__main__":

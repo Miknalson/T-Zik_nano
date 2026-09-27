@@ -2,8 +2,13 @@ name: Signaux quotidiens
 
 on:
   schedule:
-    - cron: "37 0 * * *"    # 2h37 à Paris l'été, 1h37 l'hiver : toutes les séances de la veille sont closes
+    - cron: "17 5 * * *"    # 7h17 à Paris l'été, 6h17 l'hiver : notification au réveil
   workflow_dispatch:
+    inputs:
+      test_notification:
+        description: "Envoyer aussi une notification de test"
+        type: boolean
+        default: false
 
 permissions:
   contents: write
@@ -29,8 +34,10 @@ jobs:
       - run: pip install -r signaux/requirements.txt
 
       - name: Calculer les signaux
+        env:
+          NTFY_TOPIC: ${{ secrets.NTFY_TOPIC }}
         run: |
-          python signaux/signaux.py --capital 1000 --sortie site/index.html
+          python signaux/signaux.py --capital 1000 --sortie site/index.html ${{ inputs.test_notification && '--notif-test' || '' }}
           cp signaux/icone.png site/
 
       - name: Enregistrer le journal

@@ -119,6 +119,35 @@ def test_suivi_ignore_une_position_ouverte_avant_le_debut():
     assert encore_ouvert["trades"] == 1 and encore_ouvert["resultat"] == 0.0  # 103 → 103
 
 
+def resultat(ticker, regle, action, sens=1, position_sens=0):
+    conseil = {"action": action, "orientation": sens, "sens": sens, "position_sens": position_sens,
+               "cloture": 84914.6, "stop_estime": 81745.2, "nominal": 150.0}
+    return {"ticker": ticker, "nom": "Bitcoin", "regle": regle, "erreur": None, "conseil": conseil}
+
+
+def test_notification_entrer_donne_prix_stop_et_taille():
+    [m] = s.notifications([resultat("BTC-USD", "Cassure 20 jours", "ENTRER")])
+    assert m["title"] == "Bitcoin : ACHÈTE (démo)"
+    assert "vers 84 915" in m["message"] and "Stop-loss : 81 745" in m["message"]
+    assert "150 €" in m["message"]
+
+
+def test_pas_de_notification_hors_methode_suivie_ou_sans_action():
+    assert s.notifications([resultat("BTC-USD", "Tendance (moyennes 50/200)", "ENTRER")]) == []
+    assert s.notifications([resultat("BTC-USD", "Cassure 20 jours", "EN COURS")]) == []
+    assert s.notifications([resultat("BTC-USD", "Cassure 20 jours", "RIEN", sens=0)]) == []
+
+
+def test_notification_sortir():
+    [m] = s.notifications([resultat("BTC-USD", "Cassure 20 jours", "SORTIR", sens=1, position_sens=1)])
+    assert m["title"] == "Bitcoin : SORS (démo)" and "ACHAT" in m["message"]
+
+
+def test_methodes_suivies_existent():
+    marches = {t for t, _, _ in s.MARCHES}
+    assert all(t in marches and regle in s.REGLES for t, regle in s.METHODE_SUIVIE.items())
+
+
 def test_conseil_entrer_sur_nouveau_signal():
     df = marche_plat()
     voulu = signal_achat_depuis(df, len(df) - 1)
