@@ -323,6 +323,11 @@ def eur(x):
     return f"{x:,.0f} €".replace(",", " ")
 
 
+def prix(x):
+    # 73 970 plutôt que 7.397e+04 ; 1.1682 ou 2.874 gardent leurs décimales.
+    return f"{x:,.0f}".replace(",", " ") if abs(x) >= 1000 else f"{x:.5g}"
+
+
 SENS = {1: "ACHAT", -1: "VENTE"}
 ORIENTATION = {1: ("↑ HAUSSE", "achat"), -1: ("↓ BAISSE", "vente"), 0: ("→ NEUTRE", "gris")}
 
@@ -331,7 +336,7 @@ def instructions(c):
     """Titre et consignes d'exécution détaillées correspondant à l'état de la règle."""
     taille = f"Taille max : {eur(c['nominal'])} de position (levier {c['levier']:.1f})."
     ouverture = [
-        f"Stop-loss : à {c['stop_pct']:.1%} de ton prix d'entrée (≈ {c['stop_estime']:.4g}), "
+        f"Stop-loss : à {c['stop_pct']:.1%} de ton prix d'entrée (≈ {prix(c['stop_estime'])}), "
         "à poser chez ton courtier dès l'entrée.",
         "Take-profit : aucun. Sors quand cette page affiche SORTIR.",
         taille,
@@ -348,7 +353,7 @@ def instructions(c):
                           "à l'ouverture de la prochaine séance."]
     if c["action"] == "EN COURS":
         return (f"EN COURS — {SENS[c['sens']]} depuis le {depuis}",
-                [f"Entrée à {c['prix_entree']:.4g}, stop-loss à {c['stop_position']:.4g}.",
+                [f"Entrée à {prix(c['prix_entree'])}, stop-loss à {prix(c['stop_position'])}.",
                  "Pas encore dedans ? N'entre pas en cours de route : attends le prochain ENTRER."])
     if c["action"] == "STOP TOUCHÉ":
         return "STOP TOUCHÉ", ["La position a été fermée par le stop-loss. Attends le prochain ENTRER."]
@@ -365,7 +370,7 @@ def ligne_demo(c):
         return "Démo : SORTIR à l'ouverture, si tu as pris cette position."
     if c["action"] == "EN COURS":
         return (f"Démo : {SENS[c['sens']]} en cours depuis le {c['depuis']:%d/%m/%Y}, "
-                f"stop-loss à {c['stop_position']:.4g}. N'entre pas en cours de route.")
+                f"stop-loss à {prix(c['stop_position'])}. N'entre pas en cours de route.")
     if c["action"] == "STOP TOUCHÉ":
         return "Démo : stop touché, attends le prochain ENTRER."
     return "Démo : rien à faire."
