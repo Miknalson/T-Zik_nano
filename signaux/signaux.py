@@ -36,10 +36,12 @@ MARCHES = [
     ("GBPUSD=X", "GBP/USD", "forex"),
 ]
 
-# Coûts d'un CFD grand public, en fraction du nominal. À remplacer par ceux de
-# ton courtier (spread affiché + frais de financement overnight).
+# Coûts par trade en fraction du nominal. Crypto : mesuré sur Libertex (commission
+# 0,10 % à l'ouverture + « ajustement de la marge » 0,14 %). Le reste et le
+# financement overnight sont des valeurs prudentes de CFD grand public, à
+# remplacer quand les coûts Libertex seront relevés.
 FRAIS = {
-    "crypto":  {"aller_retour": 0.006,  "financement_jour": 0.0005},
+    "crypto":  {"aller_retour": 0.0025, "financement_jour": 0.0005},
     "matiere": {"aller_retour": 0.003,  "financement_jour": 0.0002},
     "indice":  {"aller_retour": 0.0005, "financement_jour": 0.0002},
     "forex":   {"aller_retour": 0.0002, "financement_jour": 0.0001},
@@ -325,10 +327,9 @@ SENS = {1: "ACHAT", -1: "VENTE"}
 ORIENTATION = {1: ("↑ HAUSSE", "achat"), -1: ("↓ BAISSE", "vente"), 0: ("→ NEUTRE", "gris")}
 
 
-def instructions(c, public):
+def instructions(c):
     """Titre et consignes d'exécution détaillées correspondant à l'état de la règle."""
-    taille = (f"Taille max : {c['levier']:.2f} × ton capital." if public
-              else f"Taille max : {eur(c['nominal'])} (levier {c['levier']:.1f}).")
+    taille = f"Taille max : {eur(c['nominal'])} de position (levier {c['levier']:.1f})."
     ouverture = [
         f"Stop-loss : à {c['stop_pct']:.1%} de ton prix d'entrée (≈ {c['stop_estime']:.4g}), "
         "à poser chez ton courtier dès l'entrée.",
@@ -358,7 +359,8 @@ def ligne_demo(c):
     """Consigne en une ligne, pour tester une règle non validée sur le compte démo."""
     if c["action"] in ("ENTRER", "INVERSER"):
         verbe = "ENTRER en" if c["action"] == "ENTRER" else "INVERSER →"
-        return f"Démo : {verbe} {SENS[c['sens']]} à l'ouverture, stop-loss à {c['stop_pct']:.1%}."
+        return (f"Démo : {verbe} {SENS[c['sens']]} à l'ouverture, stop-loss à {c['stop_pct']:.1%}, "
+                f"taille max {eur(c['nominal'])}.")
     if c["action"] == "SORTIR":
         return "Démo : SORTIR à l'ouverture, si tu as pris cette position."
     if c["action"] == "EN COURS":
@@ -369,7 +371,7 @@ def ligne_demo(c):
     return "Démo : rien à faire."
 
 
-def consigne(r, public=False):
+def consigne(r):
     """Renvoie (titre, lignes de détail, style) pour une règle et un marché."""
     if r["erreur"]:
         return "Données indisponibles", [r["erreur"]], "gris"
@@ -380,7 +382,7 @@ def consigne(r, public=False):
     if not e["valide"]:
         return "Pas de signal fiable", [", ".join(e["raisons"]), ligne_demo(c), suivi], "gris"
 
-    titre, lignes = instructions(c, public)
+    titre, lignes = instructions(c)
     historique = f"Historique : {e['rendement_annuel']:+.1%}/an, {e['nb_trades']} trades, p = {e['p']:.3f}"
     style = "sortir" if c["action"] == "SORTIR" else {1: "achat", -1: "vente", 0: "gris"}[c["sens"]]
     if c["action"] == "STOP TOUCHÉ":
@@ -413,11 +415,11 @@ def priorite(r):
     return 4
 
 
-def ecrire_html(resultats, chemin, capital, risque, demo, public=False):
+def ecrire_html(resultats, chemin, capital, risque, demo):
     cartes = []
     a_faire = sum(priorite(r) <= 1 for r in resultats)
     for r in sorted(resultats, key=priorite):
-        titre, lignes, style = consigne(r, public)
+        titre, lignes, style = consigne(r)
         detail = "<br>".join(html.escape(ligne) for ligne in lignes)
         badge = ""
         if r["conseil"]:
@@ -432,7 +434,7 @@ def ecrire_html(resultats, chemin, capital, risque, demo, public=False):
     maintenant = dt.datetime.now(ZoneInfo("Europe/Paris"))
     dates = [r["date_cloture"] for r in resultats if r["date_cloture"] is not None]
     cloture = f" · clôtures du {max(dates):%d/%m/%Y}" if dates else ""
-    compte = "" if public else f" · capital {eur(capital)}"
+    compte = f" · capital {eur(capital)}"
     page = f"""<!doctype html><html lang="fr"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1"><title>Signaux du jour</title>
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -522,8 +524,6 @@ def main():
     ap.add_argument("--risque", type=float, default=1.0, help="%% du capital risqué par trade (défaut 1)")
     ap.add_argument("--annees", type=int, default=10, help="années d'historique (défaut 10)")
     ap.add_argument("--demo", action="store_true", help="données simulées, sans Internet")
-    ap.add_argument("--public", action="store_true",
-                    help="page publiable : capital masqué, tailles en multiple du capital")
     ap.add_argument("--sortie", default=os.path.join(DOSSIER, "rapport_signaux.html"),
                     help="chemin du rapport HTML")
     args = ap.parse_args()
@@ -536,7 +536,7 @@ def main():
     afficher_console(resultats, nb_tests)
     rapport = args.sortie
     os.makedirs(os.path.dirname(os.path.abspath(rapport)), exist_ok=True)
-    ecrire_html(resultats, rapport, args.capital, args.risque, args.demo, args.public)
+    ecrire_html(resultats, rapport, args.capital, args.risque, args.demo)
     if not args.demo:
         journaliser(resultats, os.path.join(DOSSIER, "journal_signaux.csv"))
     print(f"Rapport pour le téléphone : {rapport}")

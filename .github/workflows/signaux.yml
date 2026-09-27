@@ -30,7 +30,7 @@ jobs:
 
       - name: Calculer les signaux
         run: |
-          python signaux/signaux.py --public --sortie site/index.html
+          python signaux/signaux.py --capital 1000 --sortie site/index.html
           cp signaux/icone.png site/
 
       - name: Enregistrer le journal

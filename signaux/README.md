@@ -12,8 +12,8 @@ de Paris), une fois toutes les séances de la veille terminées, et publie le ra
 https://miknalson.github.io/T-Zik_nano/. Dans Safari : bouton Partager →
 « Sur l'écran d'accueil » pour l'avoir comme une app.
 
-La page est publique : le capital n'y apparaît pas, les tailles sont exprimées en
-multiple de ton capital. Le journal des signaux est enregistré chaque nuit dans
+La page est publique. Les tailles y sont calculées pour un capital de 1 000 € (réglable
+avec `--capital` dans `.github/workflows/signaux.yml`). Le journal des signaux est enregistré chaque nuit dans
 `journal_signaux.csv`.
 
 Pour relancer à la main : onglet Actions du dépôt → « Signaux quotidiens » → Run workflow.
@@ -49,8 +49,10 @@ sur le compte démo** : elles n'ont pas battu le hasard sur l'historique.
 - Suis les consignes à la lettre : entrée seulement sur ENTRER, stop-loss posé tout de suite,
   sortie sur SORTIR. Si tu improvises, le suivi ne correspondra plus à tes résultats.
 - Sur Libertex, la taille de la position = montant investi × multiplicateur. Pour une
-  « taille max 0,20 × ton capital » avec 1 000 € en démo : 200 € de position, par exemple
-  20 € × multiplicateur 10. Le stop-loss se règle au niveau de prix indiqué.
+  « taille max 200 € » : par exemple 100 € × 2, ou 40 € × 5. Garde un multiplicateur bas
+  (×1 à ×5) : le montant investi doit rester bien supérieur à la perte au stop (10 € pour
+  1 000 €), sinon Libertex peut fermer la position avant le stop. Le stop-loss se règle au
+  niveau de prix indiqué.
 - La ligne « Suivi démo » compte, depuis le 28/09/2026, les trades ouverts par chaque règle
   et leur résultat en % de la position. Compare-la à ton compte démo.
 - Libertex facture surtout une commission par trade : relève celle affichée dans le ticket
