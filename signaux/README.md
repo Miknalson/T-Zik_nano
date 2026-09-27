@@ -44,7 +44,8 @@ Seules les règles validées donnent une consigne. Consulte la page le matin.
 
 Chaque matin vers 7 h 15 (6 h 15 l'hiver), une notification arrive dans l'app **ntfy**
 seulement s'il y a une action à faire sur une **méthode suivie** (★ sur la page) :
-ACHÈTE / VENDS (avec prix, stop-loss et taille), SORS, ou stop touché.
+ACHÈTE / VENDS (avec les cases de l'ordre Libertex : direction, montant, multiplicateur ×2,
+stop loss), FERME, ou stop touché.
 
 | Marché | Méthode suivie |
 |---|---|

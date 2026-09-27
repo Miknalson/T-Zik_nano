@@ -121,15 +121,32 @@ def test_suivi_ignore_une_position_ouverte_avant_le_debut():
 
 def resultat(ticker, regle, action, sens=1, position_sens=0):
     conseil = {"action": action, "orientation": sens, "sens": sens, "position_sens": position_sens,
-               "cloture": 84914.6, "stop_estime": 81745.2, "nominal": 150.0}
+               "cloture": 84914.6, "stop_estime": 81745.2, "nominal": 150.7, "stop_pct": 0.0664}
     return {"ticker": ticker, "nom": "Bitcoin", "regle": regle, "erreur": None, "conseil": conseil}
 
 
-def test_notification_entrer_donne_prix_stop_et_taille():
+def test_notification_entrer_reprend_les_cases_libertex():
     [m] = s.notifications([resultat("BTC-USD", "Cassure 20 jours", "ENTRER")])
     assert m["title"] == "Bitcoin : ACHÈTE (démo)"
-    assert "vers 84 915" in m["message"] and "Stop-loss : 81 745" in m["message"]
-    assert "150 €" in m["message"]
+    assert m["message"].startswith(
+        "Direction : Acheter\n"
+        "Montant : 75 €\n"
+        "Multiplicateur : ×2\n"
+        "Take Profit : laisser vide\n"
+        "Stop Loss : 81 745 (≈ −10 € si touché)\n"
+        "Prix de référence : 84 915\n")
+    assert "notification FERME" in m["message"]
+
+
+def test_notification_vente():
+    [m] = s.notifications([resultat("BTC-USD", "Cassure 20 jours", "ENTRER", sens=-1)])
+    assert m["title"] == "Bitcoin : VENDS (démo)" and "Direction : Vendre" in m["message"]
+
+
+def test_notification_inverser_ferme_puis_ouvre():
+    [m] = s.notifications([resultat("BTC-USD", "Cassure 20 jours", "INVERSER", sens=-1, position_sens=1)])
+    assert m["message"].startswith("1) Ferme ta position ACHAT")
+    assert "2) Nouvel ordre :\nDirection : Vendre" in m["message"]
 
 
 def test_pas_de_notification_hors_methode_suivie_ou_sans_action():
@@ -140,7 +157,8 @@ def test_pas_de_notification_hors_methode_suivie_ou_sans_action():
 
 def test_notification_sortir():
     [m] = s.notifications([resultat("BTC-USD", "Cassure 20 jours", "SORTIR", sens=1, position_sens=1)])
-    assert m["title"] == "Bitcoin : SORS (démo)" and "ACHAT" in m["message"]
+    assert m["title"] == "Bitcoin : FERME (démo)"
+    assert m["message"] == "Ferme ta position ACHAT : onglet « Actif » → ta position Bitcoin → « Fermer »"
 
 
 def test_methodes_suivies_existent():
