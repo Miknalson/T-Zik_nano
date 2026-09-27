@@ -17,6 +17,8 @@ import datetime as dt
 import html
 import os
 import sys
+import time
+from zoneinfo import ZoneInfo
 
 import numpy as np
 import pandas as pd
@@ -194,10 +196,21 @@ def signal_du_jour(df, pos, capital, risque_pct):
 
 
 # ----------------------------------------------------------------------- données
-def telecharger(ticker, annees):
+def telecharger(ticker, annees, essais=3):
     import yfinance as yf
-    df = yf.download(ticker, period=f"{annees}y", interval="1d",
-                     auto_adjust=True, progress=False)
+    for essai in range(essais):
+        try:
+            df = yf.download(ticker, period=f"{annees}y", interval="1d",
+                             auto_adjust=True, progress=False)
+            if not df.empty:
+                break
+        except Exception:
+            if essai == essais - 1:
+                raise
+        # Yahoo limite parfois les serveurs cloud : on patiente avant de réessayer.
+        time.sleep(5 * (essai + 1))
+    if df.empty:
+        raise ValueError("aucune donnée renvoyée par Yahoo")
     if isinstance(df.columns, pd.MultiIndex):
         df.columns = df.columns.get_level_values(0)
     df = df[["Open", "High", "Low", "Close"]].dropna()
@@ -252,7 +265,7 @@ def afficher_console(resultats, nb_tests):
           f"Par pur hasard, on en attendrait environ {nb_tests * P_MAX:.1f}.")
 
 
-def ecrire_html(resultats, chemin, capital, risque, demo):
+def ecrire_html(resultats, chemin, capital, risque, demo, public=False):
     lignes = []
     for r in resultats:
         if r["erreur"]:
@@ -267,16 +280,24 @@ def ecrire_html(resultats, chemin, capital, risque, demo):
             detail = (f"Historique : {e['rendement_annuel']:+.1%}/an, {e['nb_trades']} trades, "
                       f"p = {e['p']:.3f}")
             if s["sens"] != "NEUTRE":
-                detail = (f"Clôture {s['cloture']:.4g} · stop {s['stop']:.4g} · nominal max "
-                          f"{eur(s['nominal'])} (levier {s['levier']:.1f})<br>" + detail)
+                taille = (f"position max {s['levier']:.2f} × ton capital" if public
+                          else f"nominal max {eur(s['nominal'])} (levier {s['levier']:.1f})")
+                detail = f"Clôture {s['cloture']:.4g} · stop {s['stop']:.4g} · {taille}<br>" + detail
         lignes.append(f'<div class="carte {classe}"><div class="marche">{html.escape(r["nom"])}'
                       f'<span>{html.escape(r["regle"])}</span></div>'
                       f'<div class="statut">{html.escape(statut)}</div>'
                       f'<div class="detail">{detail}</div></div>')
 
     avert = '<p class="demo">MODE DÉMO — données simulées, aucun signal réel.</p>' if demo else ""
+    maintenant = dt.datetime.now(ZoneInfo("Europe/Paris"))
+    dates = [r["date_cloture"] for r in resultats if r["date_cloture"] is not None]
+    cloture = f" · clôtures du {max(dates):%d/%m/%Y}" if dates else ""
+    compte = "" if public else f" · capital {eur(capital)}"
     page = f"""<!doctype html><html lang="fr"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1"><title>Signaux du jour</title>
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Signaux">
+<link rel="apple-touch-icon" href="icone.png">
 <style>
 :root{{--fond:#f6f6f4;--carte:#fff;--texte:#1d1d1b;--doux:#6b6b66;--achat:#1f7a4d;--vente:#b3261e;--bord:#e2e2dd}}
 @media (prefers-color-scheme:dark){{:root{{--fond:#141413;--carte:#1f1f1d;--texte:#ededea;--doux:#9b9b95;--achat:#4fbf85;--vente:#f2766c;--bord:#33332f}}}}
@@ -292,10 +313,10 @@ h1{{font-size:20px;margin:4px 0}} .sous{{color:var(--doux);font-size:13px;margin
 .note{{color:var(--doux);font-size:12px;margin-top:18px}}
 </style></head><body><main>
 <h1>Signaux du jour</h1>
-<p class="sous">Généré le {dt.datetime.now():%d/%m/%Y à %H:%M} · capital {eur(capital)} · risque {risque} % par trade</p>
+<p class="sous">Mis à jour le {maintenant:%d/%m/%Y à %H:%M}{cloture}{compte} · risque {risque} % par trade</p>
 {avert}{''.join(lignes)}
 <p class="note">Un signal validé a battu le hasard sur l'historique, frais compris. Cela ne garantit
-pas l'avenir. Le nominal max est calculé pour qu'un stop touché coûte {risque} % du capital.</p>
+pas l'avenir. La taille max est calculée pour qu'un stop touché coûte {risque} % du capital.</p>
 </main></body></html>"""
     with open(chemin, "w", encoding="utf-8") as f:
         f.write(page)
@@ -303,12 +324,16 @@ pas l'avenir. Le nominal max est calculé pour qu'un stop touché coûte {risque
 
 def journaliser(resultats, chemin):
     nouveau = not os.path.exists(chemin)
+    deja = set()
+    if not nouveau:
+        with open(chemin, newline="", encoding="utf-8") as f:
+            deja = {(l["date_cloture"], l["ticker"], l["regle"]) for l in csv.DictReader(f, delimiter=";")}
     with open(chemin, "a", newline="", encoding="utf-8") as f:
         w = csv.writer(f, delimiter=";")
         if nouveau:
             w.writerow(["date_execution", "date_cloture", "ticker", "regle", "valide", "signal", "cloture", "stop"])
         for r in resultats:
-            if r["erreur"]:
+            if r["erreur"] or (f"{r['date_cloture']:%Y-%m-%d}", r["ticker"], r["regle"]) in deja:
                 continue
             s = r["signal"]
             w.writerow([dt.date.today().isoformat(), f"{r['date_cloture']:%Y-%m-%d}",
@@ -346,6 +371,10 @@ def main():
     ap.add_argument("--risque", type=float, default=1.0, help="%% du capital risqué par trade (défaut 1)")
     ap.add_argument("--annees", type=int, default=10, help="années d'historique (défaut 10)")
     ap.add_argument("--demo", action="store_true", help="données simulées, sans Internet")
+    ap.add_argument("--public", action="store_true",
+                    help="page publiable : capital masqué, tailles en multiple du capital")
+    ap.add_argument("--sortie", default=os.path.join(DOSSIER, "rapport_signaux.html"),
+                    help="chemin du rapport HTML")
     args = ap.parse_args()
 
     resultats = analyser(args.demo, args.annees, args.capital, args.risque)
@@ -354,8 +383,9 @@ def main():
 
     nb_tests = sum(1 for r in resultats if not r["erreur"])
     afficher_console(resultats, nb_tests)
-    rapport = os.path.join(DOSSIER, "rapport_signaux.html")
-    ecrire_html(resultats, rapport, args.capital, args.risque, args.demo)
+    rapport = args.sortie
+    os.makedirs(os.path.dirname(os.path.abspath(rapport)), exist_ok=True)
+    ecrire_html(resultats, rapport, args.capital, args.risque, args.demo, args.public)
     if not args.demo:
         journaliser(resultats, os.path.join(DOSSIER, "journal_signaux.csv"))
     print(f"Rapport pour le téléphone : {rapport}")

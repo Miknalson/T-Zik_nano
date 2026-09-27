@@ -4,7 +4,19 @@ Analyse chaque soir 10 marchés (crypto, gaz, pétrole, or, CAC 40, S&P 500, EUR
 avec 3 règles simples, et n'affiche un signal que si la règle a battu le hasard sur
 l'historique, **frais et financement overnight compris**. Sinon : « pas de signal fiable ».
 
-## Installation (une seule fois)
+## Sur le téléphone (rien à installer)
+
+GitHub lance le programme tout seul chaque soir (vers 23 h 30 l'été, 22 h 30 l'hiver)
+et publie le rapport sur https://miknalson.github.io/T-Zik_nano/. Dans Safari :
+bouton Partager → « Sur l'écran d'accueil » pour l'avoir comme une app.
+
+La page est publique : le capital n'y apparaît pas, les tailles sont exprimées en
+multiple de ton capital. Le journal des signaux est enregistré chaque soir dans
+`journal_signaux.csv`.
+
+Pour relancer à la main : onglet Actions du dépôt → « Signaux quotidiens » → Run workflow.
+
+## Sur PC — installation (une seule fois)
 
 1. Installer Python 3.10+ : https://www.python.org/downloads/ (Windows : cocher « Add Python to PATH »).
 2. Dans un terminal, depuis ce dossier :
