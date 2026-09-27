@@ -100,6 +100,25 @@ def test_sortie_a_l_ouverture_quand_le_signal_s_arrete():
     assert c["action"] == "SORTIR"
 
 
+def test_suivi_ne_compte_que_depuis_le_debut():
+    df = marche_qui_monte_a_103()
+    df.iloc[27, df.columns.get_loc("Low")] = 90.0
+    x = s.executer(df, signal_achat_depuis(df, 24), SANS_FRAIS)
+    apres_le_trade = s.suivi_depuis(df, x, SANS_FRAIS, debut=df.index[30])
+    avant_le_trade = s.suivi_depuis(df, x, SANS_FRAIS, debut=df.index[20])
+    assert apres_le_trade == {"trades": 0, "resultat": 0.0, "commence": True}
+    assert avant_le_trade["trades"] == 1 and abs(avant_le_trade["resultat"] - (99 / 103 - 1)) < 1e-9
+    assert not s.suivi_depuis(df, x, SANS_FRAIS, debut=df.index[-1] + pd.Timedelta(days=1))["commence"]
+
+
+def test_suivi_ignore_une_position_ouverte_avant_le_debut():
+    df = marche_qui_monte_a_103()
+    x = s.executer(df, signal_achat_depuis(df, 24), SANS_FRAIS)  # entrée en 25, jamais sortie
+    assert s.suivi_depuis(df, x, SANS_FRAIS, debut=df.index[26])["trades"] == 0
+    encore_ouvert = s.suivi_depuis(df, x, SANS_FRAIS, debut=df.index[25])
+    assert encore_ouvert["trades"] == 1 and encore_ouvert["resultat"] == 0.0  # 103 → 103
+
+
 def test_conseil_entrer_sur_nouveau_signal():
     df = marche_plat()
     voulu = signal_achat_depuis(df, len(df) - 1)

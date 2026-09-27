@@ -40,6 +40,22 @@ Seules les règles validées donnent une consigne. Consulte la page le matin.
 - Le test historique suppose une entrée au prix d'ouverture. Entrer des heures plus tard
   (par exemple sur le forex ou les matières premières, qui rouvrent la nuit) change le résultat.
 
+## Tester sur compte démo (Libertex)
+
+Chaque carte affiche l'orientation de la règle (↑ HAUSSE, ↓ BAISSE, → NEUTRE). Les règles
+non validées gardent une ligne « Démo : … » avec la même consigne, **à suivre uniquement
+sur le compte démo** : elles n'ont pas battu le hasard sur l'historique.
+
+- Suis les consignes à la lettre : entrée seulement sur ENTRER, stop-loss posé tout de suite,
+  sortie sur SORTIR. Si tu improvises, le suivi ne correspondra plus à tes résultats.
+- Sur Libertex, la taille de la position = montant investi × multiplicateur. Pour une
+  « taille max 0,20 × ton capital » avec 1 000 € en démo : 200 € de position, par exemple
+  20 € × multiplicateur 10. Le stop-loss se règle au niveau de prix indiqué.
+- La ligne « Suivi démo » compte, depuis le 28/09/2026, les trades ouverts par chaque règle
+  et leur résultat en % de la position. Compare-la à ton compte démo.
+- Libertex facture surtout une commission par trade : relève celle affichée dans le ticket
+  d'ordre et mets-la dans `FRAIS` pour que le test historique soit juste.
+
 ## Sur PC — installation (une seule fois)
 
 1. Installer Python 3.10+ : https://www.python.org/downloads/ (Windows : cocher « Add Python to PATH »).

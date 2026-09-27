@@ -51,6 +51,7 @@ TRADES_MIN = 30       # en dessous, trop peu de trades pour conclure
 DECALAGE_MIN = 20     # décalages trop proches de la vraie date exclus du test
 NB_DECALAGES = 400    # nombre de versions « hasard » de chaque règle
 BARRES_MIN = 400
+DEBUT_SUIVI = pd.Timestamp("2026-09-28")  # début du test en conditions réelles (compte démo)
 
 DOSSIER = os.path.dirname(os.path.abspath(__file__))
 
@@ -234,6 +235,7 @@ def conseil_du_jour(df, voulu, execution, capital, risque_pct):
 
     return {
         "action": action,
+        "orientation": int(v),
         "sens": int(v) if action in ("ENTRER", "INVERSER") else int(execution["sens"]),
         "position_sens": int(execution["sens"]),
         "depuis": df.index[entrees[-1][0]] if entrees else None,
@@ -245,6 +247,27 @@ def conseil_du_jour(df, voulu, execution, capital, risque_pct):
         "nominal": nominal,
         "levier": nominal / capital if capital else 0.0,
     }
+
+
+def suivi_depuis(df, execution, frais, debut=DEBUT_SUIVI):
+    """Résultat des trades ouverts depuis le début du test sur compte démo.
+
+    Les positions ouvertes avant `debut` sont ignorées : la consigne est de ne
+    jamais entrer en cours de route, donc tu ne les aurais pas. Un trade encore
+    ouvert est évalué au dernier cours de clôture.
+    """
+    ops = execution["operations"]
+    trades, total = 0, 0.0
+    for i, (t, genre, sens, prix) in enumerate(ops):
+        if genre != "entree" or df.index[t] < debut:
+            continue
+        fin = next((op for op in ops[i + 1:] if op[1] in ("sortie", "stop")), None)
+        t_fin, prix_fin = (fin[0], fin[3]) if fin else (len(df) - 1, float(df["Close"].iloc[-1]))
+        couts = (frais["aller_retour"] * (1 if fin else 0.5)
+                 + frais["financement_jour"] * (df.index[t_fin] - df.index[t]).days)
+        total += sens * (prix_fin / prix - 1) - couts
+        trades += 1
+    return {"trades": trades, "resultat": total, "commence": bool(df.index[-1] >= debut)}
 
 
 # ----------------------------------------------------------------------- données
@@ -299,18 +322,11 @@ def eur(x):
 
 
 SENS = {1: "ACHAT", -1: "VENTE"}
+ORIENTATION = {1: ("↑ HAUSSE", "achat"), -1: ("↓ BAISSE", "vente"), 0: ("→ NEUTRE", "gris")}
 
 
-def consigne(r, public=False):
-    """Renvoie (titre, lignes de détail, style) pour une règle et un marché."""
-    if r["erreur"]:
-        return "Données indisponibles", [r["erreur"]], "gris"
-    e = r["eval"]
-    if not e["valide"]:
-        return "Pas de signal fiable", [", ".join(e["raisons"])], "gris"
-
-    c = r["conseil"]
-    historique = f"Historique : {e['rendement_annuel']:+.1%}/an, {e['nb_trades']} trades, p = {e['p']:.3f}"
+def instructions(c, public):
+    """Titre et consignes d'exécution détaillées correspondant à l'état de la règle."""
     taille = (f"Taille max : {c['levier']:.2f} × ton capital." if public
               else f"Taille max : {eur(c['nominal'])} (levier {c['levier']:.1f}).")
     ouverture = [
@@ -319,30 +335,57 @@ def consigne(r, public=False):
         "Take-profit : aucun. Sors quand cette page affiche SORTIR.",
         taille,
     ]
-    style = {1: "achat", -1: "vente", 0: "gris"}[c["sens"]]
     depuis = f"{c['depuis']:%d/%m/%Y}" if c["depuis"] is not None else "?"
-
     if c["action"] == "ENTRER":
-        return (f"ENTRER — {SENS[c['sens']]}",
-                ["Quand : à l'ouverture de la prochaine séance."] + ouverture + [historique], style)
+        return f"ENTRER — {SENS[c['sens']]}", ["Quand : à l'ouverture de la prochaine séance."] + ouverture
     if c["action"] == "INVERSER":
         return (f"INVERSER → {SENS[c['sens']]}",
                 [f"À l'ouverture : ferme ta position {SENS[c['position_sens']]} et entre en "
-                 f"{SENS[c['sens']]}."] + ouverture + [historique], style)
+                 f"{SENS[c['sens']]}."] + ouverture)
     if c["action"] == "SORTIR":
-        return ("SORTIR",
-                [f"Ferme la position {SENS[c['position_sens']]} ouverte le {depuis}, "
-                 "à l'ouverture de la prochaine séance.", historique], "sortir")
+        return "SORTIR", [f"Ferme la position {SENS[c['position_sens']]} ouverte le {depuis}, "
+                          "à l'ouverture de la prochaine séance."]
     if c["action"] == "EN COURS":
         return (f"EN COURS — {SENS[c['sens']]} depuis le {depuis}",
                 [f"Entrée à {c['prix_entree']:.4g}, stop-loss à {c['stop_position']:.4g}.",
-                 "Pas encore dedans ? N'entre pas en cours de route : attends le prochain ENTRER.",
-                 historique], style)
+                 "Pas encore dedans ? N'entre pas en cours de route : attends le prochain ENTRER."])
     if c["action"] == "STOP TOUCHÉ":
-        return ("STOP TOUCHÉ",
-                ["La position a été fermée par le stop-loss. Attends le prochain ENTRER.", historique],
-                "gris")
-    return "Rien à faire", ["Pas de position, pas de nouveau signal.", historique], "gris"
+        return "STOP TOUCHÉ", ["La position a été fermée par le stop-loss. Attends le prochain ENTRER."]
+    return "Rien à faire", ["Pas de position, pas de nouveau signal."]
+
+
+def ligne_demo(c):
+    """Consigne en une ligne, pour tester une règle non validée sur le compte démo."""
+    if c["action"] in ("ENTRER", "INVERSER"):
+        verbe = "ENTRER en" if c["action"] == "ENTRER" else "INVERSER →"
+        return f"Démo : {verbe} {SENS[c['sens']]} à l'ouverture, stop-loss à {c['stop_pct']:.1%}."
+    if c["action"] == "SORTIR":
+        return "Démo : SORTIR à l'ouverture, si tu as pris cette position."
+    if c["action"] == "EN COURS":
+        return (f"Démo : {SENS[c['sens']]} en cours depuis le {c['depuis']:%d/%m/%Y}, "
+                f"stop-loss à {c['stop_position']:.4g}. N'entre pas en cours de route.")
+    if c["action"] == "STOP TOUCHÉ":
+        return "Démo : stop touché, attends le prochain ENTRER."
+    return "Démo : rien à faire."
+
+
+def consigne(r, public=False):
+    """Renvoie (titre, lignes de détail, style) pour une règle et un marché."""
+    if r["erreur"]:
+        return "Données indisponibles", [r["erreur"]], "gris"
+    e, c, s = r["eval"], r["conseil"], r["suivi"]
+    suivi = (f"Suivi démo depuis le {DEBUT_SUIVI:%d/%m} : {s['trades']} trade(s), "
+             f"résultat {s['resultat']:+.1%}" if s["commence"]
+             else f"Suivi démo : commence le {DEBUT_SUIVI:%d/%m/%Y}")
+    if not e["valide"]:
+        return "Pas de signal fiable", [", ".join(e["raisons"]), ligne_demo(c), suivi], "gris"
+
+    titre, lignes = instructions(c, public)
+    historique = f"Historique : {e['rendement_annuel']:+.1%}/an, {e['nb_trades']} trades, p = {e['p']:.3f}"
+    style = "sortir" if c["action"] == "SORTIR" else {1: "achat", -1: "vente", 0: "gris"}[c["sens"]]
+    if c["action"] == "STOP TOUCHÉ":
+        style = "gris"
+    return titre, lignes + [historique, suivi], style
 
 
 def afficher_console(resultats, nb_tests):
@@ -350,23 +393,38 @@ def afficher_console(resultats, nb_tests):
     print()
     for r in resultats:
         titre, lignes, _ = consigne(r)
-        print(f"{r['nom']:<13} {r['regle']:<30} {titre}")
-        if r["eval"] and r["eval"]["valide"]:
-            for ligne in lignes:
-                print(f"{'':<45}{ligne}")
-        else:
-            print(f"{'':<45}{lignes[0]}")
+        orientation = f" [{ORIENTATION[r['conseil']['orientation']][0]}]" if r["conseil"] else ""
+        print(f"{r['nom']:<13} {r['regle']:<30} {titre}{orientation}")
+        for ligne in lignes:
+            print(f"{'':<45}{ligne}")
     print(f"\n{len(valides)} règle(s) validée(s) sur {nb_tests} testées. "
           f"Par pur hasard, on en attendrait environ {nb_tests * P_MAX:.1f}.")
 
 
+def priorite(r):
+    """Les cartes qui demandent d'agir aujourd'hui passent en tête de page."""
+    if r["erreur"]:
+        return 5
+    valide, action = r["eval"]["valide"], r["conseil"]["action"]
+    if action in ("ENTRER", "INVERSER", "SORTIR"):
+        return 0 if valide else 1
+    if action == "EN COURS":
+        return 2 if valide else 3
+    return 4
+
+
 def ecrire_html(resultats, chemin, capital, risque, demo, public=False):
     cartes = []
-    for r in resultats:
+    a_faire = sum(priorite(r) <= 1 for r in resultats)
+    for r in sorted(resultats, key=priorite):
         titre, lignes, style = consigne(r, public)
         detail = "<br>".join(html.escape(ligne) for ligne in lignes)
+        badge = ""
+        if r["conseil"]:
+            texte, couleur = ORIENTATION[r["conseil"]["orientation"]]
+            badge = f'<b class="badge {couleur}">{texte}</b>'
         cartes.append(f'<div class="carte {style}"><div class="marche">{html.escape(r["nom"])}'
-                      f'<span>{html.escape(r["regle"])}</span></div>'
+                      f'<span>{html.escape(r["regle"])}</span>{badge}</div>'
                       f'<div class="statut">{html.escape(titre)}</div>'
                       f'<div class="detail">{detail}</div></div>')
 
@@ -391,16 +449,21 @@ h1{{font-size:20px;margin:4px 0}} .sous{{color:var(--doux);font-size:13px;margin
 .marche{{font-weight:600}} .marche span{{font-weight:400;color:var(--doux);font-size:13px;margin-left:6px}}
 .achat .statut{{color:var(--achat);font-weight:600}} .vente .statut{{color:var(--vente);font-weight:600}} .sortir .statut{{color:var(--sortir);font-weight:600}}
 .gris .statut{{color:var(--doux)}} .detail{{color:var(--doux);font-size:13px;margin-top:2px}}
+.marche{{display:flex;align-items:baseline;flex-wrap:wrap;gap:0 6px}} .marche span{{margin-left:0!important;flex:1}}
+.badge{{font-size:12px;font-weight:700;white-space:nowrap}} .badge.achat{{color:var(--achat)}} .badge.vente{{color:var(--vente)}} .badge.gris{{color:var(--doux)}}
 .demo{{background:#fff3cd;color:#664d03;padding:8px 10px;border-radius:6px}}
-.note{{color:var(--doux);font-size:12px;margin-top:18px}}
+.note{{color:var(--doux);font-size:12px;margin-top:18px}} .resume{{font-weight:600;margin:0 0 6px}}
 </style></head><body><main>
 <h1>Signaux du jour</h1>
 <p class="sous">Mis à jour le {maintenant:%d/%m/%Y à %H:%M}{cloture}{compte} · risque {risque} % par trade</p>
-{avert}{''.join(cartes)}
+{avert}<p class="resume">À faire aujourd'hui : {a_faire} consigne(s) (entrer, inverser ou sortir), en tête de page.</p>
+{''.join(cartes)}
 <p class="note">Un signal validé a battu le hasard sur l'historique, en simulant exactement ces
 consignes : entrée à l'ouverture, stop-loss chez le courtier, frais compris. Cela ne garantit pas
 l'avenir. Entrer plus tard que l'ouverture change le résultat. La taille max est calculée pour qu'un
-stop touché coûte {risque} % du capital.</p>
+stop touché coûte {risque} % du capital.<br><br>Les lignes « Démo » des règles non validées servent
+uniquement à les tester sur un compte démo : elles n'ont pas battu le hasard. Le suivi démo
+compte ce qu'aurait donné chaque règle depuis le {DEBUT_SUIVI:%d/%m/%Y}, en % de la position.</p>
 </main></body></html>"""
     with open(chemin, "w", encoding="utf-8") as f:
         f.write(page)
@@ -442,11 +505,12 @@ def analyser(demo, annees, capital, risque):
             df, erreur = None, str(exc) or exc.__class__.__name__
         for nom_regle, regle in REGLES.items():
             base = {"ticker": ticker, "nom": nom, "regle": nom_regle, "erreur": erreur,
-                    "eval": None, "conseil": None, "date_cloture": None}
+                    "eval": None, "conseil": None, "suivi": None, "date_cloture": None}
             if df is not None:
                 voulu = regle(df)
                 base["eval"] = evaluer(df, voulu, FRAIS[classe])
                 base["conseil"] = conseil_du_jour(df, voulu, base["eval"]["execution"], capital, risque)
+                base["suivi"] = suivi_depuis(df, base["eval"]["execution"], FRAIS[classe])
                 base["date_cloture"] = df.index[-1]
             resultats.append(base)
     return resultats
