@@ -524,7 +524,7 @@ def journaliser(resultats, chemin):
 
 MULTIPLICATEUR = 2  # plafond européen sur la crypto ; le montant investi reste ≫ la perte au stop
 # Nom de l'instrument tel qu'il apparaît dans Libertex.
-NOM_LIBERTEX = {"BTC-USD": "BTCUSD", "ETH-USD": "ETHUSD", "XRP-USD": "XRPUSD", "^GSPC": "S&P 500"}
+NOM_LIBERTEX = {"BTC-USD": "BTCUSD", "ETH-USD": "ETHUSD", "XRP-USD": "XRPUSD", "^GSPC": "US SPX 500 Cash"}
 FERMER = "onglet « Actif » → ta position {nom} → « Fermer »"
 
 
