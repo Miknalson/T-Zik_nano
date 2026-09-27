@@ -129,6 +129,7 @@ def test_notification_entrer_reprend_les_cases_libertex():
     [m] = s.notifications([resultat("BTC-USD", "Cassure 20 jours", "ENTRER")])
     assert m["title"] == "Bitcoin : ACHÈTE (démo)"
     assert m["message"].startswith(
+        "Instrument : BTCUSD\n"
         "Direction : Acheter\n"
         "Montant : 75 €\n"
         "Multiplicateur : ×2\n"
@@ -146,7 +147,7 @@ def test_notification_vente():
 def test_notification_inverser_ferme_puis_ouvre():
     [m] = s.notifications([resultat("BTC-USD", "Cassure 20 jours", "INVERSER", sens=-1, position_sens=1)])
     assert m["message"].startswith("1) Ferme ta position ACHAT")
-    assert "2) Nouvel ordre :\nDirection : Vendre" in m["message"]
+    assert "2) Nouvel ordre :\nInstrument : BTCUSD\nDirection : Vendre" in m["message"]
 
 
 def test_pas_de_notification_hors_methode_suivie_ou_sans_action():
@@ -158,12 +159,13 @@ def test_pas_de_notification_hors_methode_suivie_ou_sans_action():
 def test_notification_sortir():
     [m] = s.notifications([resultat("BTC-USD", "Cassure 20 jours", "SORTIR", sens=1, position_sens=1)])
     assert m["title"] == "Bitcoin : FERME (démo)"
-    assert m["message"] == "Ferme ta position ACHAT : onglet « Actif » → ta position Bitcoin → « Fermer »"
+    assert m["message"] == "Ferme ta position ACHAT : onglet « Actif » → ta position BTCUSD → « Fermer »"
 
 
 def test_methodes_suivies_existent():
     marches = {t for t, _, _ in s.MARCHES}
     assert all(t in marches and regle in s.REGLES for t, regle in s.METHODE_SUIVIE.items())
+    assert set(s.NOM_LIBERTEX) == set(s.METHODE_SUIVIE)
 
 
 def test_conseil_entrer_sur_nouveau_signal():

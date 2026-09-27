@@ -523,14 +523,17 @@ def journaliser(resultats, chemin):
 
 
 MULTIPLICATEUR = 2  # plafond européen sur la crypto ; le montant investi reste ≫ la perte au stop
+# Nom de l'instrument tel qu'il apparaît dans Libertex.
+NOM_LIBERTEX = {"BTC-USD": "BTCUSD", "ETH-USD": "ETHUSD", "XRP-USD": "XRPUSD", "^GSPC": "S&P 500"}
 FERMER = "onglet « Actif » → ta position {nom} → « Fermer »"
 
 
-def ticket_libertex(c):
+def ticket_libertex(instrument, c):
     """Les cases de l'écran d'ordre Libertex, dans l'ordre où elles apparaissent."""
     montant = int(c["nominal"] / MULTIPLICATEUR)
     perte = montant * MULTIPLICATEUR * c["stop_pct"]
-    return (f"Direction : {'Acheter' if c['sens'] > 0 else 'Vendre'}\n"
+    return (f"Instrument : {instrument}\n"
+            f"Direction : {'Acheter' if c['sens'] > 0 else 'Vendre'}\n"
             f"Montant : {eur(montant)}\n"
             f"Multiplicateur : ×{MULTIPLICATEUR}\n"
             "Take Profit : laisser vide\n"
@@ -547,10 +550,11 @@ def notifications(resultats):
         c = r["conseil"]
         if c["action"] in ("ENTRER", "INVERSER"):
             verbe = "ACHÈTE" if c["sens"] > 0 else "VENDS"
-            etapes = ticket_libertex(c) + "\nSortie : attends la notification FERME."
+            instrument = NOM_LIBERTEX.get(r["ticker"], r["nom"])
+            etapes = ticket_libertex(instrument, c) + "\nSortie : attends la notification FERME."
             if c["action"] == "INVERSER":
                 etapes = (f"1) Ferme ta position {SENS[c['position_sens']]} : "
-                          f"{FERMER.format(nom=r['nom'])}\n2) Nouvel ordre :\n{etapes}")
+                          f"{FERMER.format(nom=NOM_LIBERTEX.get(r['ticker'], r['nom']))}\n2) Nouvel ordre :\n{etapes}")
             messages.append({
                 "title": f"{r['nom']} : {verbe} (démo)",
                 "message": etapes,
@@ -560,7 +564,7 @@ def notifications(resultats):
         elif c["action"] == "SORTIR":
             messages.append({
                 "title": f"{r['nom']} : FERME (démo)",
-                "message": f"Ferme ta position {SENS[c['position_sens']]} : {FERMER.format(nom=r['nom'])}",
+                "message": f"Ferme ta position {SENS[c['position_sens']]} : {FERMER.format(nom=NOM_LIBERTEX.get(r['ticker'], r['nom']))}",
                 "priority": 4,
                 "tags": ["warning"],
             })
@@ -639,7 +643,7 @@ def main():
     if args.notif_test:
         exemple = {"sens": 1, "nominal": 150.0, "stop_pct": 0.066, "stop_estime": 81745, "cloture": 84915}
         messages.insert(0, {"title": "EXEMPLE — ne passe pas cet ordre",
-                            "message": "Voici à quoi ressemblera une consigne :\n" + ticket_libertex(exemple),
+                            "message": "Voici à quoi ressemblera une consigne :\n" + ticket_libertex("BTCUSD", exemple),
                             "priority": 3, "tags": ["white_check_mark"]})
     if messages and not sujet:
         print("Notifications non envoyées : NTFY_TOPIC n'est pas défini.")
