@@ -443,7 +443,9 @@ def carte_html(r):
         texte, couleur = ORIENTATION[r["conseil"]["orientation"]]
         badge = f'<b class="badge {couleur}">{texte}</b>'
     etoile = '<div class="suivie">★ Méthode suivie</div>' if suivie(r) else ""
-    return (f'<div class="carte {style}">{etoile}<div class="marche">{html.escape(r["nom"])}'
+    attributs = (f'data-marche="{html.escape(r["nom"])}" data-suivie="{int(suivie(r))}" '
+                 f'data-afaire="{int(priorite(r) <= 1)}"')
+    return (f'<div class="carte {style}" {attributs}>{etoile}<div class="marche">{html.escape(r["nom"])}'
             f'<span>{html.escape(r["regle"])}</span>{badge}</div>'
             f'<div class="statut">{html.escape(titre)}</div>'
             f'<div class="detail">{detail}</div></div>')
@@ -454,10 +456,11 @@ def ecrire_html(resultats, chemin, capital, risque, demo):
     autres = sorted((r for r in resultats if not suivie(r)), key=priorite)
     a_faire = sum(priorite(r) <= 1 for r in suivies)
     cartes = ([carte_html(r) for r in suivies]
-              + ['<h2>Autres méthodes (pour information)</h2>']
+              + ['<h2 id="autres">Autres méthodes (pour information)</h2>']
               + [carte_html(r) for r in autres])
 
     avert = '<p class="demo">MODE DÉMO — données simulées, aucun signal réel.</p>' if demo else ""
+    options_marches = "".join(f'<option>{html.escape(nom)}</option>' for _, nom, _ in MARCHES)
     maintenant = dt.datetime.now(ZoneInfo("Europe/Paris"))
     dates = [r["date_cloture"] for r in resultats if r["date_cloture"] is not None]
     cloture = f" · clôtures du {max(dates):%d/%m/%Y}" if dates else ""
@@ -482,12 +485,21 @@ h1{{font-size:20px;margin:4px 0}} .sous{{color:var(--doux);font-size:13px;margin
 .badge{{font-size:12px;font-weight:700;white-space:nowrap}} .badge.achat{{color:var(--achat)}} .badge.vente{{color:var(--vente)}} .badge.gris{{color:var(--doux)}}
 .demo{{background:#fff3cd;color:#664d03;padding:8px 10px;border-radius:6px}}
 .note{{color:var(--doux);font-size:12px;margin-top:18px}} .resume{{font-weight:600;margin:0 0 6px}}
+.filtres{{position:sticky;top:0;z-index:1;background:var(--fond);padding:8px 0;display:flex;gap:6px;flex-wrap:wrap;align-items:center}}
+.filtres button,.filtres select{{font:inherit;font-size:14px;color:var(--texte);background:var(--carte);border:1px solid var(--bord);border-radius:999px;padding:6px 12px}}
+.filtres button[aria-pressed="true"]{{background:var(--texte);color:var(--fond);border-color:var(--texte)}}
+.filtres select{{border-radius:8px;margin-left:auto}} .vide{{color:var(--doux);display:none}}
 .suivie{{font-size:12px;font-weight:700;color:var(--sortir);margin-bottom:2px}}
 h2{{font-size:15px;color:var(--doux);margin:22px 0 4px}}
 </style></head><body><main>
 <h1>Signaux du jour</h1>
 <p class="sous">Mis à jour le {maintenant:%d/%m/%Y à %H:%M}{cloture}{compte} · risque {risque} % par trade</p>
 {avert}<p class="resume">À faire aujourd'hui : {a_faire} consigne(s) sur les méthodes suivies (★).</p>
+<div class="filtres">
+<button data-filtre="suivies">★ Suivies</button><button data-filtre="afaire">À faire</button><button data-filtre="toutes">Toutes</button>
+<select id="marche" aria-label="Marché"><option value="">Tous les marchés</option>{options_marches}</select>
+</div>
+<p class="vide" id="vide">Aucune carte pour ce filtre.</p>
 {''.join(cartes)}
 <p class="note">Un signal validé a battu le hasard sur l'historique, en simulant exactement ces
 consignes : entrée à l'ouverture, stop-loss chez le courtier, frais compris. Cela ne garantit pas
@@ -495,7 +507,35 @@ l'avenir. Entrer plus tard que l'ouverture change le résultat. La taille max es
 stop touché coûte {risque} % du capital.<br><br>Les lignes « Démo » des règles non validées servent
 uniquement à les tester sur un compte démo : elles n'ont pas battu le hasard. Le suivi démo
 compte ce qu'aurait donné chaque règle depuis le {DEBUT_SUIVI:%d/%m/%Y}, en % de la position.</p>
-</main></body></html>"""
+</main>
+<script>
+(function () {{
+  var cartes = document.querySelectorAll(".carte");
+  var boutons = document.querySelectorAll(".filtres button");
+  var choixMarche = document.getElementById("marche");
+  var etat = {{filtre: "suivies", marche: ""}};
+  try {{ etat = Object.assign(etat, JSON.parse(localStorage.getItem("filtres") || "{{}}")); }} catch (e) {{}}
+  function appliquer() {{
+    var visibles = 0, autres = 0;
+    cartes.forEach(function (c) {{
+      var ok = (etat.filtre === "toutes" || (etat.filtre === "suivies" && c.dataset.suivie === "1")
+                || (etat.filtre === "afaire" && c.dataset.afaire === "1"))
+               && (!etat.marche || c.dataset.marche === etat.marche);
+      c.style.display = ok ? "" : "none";
+      if (ok) {{ visibles++; if (c.dataset.suivie === "0") autres++; }}
+    }});
+    document.getElementById("autres").style.display = autres ? "" : "none";
+    document.getElementById("vide").style.display = visibles ? "none" : "block";
+    boutons.forEach(function (b) {{ b.setAttribute("aria-pressed", String(b.dataset.filtre === etat.filtre)); }});
+    choixMarche.value = etat.marche;
+    try {{ localStorage.setItem("filtres", JSON.stringify(etat)); }} catch (e) {{}}
+  }}
+  boutons.forEach(function (b) {{ b.addEventListener("click", function () {{ etat.filtre = b.dataset.filtre; appliquer(); }}); }});
+  choixMarche.addEventListener("change", function () {{ etat.marche = choixMarche.value; appliquer(); }});
+  appliquer();
+}})();
+</script>
+</body></html>"""
     with open(chemin, "w", encoding="utf-8") as f:
         f.write(page)
 
