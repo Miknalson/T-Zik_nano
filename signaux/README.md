@@ -40,6 +40,22 @@ Seules les règles validées donnent une consigne. Consulte la page le matin.
 - Le test historique suppose une entrée au prix d'ouverture. Entrer des heures plus tard
   (par exemple sur le forex ou les matières premières, qui rouvrent la nuit) change le résultat.
 
+## Notifications sur le téléphone
+
+Chaque matin vers 7 h 15 (6 h 15 l'hiver), une notification arrive dans l'app **ntfy**
+seulement s'il y a une action à faire sur une **méthode suivie** (★ sur la page) :
+ACHÈTE / VENDS (avec prix, stop-loss et taille), SORS, ou stop touché.
+
+| Marché | Méthode suivie |
+|---|---|
+| Bitcoin, Ethereum, XRP | Cassure 20 jours |
+| S&P 500 | Retour à la moyenne (RSI 2) |
+
+Ces méthodes ont été fixées le 27/09/2026 et ne doivent pas changer pendant le test.
+Le canal ntfy est dans le secret GitHub `NTFY_TOPIC`. Pour vérifier que tout marche :
+onglet Actions → « Signaux quotidiens » → Run workflow → cocher « Envoyer aussi une
+notification de test ».
+
 ## Tester sur compte démo (Libertex)
 
 Chaque carte affiche l'orientation de la règle (↑ HAUSSE, ↓ BAISSE, → NEUTRE). Les règles
