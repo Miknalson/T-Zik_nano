@@ -36,12 +36,12 @@ MARCHES = [
     ("GBPUSD=X", "GBP/USD", "forex"),
 ]
 
-# Coûts par trade en fraction du nominal. Crypto : mesuré sur Libertex (commission
-# 0,10 % à l'ouverture + « ajustement de la marge » 0,14 %). Le reste et le
-# financement overnight sont des valeurs prudentes de CFD grand public, à
-# remplacer quand les coûts Libertex seront relevés.
+# Coûts en fraction du nominal. Crypto : mesuré sur Libertex (commission 0,10 %
+# à l'ouverture + « ajustement de la marge » 0,14 % ; swap 0,05 € pour une nuit
+# sur 400 € d'ETHUSD acheteur). Le reste : valeurs prudentes de CFD grand public,
+# à remplacer quand les coûts Libertex seront relevés.
 FRAIS = {
-    "crypto":  {"aller_retour": 0.0025, "financement_jour": 0.0005},
+    "crypto":  {"aller_retour": 0.0025, "financement_jour": 0.000125},
     "matiere": {"aller_retour": 0.003,  "financement_jour": 0.0002},
     "indice":  {"aller_retour": 0.0005, "financement_jour": 0.0002},
     "forex":   {"aller_retour": 0.0002, "financement_jour": 0.0001},
