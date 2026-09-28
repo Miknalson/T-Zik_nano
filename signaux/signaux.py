@@ -165,7 +165,7 @@ def executer(df, voulu, frais, decalages=()):
     """
     o, h, l, c = (df[k].to_numpy(float) for k in ("Open", "High", "Low", "Close"))
     a = atr(df).to_numpy(float)
-    jours = df.index.to_series().diff().dt.days.fillna(1).to_numpy(float)
+    jours = (df.index.to_series().diff().dt.total_seconds() / 86400).fillna(1).to_numpy(float)
     v0 = voulu.to_numpy(float)
     V = np.vstack([v0] + [np.roll(v0, int(k)) for k in decalages])
     nb, n = V.shape
