@@ -421,6 +421,8 @@ def afficher_console(resultats, nb_tests):
             print(f"{'':<45}{ligne}")
     print(f"\n{len(valides)} règle(s) validée(s) sur {nb_tests} testées. "
           f"Par pur hasard, on en attendrait environ {nb_tests * P_MAX:.1f}.")
+    clotures = {r["ticker"]: r["date_cloture"] for r in resultats if r["date_cloture"] is not None}
+    print("Dernières clôtures : " + ", ".join(f"{t} {d:%d/%m}" for t, d in clotures.items()))
 
 
 def priorite(r):
