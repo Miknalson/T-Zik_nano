@@ -310,6 +310,45 @@ def telecharger(ticker, annees, essais=3):
     return df
 
 
+def jours_crypto_manquants(df, aujourd_hui):
+    """Journées complètes absentes entre la dernière barre publiée et hier (UTC)."""
+    complets = df.index[df.index < aujourd_hui]
+    if len(complets) == 0:
+        return []
+    return list(pd.date_range(complets[-1] + pd.Timedelta(days=1), aujourd_hui - pd.Timedelta(days=1)))
+
+
+def barres_journalieres(horaire, jours):
+    """Agrège des barres horaires UTC en barres journalières, pour les journées entièrement couvertes."""
+    horaire = horaire.copy()
+    horaire.index = pd.to_datetime(horaire.index)
+    if horaire.index.tz is not None:
+        horaire.index = horaire.index.tz_convert("UTC").tz_localize(None)
+    lignes = {}
+    for jour in jours:
+        seance = horaire[(horaire.index >= jour) & (horaire.index < jour + pd.Timedelta(days=1))]
+        if len(seance) < 20:  # journée incomplète : mieux vaut attendre que Yahoo la publie
+            continue
+        lignes[jour] = {"Open": seance["Open"].iloc[0], "High": seance["High"].max(),
+                        "Low": seance["Low"].min(), "Close": seance["Close"].iloc[-1]}
+    return pd.DataFrame.from_dict(lignes, orient="index", columns=["Open", "High", "Low", "Close"])
+
+
+def completer_crypto(ticker, df):
+    """Yahoo publie parfois la journée crypto d'hier avec des heures de retard (le 27/09/2026 manquait
+    encore à 8 h) ; on la reconstitue alors à partir des barres horaires, publiées, elles, en continu."""
+    import yfinance as yf
+    aujourd_hui = pd.Timestamp(dt.datetime.now(dt.timezone.utc).date())
+    manquants = jours_crypto_manquants(df, aujourd_hui)
+    if not manquants:
+        return df
+    horaire = yf.download(ticker, period="7d", interval="1h", auto_adjust=True, progress=False)
+    if isinstance(horaire.columns, pd.MultiIndex):
+        horaire.columns = horaire.columns.get_level_values(0)
+    ajout = barres_journalieres(horaire[["Open", "High", "Low", "Close"]].dropna(), manquants)
+    return pd.concat([df, ajout]).sort_index()
+
+
 def simuler(ticker, jours=2500):
     """Marche aléatoire sans aucun avantage exploitable : sert de test à vide."""
     rng = np.random.default_rng(abs(hash(ticker)) % 2**32)
@@ -545,8 +584,14 @@ compte ce qu'aurait donné chaque règle depuis le {DEBUT_SUIVI:%d/%m/%Y}, en % 
         f.write(page)
 
 
+def cle(r):
+    return (f"{r['date_cloture']:%Y-%m-%d}", r["ticker"], r["regle"])
+
+
 def journaliser(resultats, chemin):
+    """Ajoute les clôtures pas encore journalisées et renvoie leurs clés."""
     nouveau = not os.path.exists(chemin)
+    ajoutees = set()
     deja = set()
     if not nouveau:
         with open(chemin, newline="", encoding="utf-8") as f:
@@ -556,8 +601,9 @@ def journaliser(resultats, chemin):
         if nouveau:
             w.writerow(["date_execution", "date_cloture", "ticker", "regle", "valide", "signal", "cloture", "stop"])
         for r in resultats:
-            if r["erreur"] or (f"{r['date_cloture']:%Y-%m-%d}", r["ticker"], r["regle"]) in deja:
+            if r["erreur"] or cle(r) in deja:
                 continue
+            ajoutees.add(cle(r))
             c = r["conseil"]
             stop = {"ENTRER": c["stop_estime"], "INVERSER": c["stop_estime"],
                     "EN COURS": c["stop_position"]}.get(c["action"])
@@ -565,6 +611,7 @@ def journaliser(resultats, chemin):
                         r["ticker"], r["regle"], int(r["eval"]["valide"]),
                         f"{c['action']} {SENS.get(c['sens'], '')}".strip(),
                         f"{c['cloture']:.6g}", f"{stop:.6g}" if stop is not None else ""])
+    return ajoutees
 
 
 MULTIPLICATEUR = 2  # plafond européen sur la crypto ; le montant investi reste ≫ la perte au stop
@@ -640,6 +687,8 @@ def analyser(demo, annees, capital, risque):
         try:
             df = simuler(ticker) if demo else telecharger(ticker, annees)
             brut = df.index[-3:]
+            if classe == "crypto" and not demo:
+                df = completer_crypto(ticker, df)
             df = seances_terminees(df, classe)
             if len(df) < BARRES_MIN:
                 raise ValueError(f"historique trop court ({len(df)} jours)")
@@ -682,11 +731,14 @@ def main():
     rapport = args.sortie
     os.makedirs(os.path.dirname(os.path.abspath(rapport)), exist_ok=True)
     ecrire_html(resultats, rapport, args.capital, args.risque, args.demo)
+    nouvelles = set()
     if not args.demo:
-        journaliser(resultats, os.path.join(DOSSIER, "journal_signaux.csv"))
+        nouvelles = journaliser(resultats, os.path.join(DOSSIER, "journal_signaux.csv"))
     print(f"Rapport pour le téléphone : {rapport}")
 
-    messages = [] if args.demo else notifications(resultats)
+    # Plusieurs passages par matin : seule une clôture pas encore journalisée déclenche
+    # une notification, pour ne jamais envoyer deux fois la même consigne.
+    messages = notifications([r for r in resultats if not r["erreur"] and cle(r) in nouvelles])
     if args.notif_test:
         exemple = {"sens": 1, "nominal": 150.0, "stop_pct": 0.066, "stop_estime": 81745, "cloture": 84915}
         messages.insert(0, {"title": "EXEMPLE — ne passe pas cet ordre",

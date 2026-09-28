@@ -2,7 +2,11 @@ name: Signaux quotidiens
 
 on:
   schedule:
-    - cron: "17 5 * * *"    # 7h17 à Paris l'été, 6h17 l'hiver : notification au réveil
+    # 7h17, 7h47 et 8h17 à Paris l'été (une heure plus tôt l'hiver). GitHub saute parfois un
+    # passage programmé ; le journal garantit qu'une consigne n'est notifiée qu'une fois.
+    - cron: "17 5 * * *"
+    - cron: "47 5 * * *"
+    - cron: "17 6 * * *"
   workflow_dispatch:
     inputs:
       test_notification:

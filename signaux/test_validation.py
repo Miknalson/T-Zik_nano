@@ -168,6 +168,37 @@ def test_methodes_suivies_existent():
     assert set(s.NOM_LIBERTEX) == set(s.METHODE_SUIVIE)
 
 
+def test_journee_crypto_manquante_reconstituee_depuis_les_barres_horaires():
+    quotidien = pd.DataFrame({"Open": [1.0, 2.0], "High": [1.0, 2.0], "Low": [1.0, 2.0], "Close": [1.0, 2.0]},
+                             index=pd.to_datetime(["2026-09-25", "2026-09-26"]))
+    aujourd_hui = pd.Timestamp("2026-09-28")
+    manquants = s.jours_crypto_manquants(quotidien, aujourd_hui)
+    assert manquants == [pd.Timestamp("2026-09-27")]
+
+    heures = pd.date_range("2026-09-27 00:00", "2026-09-28 05:00", freq="h", tz="UTC")
+    prix = np.arange(len(heures), dtype=float) + 100
+    horaire = pd.DataFrame({"Open": prix, "High": prix + 5, "Low": prix - 5, "Close": prix + 1}, index=heures)
+    ajout = s.barres_journalieres(horaire, manquants + [aujourd_hui])
+    assert list(ajout.index) == [pd.Timestamp("2026-09-27")]  # le 28, incomplet, est laissé de côté
+    jour = ajout.iloc[0]
+    assert (jour["Open"], jour["High"], jour["Low"], jour["Close"]) == (100, 128, 95, 124)
+
+
+def test_rien_a_reconstituer_quand_hier_est_publie():
+    quotidien = pd.DataFrame({"Close": [1.0, 2.0]}, index=pd.to_datetime(["2026-09-26", "2026-09-27"]))
+    assert s.jours_crypto_manquants(quotidien, pd.Timestamp("2026-09-28")) == []
+
+
+def test_journal_renvoie_seulement_les_nouvelles_clotures():
+    import tempfile, os
+    r = {"erreur": None, "date_cloture": pd.Timestamp("2026-09-27"), "ticker": "BTC-USD",
+         "regle": "Cassure 20 jours", "eval": {"valide": False},
+         "conseil": {"action": "ENTRER", "sens": 1, "cloture": 1.0, "stop_estime": 0.9, "stop_position": 0}}
+    chemin = os.path.join(tempfile.mkdtemp(), "journal.csv")
+    assert s.journaliser([r], chemin) == {("2026-09-27", "BTC-USD", "Cassure 20 jours")}
+    assert s.journaliser([r], chemin) == set()  # 2e passage du matin : pas de nouvelle notification
+
+
 def test_conseil_entrer_sur_nouveau_signal():
     df = marche_plat()
     voulu = signal_achat_depuis(df, len(df) - 1)
