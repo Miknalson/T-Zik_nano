@@ -423,6 +423,9 @@ def afficher_console(resultats, nb_tests):
           f"Par pur hasard, on en attendrait environ {nb_tests * P_MAX:.1f}.")
     clotures = {r["ticker"]: r["date_cloture"] for r in resultats if r["date_cloture"] is not None}
     print("Dernières clôtures : " + ", ".join(f"{t} {d:%d/%m}" for t, d in clotures.items()))
+    bruts = {r["ticker"]: r.get("brut") for r in resultats if r.get("brut") is not None}
+    print("Dates brutes Yahoo : " + " | ".join(
+        f"{t} " + ",".join(f"{d:%d/%m %H:%M}" for d in b) for t, b in bruts.items()))
 
 
 def priorite(r):
@@ -636,6 +639,7 @@ def analyser(demo, annees, capital, risque):
     for ticker, nom, classe in MARCHES:
         try:
             df = simuler(ticker) if demo else telecharger(ticker, annees)
+            brut = df.index[-3:]
             df = seances_terminees(df, classe)
             if len(df) < BARRES_MIN:
                 raise ValueError(f"historique trop court ({len(df)} jours)")
@@ -651,6 +655,7 @@ def analyser(demo, annees, capital, risque):
                 base["conseil"] = conseil_du_jour(df, voulu, base["eval"]["execution"], capital, risque)
                 base["suivi"] = suivi_depuis(df, base["eval"]["execution"], FRAIS[classe])
                 base["date_cloture"] = df.index[-1]
+                base["brut"] = brut
             resultats.append(base)
     return resultats
 
