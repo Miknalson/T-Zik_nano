@@ -11,7 +11,7 @@ def main():
     lignes, valides, testees = [], 0, 0
     for ticker, nom, classe in s.MARCHES:
         try:
-            df = s.telecharger(ticker, 15)
+            df = s.telecharger(ticker, 10)
             if classe == "crypto":
                 df = s.completer_crypto(ticker, df)
             df = s.seances_terminees(df, classe)
