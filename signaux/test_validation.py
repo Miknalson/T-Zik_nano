@@ -88,6 +88,14 @@ def test_gap_sous_le_stop_execute_a_l_ouverture():
     assert x["operations"][1] == (27, "stop", 1.0, 95.0)
 
 
+def test_entree_en_cours_reprend_le_lendemain_du_stop():
+    df = marche_qui_monte_a_103()
+    df.iloc[27, df.columns.get_loc("Low")] = 90.0
+    x = s.executer(df, signal_achat_depuis(df, 24), SANS_FRAIS, en_cours=True)
+    assert x["operations"][:3] == [(25, "entree", 1.0, 103.0), (27, "stop", 1.0, 99.0),
+                                   (28, "entree", 1.0, 103.0)]
+
+
 def test_sortie_a_l_ouverture_quand_le_signal_s_arrete():
     df = marche_plat()
     voulu = signal_achat_depuis(df, 24)

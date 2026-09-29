@@ -149,7 +149,7 @@ def suivie(r):
 
 
 # ------------------------------------------------------------------- évaluation
-def executer(df, voulu, frais, decalages=()):
+def executer(df, voulu, frais, decalages=(), en_cours=False):
     """Rejoue les trades exactement comme tu les passerais.
 
     - entrée à l'ouverture de la séance qui suit un NOUVEAU signal ;
@@ -157,7 +157,9 @@ def executer(df, voulu, frais, decalages=()):
       d'entrée, déclenché dans la séance (au prix d'ouverture si le marché
       ouvre déjà au-delà du stop) ;
     - sortie à l'ouverture qui suit la fin du signal ;
-    - après un stop, pas de nouvelle entrée avant un nouveau signal.
+    - après un stop, pas de nouvelle entrée avant un nouveau signal ;
+      avec `en_cours`, on entre dès qu'on est à plat et que la règle est en
+      position, même sans nouveau signal (y compris le lendemain d'un stop).
 
     Les versions décalées dans le temps (`decalages`) passent par la même
     mécanique : seul le moment des signaux change, ce qui sert de référence
@@ -185,7 +187,7 @@ def executer(df, voulu, frais, decalages=()):
             operations.append((t, "sortie", sens[0], o[t]))
         sens[sortie] = 0
 
-        entre = (sens == 0) & (prec != 0) & (prec != avant) & (not np.isnan(a[t - 1]))
+        entre = (sens == 0) & (prec != 0) & ((prec != avant) | en_cours) & (not np.isnan(a[t - 1]))
         sens[entre] = prec[entre]
         stop[entre] = o[t] - sens[entre] * K_STOP * a[t - 1]
         ret[entre, t] -= demi
@@ -209,10 +211,10 @@ def executer(df, voulu, frais, decalages=()):
             "operations": operations, "sens": float(sens[0]), "stop": float(stop[0])}
 
 
-def evaluer(df, voulu, frais, nb_decalages=NB_DECALAGES):
+def evaluer(df, voulu, frais, nb_decalages=NB_DECALAGES, en_cours=False):
     n = len(df)
     decalages = np.unique(np.linspace(DECALAGE_MIN, n - DECALAGE_MIN, nb_decalages).astype(int))
-    x = executer(df, voulu, frais, decalages)
+    x = executer(df, voulu, frais, decalages, en_cours)
     net = x["net"]
     pval = (1 + np.sum(x["hasard"] >= net.sum() - 1e-12)) / (1 + len(x["hasard"]))
     annees = max((df.index[-1] - df.index[0]).days / 365.25, 1e-9)
