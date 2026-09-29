@@ -226,6 +226,23 @@ def test_conseil_en_cours_propose_d_entrer():
     assert "N'entre pas en cours de route" in s.entrer_en_cours(c)
 
 
+def test_carte_suivie_en_cours_donne_l_ordre_libertex():
+    r = resultat("BTC-USD", "Cassure 20 jours", "EN COURS", sens=1, position_sens=1)
+    r["conseil"].update({"depuis": pd.Timestamp("2026-09-22"), "stop_position": 81745.0})
+    titre, lignes, style = s.consigne(r)
+    assert titre == "Tendance ACHAT en cours" and style == "achat"
+    assert lignes[0] == "Déjà dedans ? Ne touche à rien (stop à 81 745 si tu es entré le 22/09)."
+    assert lignes[1:4] == ["Pas dedans ? Tu peux entrer avec cet ordre :", "Instrument : BTCUSD",
+                           "Direction : Acheter"]
+
+
+def test_carte_non_suivie_sans_consigne():
+    r = resultat("GC=F", "Cassure 20 jours", "INVERSER", sens=-1, position_sens=1)
+    r["eval"], r["suivi"] = {"valide": False, "raisons": ["pas mieux que le hasard"]}, None
+    assert s.consigne(r) == ("Pas une de tes méthodes",
+                             ["N'agis pas dessus : elle n'est là que pour information."], "gris")
+
+
 def test_conseil_rentre_le_lendemain_d_un_stop_en_mode_en_cours():
     df = marche_qui_monte_a_103()
     df.iloc[-1, df.columns.get_loc("Low")] = 90.0  # stop touché à la dernière séance

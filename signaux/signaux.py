@@ -432,32 +432,46 @@ def entrer_en_cours(c):
             f"stop-loss à {prix(c['stop_estime'])} ({c['stop_pct']:.1%}), pas de take-profit.")
 
 
-def ligne_demo(c):
-    """Consigne en une ligne, pour tester une règle non validée sur le compte démo."""
-    if c["action"] in ("ENTRER", "INVERSER"):
-        verbe = "ENTRER en" if c["action"] == "ENTRER" else "INVERSER →"
-        return (f"Démo : {verbe} {SENS[c['sens']]} à l'ouverture, stop-loss à {c['stop_pct']:.1%}, "
-                f"taille max {eur(c['nominal'])}.")
+def consigne_suivie(r):
+    """Carte d'une méthode suivie, en clair et avec les cases de l'ordre Libertex."""
+    c = r["conseil"]
+    instrument = NOM_LIBERTEX.get(r["ticker"], r["nom"])
+    ticket = ticket_libertex(instrument, c).split("\n")
+    fermer = f"Ferme ta position {SENS.get(c['position_sens'], '')} : {FERMER.format(nom=instrument)}"
+    style = {1: "achat", -1: "vente", 0: "gris"}[c["sens"]]
+    if c["action"] == "ENTRER":
+        titre = f"{'ACHÈTE' if c['sens'] > 0 else 'VENDS'} à l'ouverture"
+        if c["apres_stop"]:
+            ticket = ["Ton stop a été touché, la tendance continue : on rentre."] + ticket
+        return titre, ticket, style
+    if c["action"] == "INVERSER":
+        return (f"FERME puis {'ACHÈTE' if c['sens'] > 0 else 'VENDS'}",
+                [f"1) {fermer}", "2) Nouvel ordre :"] + ticket, style)
     if c["action"] == "SORTIR":
-        return "Démo : SORTIR à l'ouverture, si tu as pris cette position."
+        return "FERME ta position", [fermer], "sortir"
     if c["action"] == "EN COURS":
-        return (f"Démo : {SENS[c['sens']]} en cours depuis le {c['depuis']:%d/%m/%Y}, "
-                f"stop-loss à {prix(c['stop_position'])}. {entrer_en_cours(c)}")
+        lignes = [f"Déjà dedans ? Ne touche à rien (stop à {prix(c['stop_position'])} si tu es entré le "
+                  f"{c['depuis']:%d/%m})." if c["depuis"] is not None else "Déjà dedans ? Ne touche à rien."]
+        if c["en_cours"]:
+            lignes += ["Pas dedans ? Tu peux entrer avec cet ordre :"] + ticket
+        return f"Tendance {SENS[c['sens']]} en cours", lignes, style
     if c["action"] == "STOP TOUCHÉ":
-        return "Démo : stop touché, attends le prochain ENTRER."
-    return "Démo : rien à faire."
+        return "Stop touché", ["Ta position a été fermée par le stop. Rien à faire."], "gris"
+    return "Rien à faire", ["Pas de tendance en ce moment. Attends la notification."], "gris"
 
 
 def consigne(r):
     """Renvoie (titre, lignes de détail, style) pour une règle et un marché."""
     if r["erreur"]:
         return "Données indisponibles", [r["erreur"]], "gris"
+    if suivie(r):
+        return consigne_suivie(r)
     e, c, s = r["eval"], r["conseil"], r["suivi"]
+    if not e["valide"]:
+        return "Pas une de tes méthodes", ["N'agis pas dessus : elle n'est là que pour information."], "gris"
     suivi = (f"Suivi démo depuis le {DEBUT_SUIVI:%d/%m} : {s['trades']} trade(s), "
              f"résultat {s['resultat']:+.1%}" if s["commence"]
              else f"Suivi démo : commence le {DEBUT_SUIVI:%d/%m/%Y}")
-    if not e["valide"]:
-        return "Pas de signal fiable", [", ".join(e["raisons"]), ligne_demo(c), suivi], "gris"
 
     titre, lignes = instructions(c)
     historique = f"Historique : {e['rendement_annuel']:+.1%}/an, {e['nb_trades']} trades, p = {e['p']:.3f}"
@@ -489,7 +503,7 @@ def priorite(r):
     """Les cartes qui demandent d'agir aujourd'hui passent en tête de page."""
     if r["erreur"]:
         return 5
-    valide, action = r["eval"]["valide"], r["conseil"]["action"]
+    valide, action = r["eval"]["valide"] or suivie(r), r["conseil"]["action"]
     if action in ("ENTRER", "INVERSER", "SORTIR"):
         return 0 if valide else 1
     if action == "EN COURS":
@@ -505,8 +519,7 @@ def carte_html(r):
         texte, couleur = ORIENTATION[r["conseil"]["orientation"]]
         badge = f'<b class="badge {couleur}">{texte}</b>'
     etoile = '<div class="suivie">★ Méthode suivie</div>' if suivie(r) else ""
-    attributs = (f'data-marche="{html.escape(r["nom"])}" data-suivie="{int(suivie(r))}" '
-                 f'data-afaire="{int(priorite(r) <= 1)}"')
+    attributs = f'data-marche="{html.escape(r["nom"])}" data-suivie="{int(suivie(r))}"'
     return (f'<div class="carte {style}" {attributs}>{etoile}<div class="marche">{html.escape(r["nom"])}'
             f'<span>{html.escape(r["regle"])}</span>{badge}</div>'
             f'<div class="statut">{html.escape(titre)}</div>'
@@ -516,9 +529,15 @@ def carte_html(r):
 def ecrire_html(resultats, chemin, capital, risque, demo):
     suivies = sorted((r for r in resultats if suivie(r)), key=priorite)
     autres = sorted((r for r in resultats if not suivie(r)), key=priorite)
-    a_faire = sum(priorite(r) <= 1 for r in suivies)
+    a_faire = [r["nom"] for r in suivies if priorite(r) == 0]
+    possibles = [r["nom"] for r in suivies
+                 if not r["erreur"] and r["conseil"]["action"] == "EN COURS" and r["conseil"]["en_cours"]]
+    resume = (f"À faire aujourd'hui : {', '.join(a_faire)}." if a_faire
+              else "Rien d'obligatoire aujourd'hui.")
+    if possibles:
+        resume += f" Si tu n'es pas dedans, tu peux entrer sur : {', '.join(possibles)}."
     cartes = ([carte_html(r) for r in suivies]
-              + ['<h2 id="autres">Autres méthodes (pour information)</h2>']
+              + ['<h2 id="autres">Pas tes méthodes : n\'agis pas dessus</h2>']
               + [carte_html(r) for r in autres])
 
     avert = '<p class="demo">MODE DÉMO — données simulées, aucun signal réel.</p>' if demo else ""
@@ -556,19 +575,17 @@ h2{{font-size:15px;color:var(--doux);margin:22px 0 4px}}
 </style></head><body><main>
 <h1>Signaux du jour</h1>
 <p class="sous">Mis à jour le {maintenant:%d/%m/%Y à %H:%M}{cloture}{compte} · risque {risque} % par trade</p>
-{avert}<p class="resume">À faire aujourd'hui : {a_faire} consigne(s) sur les méthodes suivies (★).</p>
+{avert}<p class="resume">{html.escape(resume)}</p>
 <div class="filtres">
-<button data-filtre="suivies">★ Suivies</button><button data-filtre="afaire">À faire</button><button data-filtre="toutes">Toutes</button>
+<button data-filtre="suivies">★ Mes méthodes</button><button data-filtre="toutes">Toutes</button>
 <select id="marche" aria-label="Marché"><option value="">Tous les marchés</option>{options_marches}</select>
 </div>
 <p class="vide" id="vide">Aucune carte pour ce filtre.</p>
 {''.join(cartes)}
-<p class="note">Un signal validé a battu le hasard sur l'historique, en simulant exactement ces
-consignes : entrée à l'ouverture, stop-loss chez le courtier, frais compris. Cela ne garantit pas
-l'avenir. Entrer plus tard que l'ouverture change le résultat. La taille max est calculée pour qu'un
-stop touché coûte {risque} % du capital.<br><br>Les lignes « Démo » des règles non validées servent
-uniquement à les tester sur un compte démo : elles n'ont pas battu le hasard. Le suivi démo
-compte ce qu'aurait donné chaque règle depuis le {DEBUT_SUIVI:%d/%m/%Y}, en % de la position.</p>
+<p class="note">Recopie les cases telles quelles dans l'écran d'ordre Libertex. Si le prix a bougé
+depuis le prix de référence, garde le même écart en % pour le stop loss. Un stop touché coûte
+environ {risque} % du capital. Aucune méthode n'a encore prouvé qu'elle bat le hasard :
+compte démo uniquement.</p>
 </main>
 <script>
 (function () {{
@@ -577,11 +594,11 @@ compte ce qu'aurait donné chaque règle depuis le {DEBUT_SUIVI:%d/%m/%Y}, en % 
   var choixMarche = document.getElementById("marche");
   var etat = {{filtre: "suivies", marche: ""}};
   try {{ etat = Object.assign(etat, JSON.parse(localStorage.getItem("filtres") || "{{}}")); }} catch (e) {{}}
+  if (etat.filtre !== "toutes") etat.filtre = "suivies";
   function appliquer() {{
     var visibles = 0, autres = 0;
     cartes.forEach(function (c) {{
-      var ok = (etat.filtre === "toutes" || (etat.filtre === "suivies" && c.dataset.suivie === "1")
-                || (etat.filtre === "afaire" && c.dataset.afaire === "1"))
+      var ok = (etat.filtre === "toutes" || c.dataset.suivie === "1")
                && (!etat.marche || c.dataset.marche === etat.marche);
       c.style.display = ok ? "" : "none";
       if (ok) {{ visibles++; if (c.dataset.suivie === "0") autres++; }}
