@@ -25,7 +25,7 @@ Seules les règles validées donnent une consigne. Consulte la page le matin.
 | Carte | Quoi faire |
 |---|---|
 | **ENTRER — ACHAT / VENTE** | Entre à l'ouverture de la prochaine séance. Pose aussitôt le stop-loss indiqué chez ton courtier. Pas de take-profit. |
-| **EN COURS** | Si tu es dedans : ne touche à rien. Si tu n'y es pas : n'entre pas en cours de route, attends le prochain ENTRER. |
+| **EN COURS** | Si tu es dedans : ne touche à rien. Si tu n'y es pas : méthode suivie (★), tu peux entrer à l'ouverture avec le montant et le stop-loss affichés ; autre méthode, attends le prochain ENTRER. |
 | **SORTIR** | Ferme la position à l'ouverture de la prochaine séance. |
 | **INVERSER** | Ferme la position et entre dans l'autre sens à l'ouverture, avec le nouveau stop. |
 | **STOP TOUCHÉ** | La position a été fermée par le stop. Attends le prochain ENTRER. |
@@ -53,6 +53,14 @@ stop loss), FERME, ou stop touché.
 | S&P 500 | Retour à la moyenne (RSI 2) |
 
 Ces méthodes ont été fixées le 27/09/2026 et ne doivent pas changer pendant le test.
+
+Depuis le 29/09/2026, ces méthodes permettent d'**entrer en cours de route** : si la carte
+dit EN COURS et que tu n'es pas dedans, entre à l'ouverture avec un stop-loss neuf (2 × ATR
+depuis ton prix d'entrée), indiqué sur la carte. Après un stop touché, si la tendance
+continue, la notification ACHÈTE/VENDS arrive le matin même pour rentrer. Test historique
+(`test_en_cours.py`) : résultat équivalent à l'attente d'un nouveau signal
+(Bitcoin +52 %/an contre +44 %, Ethereum +52 % contre +50 %, XRP +46 % contre +46 %,
+S&P 500 +1,9 % contre +1,7 %), toujours sans battre nettement le hasard.
 Le canal ntfy est dans le secret GitHub `NTFY_TOPIC`. Pour vérifier que tout marche :
 onglet Actions → « Signaux quotidiens » → Run workflow → cocher « Envoyer aussi une
 notification de test ».

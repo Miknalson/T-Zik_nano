@@ -129,6 +129,7 @@ def test_suivi_ignore_une_position_ouverte_avant_le_debut():
 
 def resultat(ticker, regle, action, sens=1, position_sens=0):
     conseil = {"action": action, "orientation": sens, "sens": sens, "position_sens": position_sens,
+               "en_cours": True, "apres_stop": False,
                "cloture": 84914.6, "stop_estime": 81745.2, "nominal": 150.7, "stop_pct": 0.0664}
     return {"ticker": ticker, "nom": "Bitcoin", "regle": regle, "erreur": None, "conseil": conseil}
 
@@ -205,6 +206,35 @@ def test_journal_renvoie_seulement_les_nouvelles_clotures():
     chemin = os.path.join(tempfile.mkdtemp(), "journal.csv")
     assert s.journaliser([r], chemin) == {("2026-09-27", "BTC-USD", "Cassure 20 jours")}
     assert s.journaliser([r], chemin) == set()  # 2e passage du matin : pas de nouvelle notification
+
+
+def test_notification_apres_un_stop():
+    r = resultat("BTC-USD", "Cassure 20 jours", "ENTRER")
+    r["conseil"]["apres_stop"] = True
+    [m] = s.notifications([r])
+    assert m["message"].startswith("Ton stop a été touché, la tendance continue : on rentre.\nInstrument : BTCUSD")
+
+
+def test_conseil_en_cours_propose_d_entrer():
+    df = marche_plat()
+    voulu = signal_achat_depuis(df, 20)
+    c = s.conseil_du_jour(df, voulu, s.executer(df, voulu, SANS_FRAIS), 1000, 1, en_cours=True)
+    assert c["action"] == "EN COURS"
+    assert s.entrer_en_cours(c) == ("Pas encore dedans ? Tu peux entrer en ACHAT à l'ouverture : "
+                                    "montant 125 € × 2, stop-loss à 96 (4.0%), pas de take-profit.")
+    c["en_cours"] = False
+    assert "N'entre pas en cours de route" in s.entrer_en_cours(c)
+
+
+def test_conseil_rentre_le_lendemain_d_un_stop_en_mode_en_cours():
+    df = marche_qui_monte_a_103()
+    df.iloc[-1, df.columns.get_loc("Low")] = 90.0  # stop touché à la dernière séance
+    voulu = signal_achat_depuis(df, 24)
+    x = s.executer(df, voulu, SANS_FRAIS, en_cours=True)
+    c = s.conseil_du_jour(df, voulu, x, 1000, 1, en_cours=True)
+    assert c["action"] == "ENTRER" and c["apres_stop"] and c["sens"] == 1
+    sans = s.conseil_du_jour(df, voulu, s.executer(df, voulu, SANS_FRAIS), 1000, 1)
+    assert sans["action"] == "STOP TOUCHÉ"
 
 
 def test_conseil_entrer_sur_nouveau_signal():

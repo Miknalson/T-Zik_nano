@@ -232,8 +232,12 @@ def evaluer(df, voulu, frais, nb_decalages=NB_DECALAGES, en_cours=False):
             "valide": not raisons, "raisons": raisons, "execution": x}
 
 
-def conseil_du_jour(df, voulu, execution, capital, risque_pct):
-    """Traduit l'état de la règle à la dernière clôture en consigne pour demain."""
+def conseil_du_jour(df, voulu, execution, capital, risque_pct, en_cours=False):
+    """Traduit l'état de la règle à la dernière clôture en consigne pour demain.
+
+    Avec `en_cours`, être à plat alors que la règle est en position donne ENTRER,
+    même sans nouveau signal (par exemple le lendemain d'un stop).
+    """
     v, v_prec = voulu.iloc[-1], voulu.iloc[-2]
     ops = execution["operations"]
     derniere = len(df) - 1
@@ -242,18 +246,21 @@ def conseil_du_jour(df, voulu, execution, capital, risque_pct):
     distance = K_STOP * float(atr(df).iloc[-1])
     nominal = capital * risque_pct / 100 * cloture / distance if distance > 0 else 0.0
     nouveau = v != 0 and v != v_prec
+    stop_du_jour = bool(ops) and ops[-1][0] == derniere and ops[-1][1] == "stop"
 
     if execution["sens"] != 0:
         action = "EN COURS" if v == execution["sens"] else ("INVERSER" if nouveau else "SORTIR")
-    elif nouveau:
+    elif nouveau or (en_cours and v != 0):
         action = "ENTRER"
-    elif ops and ops[-1][0] == derniere and ops[-1][1] == "stop":
+    elif stop_du_jour:
         action = "STOP TOUCHÉ"
     else:
         action = "RIEN"
 
     return {
         "action": action,
+        "en_cours": en_cours,
+        "apres_stop": action == "ENTRER" and stop_du_jour,
         "orientation": int(v),
         "sens": int(v) if action in ("ENTRER", "INVERSER") else int(execution["sens"]),
         "position_sens": int(execution["sens"]),
@@ -410,10 +417,19 @@ def instructions(c):
     if c["action"] == "EN COURS":
         return (f"EN COURS — {SENS[c['sens']]} depuis le {depuis}",
                 [f"Entrée à {prix(c['prix_entree'])}, stop-loss à {prix(c['stop_position'])}.",
-                 "Pas encore dedans ? N'entre pas en cours de route : attends le prochain ENTRER."])
+                 entrer_en_cours(c)])
     if c["action"] == "STOP TOUCHÉ":
         return "STOP TOUCHÉ", ["La position a été fermée par le stop-loss. Attends le prochain ENTRER."]
     return "Rien à faire", ["Pas de position, pas de nouveau signal."]
+
+
+def entrer_en_cours(c):
+    """Consigne pour qui n'est pas encore dans une position EN COURS."""
+    if not c["en_cours"]:
+        return "Pas encore dedans ? N'entre pas en cours de route : attends le prochain ENTRER."
+    return (f"Pas encore dedans ? Tu peux entrer en {SENS[c['sens']]} à l'ouverture : "
+            f"montant {eur(int(c['nominal'] / MULTIPLICATEUR))} × {MULTIPLICATEUR}, "
+            f"stop-loss à {prix(c['stop_estime'])} ({c['stop_pct']:.1%}), pas de take-profit.")
 
 
 def ligne_demo(c):
@@ -426,7 +442,7 @@ def ligne_demo(c):
         return "Démo : SORTIR à l'ouverture, si tu as pris cette position."
     if c["action"] == "EN COURS":
         return (f"Démo : {SENS[c['sens']]} en cours depuis le {c['depuis']:%d/%m/%Y}, "
-                f"stop-loss à {prix(c['stop_position'])}. N'entre pas en cours de route.")
+                f"stop-loss à {prix(c['stop_position'])}. {entrer_en_cours(c)}")
     if c["action"] == "STOP TOUCHÉ":
         return "Démo : stop touché, attends le prochain ENTRER."
     return "Démo : rien à faire."
@@ -646,6 +662,8 @@ def notifications(resultats):
             verbe = "ACHÈTE" if c["sens"] > 0 else "VENDS"
             instrument = NOM_LIBERTEX.get(r["ticker"], r["nom"])
             etapes = ticket_libertex(instrument, c) + "\nSortie : attends la notification FERME."
+            if c["apres_stop"]:
+                etapes = f"Ton stop a été touché, la tendance continue : on rentre.\n{etapes}"
             if c["action"] == "INVERSER":
                 etapes = (f"1) Ferme ta position {SENS[c['position_sens']]} : "
                           f"{FERMER.format(nom=NOM_LIBERTEX.get(r['ticker'], r['nom']))}\n2) Nouvel ordre :\n{etapes}")
@@ -702,8 +720,12 @@ def analyser(demo, annees, capital, risque):
                     "eval": None, "conseil": None, "suivi": None, "date_cloture": None}
             if df is not None:
                 voulu = regle(df)
-                base["eval"] = evaluer(df, voulu, FRAIS[classe])
-                base["conseil"] = conseil_du_jour(df, voulu, base["eval"]["execution"], capital, risque)
+                # Méthodes suivies : entrée permise en cours de route (testé le 29/09/2026,
+                # résultat historique équivalent à l'attente d'un nouveau signal).
+                en_cours = METHODE_SUIVIE.get(ticker) == nom_regle
+                base["eval"] = evaluer(df, voulu, FRAIS[classe], en_cours=en_cours)
+                base["conseil"] = conseil_du_jour(df, voulu, base["eval"]["execution"], capital, risque,
+                                                  en_cours)
                 base["suivi"] = suivi_depuis(df, base["eval"]["execution"], FRAIS[classe])
                 base["date_cloture"] = df.index[-1]
                 base["brut"] = brut
