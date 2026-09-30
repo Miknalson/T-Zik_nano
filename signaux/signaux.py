@@ -27,6 +27,9 @@ MARCHES = [
     ("BTC-USD", "Bitcoin", "crypto"),
     ("ETH-USD", "Ethereum", "crypto"),
     ("XRP-USD", "XRP", "crypto"),
+    ("DOGE-USD", "Dogecoin", "crypto"),
+    ("XLM-USD", "Stellar", "crypto"),
+    ("VET-USD", "VeChain", "crypto"),
     ("NG=F", "Gaz naturel", "matiere"),
     ("CL=F", "Pétrole WTI", "matiere"),
     ("GC=F", "Or", "matiere"),
@@ -136,10 +139,15 @@ REGLES = {
 # la plus probante parmi celles restées gagnantes sur les deux moitiés de
 # l'historique (frais Libertex). Les marchés sans candidate ne sont pas suivis.
 # Figé volontairement : changer de méthode au gré des résultats fausserait le test.
+# Ajoutés le 30/09/2026 (test_marches.py, règle d'ajout fixée avant le test : gagnant
+# sur les deux moitiés, au moins 30 trades) : Dogecoin, Stellar, VeChain.
 METHODE_SUIVIE = {
     "BTC-USD": "Cassure 20 jours",
     "ETH-USD": "Cassure 20 jours",
     "XRP-USD": "Cassure 20 jours",
+    "DOGE-USD": "Cassure 20 jours",
+    "XLM-USD": "Cassure 20 jours",
+    "VET-USD": "Cassure 20 jours",
     "^GSPC": "Retour à la moyenne (RSI 2)",
 }
 
@@ -651,7 +659,8 @@ def journaliser(resultats, chemin):
 
 MULTIPLICATEUR = 2  # plafond européen sur la crypto ; le montant investi reste ≫ la perte au stop
 # Nom de l'instrument tel qu'il apparaît dans Libertex.
-NOM_LIBERTEX = {"BTC-USD": "BTCUSD", "ETH-USD": "ETHUSD", "XRP-USD": "XRPUSD", "^GSPC": "US SPX 500 Cash"}
+NOM_LIBERTEX = {"BTC-USD": "BTCUSD", "ETH-USD": "ETHUSD", "XRP-USD": "XRPUSD", "DOGE-USD": "DOGEUSD",
+                "XLM-USD": "XLMUSD", "VET-USD": "VETUSD", "^GSPC": "US SPX 500 Cash"}
 FERMER = "onglet « Actif » → ta position {nom} → « Fermer »"
 
 
