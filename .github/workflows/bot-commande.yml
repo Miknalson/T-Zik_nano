@@ -15,6 +15,7 @@ on:
 
 permissions:
   contents: write
+  actions: write
 
 concurrency:
   group: bot
@@ -55,3 +56,10 @@ jobs:
           git commit -m "Bot : ${{ inputs.commande }}"
           git pull --rebase origin "$GITHUB_REF_NAME"
           git push origin HEAD:"$GITHUB_REF_NAME"
+
+      # Remet la page à jour tout de suite pour que la carte du bot affiche son nouvel état.
+      - name: Rafraîchir la page
+        if: always()
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh workflow run signaux.yml --ref "$GITHUB_REF_NAME"
