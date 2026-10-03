@@ -1,4 +1,4 @@
-name: Bot crypto (papier)
+name: Bot crypto Kraken
 
 on:
   schedule:
@@ -7,6 +7,11 @@ on:
     - cron: "7 0 * * *"
     - cron: "37 0 * * *"
   workflow_dispatch:
+    inputs:
+      verifier:
+        description: "Vérifier la clé Kraken (aucun ordre exécuté)"
+        type: boolean
+        default: false
 
 permissions:
   contents: write
@@ -32,17 +37,25 @@ jobs:
       - name: Tests du bot
         run: cd signaux && python test_bot.py
 
+      # Mode réel seulement si la variable de dépôt BOT_MODE vaut « reel » (réglée à la main
+      # dans GitHub). Sinon : papier, ou vérification si elle est demandée au lancement manuel.
       - name: Passe du jour
         env:
           NTFY_TOPIC: ${{ secrets.NTFY_TOPIC }}
-        run: python signaux/bot.py
+          KRAKEN_API_KEY: ${{ secrets.KRAKEN_API_KEY }}
+          KRAKEN_API_SECRET: ${{ secrets.KRAKEN_API_SECRET }}
+          MODE: ${{ inputs.verifier && 'verifier' || (vars.BOT_MODE == 'reel' && 'reel' || 'papier') }}
+          BUDGET: ${{ vars.BOT_BUDGET || '0' }}
+        run: python signaux/bot.py --mode "$MODE" --budget "$BUDGET"
 
       - name: Enregistrer le portefeuille
+        if: always()
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add signaux/bot_portefeuille.json signaux/bot_journal.csv
+          git add signaux/bot_reel.json signaux/bot_reel_journal.csv 2>/dev/null || true
           if git diff --cached --quiet; then exit 0; fi
-          git commit -m "Bot papier du $(date -u +%F)"
+          git commit -m "Bot du $(date -u +%F)"
           git pull --rebase origin "$GITHUB_REF_NAME"
           git push origin HEAD:"$GITHUB_REF_NAME"

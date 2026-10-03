@@ -84,6 +84,130 @@ def test_notifications():
     assert bot.notification(stop)["message"] == "Stop touché : vendu à 68 000 €\nRésultat : -4.29 €"
 
 
+def test_signature_kraken_exemple_de_la_documentation():
+    secret = "kQH5HW/8p1uGOVjbgWA7FunAmGO8lsSUXNsu3eow76sz84Q18fWxnyRzBHCd3pd5nE9qa99HAZtuZuj6F1huXg=="
+    donnees = {"nonce": "1616492376594", "ordertype": "limit", "pair": "XBTUSD", "price": "37500",
+               "type": "buy", "volume": "1.25"}
+    assert bot.signature("/0/private/AddOrder", donnees, secret) == (
+        "4/dpxb3iT4tp/ZCVEwSnEsLxx0bqyhLpdfOpc6fn7OR8+UClSV5n9E6aSS8MPtnRfp32bAb0nmbRn6H8ndwLUQ==")
+
+
+INFOS = {"XBTEUR": {"lot_decimals": 8, "pair_decimals": 1, "ordermin": "0.00005"}}
+
+
+class FauxCompte:
+    """Imite l'API privée Kraken : enregistre les appels, exécute les ordres au marché."""
+
+    def __init__(self, prix=117.0, refuser=()):
+        self.appels, self.ordres, self.prix, self.refuser = [], {}, prix, set(refuser)
+
+    def appel(self, methode, **donnees):
+        self.appels.append((methode, donnees))
+        if (methode, donnees.get("ordertype")) in self.refuser:
+            raise RuntimeError(f"{methode} : EOrder:Insufficient funds")
+        if methode == "AddOrder":
+            txid = f"O{len(self.ordres) + 1}"
+            vol = float(donnees["volume"])
+            if donnees["ordertype"] == "market":
+                cout = vol * self.prix
+                self.ordres[txid] = {"status": "closed", "vol_exec": donnees["volume"], "price": str(self.prix),
+                                     "cost": str(cout), "fee": str(cout * 0.004)}
+            else:
+                self.ordres[txid] = {"status": "open"}
+            return {"txid": [txid]}
+        if methode == "QueryOrders":
+            return {donnees["txid"]: self.ordres[donnees["txid"]]}
+        if methode == "CancelOrder":
+            self.ordres[donnees["txid"]]["status"] = "canceled"
+            return {"count": 1}
+        raise AssertionError(methode)
+
+
+def test_reel_achete_au_marche_puis_pose_un_vrai_stop():
+    df = marche_en_hausse()
+    compte = FauxCompte()
+    etat = bot.etat_initial(200.0)
+    [op] = bot.journee(etat, {"Bitcoin": (df, 117.0)}, "2026-02-10", bot.Reel(compte, INFOS, attente=0))
+    (m1, achat), (m2, _), (m3, stop) = compte.appels
+    assert (m1, m2, m3) == ("AddOrder", "QueryOrders", "AddOrder")
+    assert achat["type"] == "buy" and achat["ordertype"] == "market" and achat["oflags"] == "fciq"
+    assert "e" not in achat["volume"] and len(achat["volume"].split(".")[1]) == 8
+    assert stop["type"] == "sell" and stop["ordertype"] == "stop-loss" and stop["volume"] == achat["volume"]
+    assert stop["price"] == f"{op['stop']:.1f}"
+    position = etat["positions"]["Bitcoin"]
+    assert position["stop_txid"] == "O2"
+    vol = float(achat["volume"])
+    assert abs(etat["cash"] - (200 - vol * 117 * 1.004)) < 1e-9
+
+
+def test_reel_stop_execute_chez_kraken_puis_rachat():
+    df = marche_en_hausse()
+    compte = FauxCompte()
+    etat = bot.etat_initial(200.0)
+    courtier = bot.Reel(compte, INFOS, attente=0)
+    bot.journee(etat, {"Bitcoin": (df, 117.0)}, "2026-02-10", courtier)
+    vol = etat["positions"]["Bitcoin"]["quantite"]
+    compte.ordres["O2"] = {"status": "closed", "price": "110.0", "cost": str(vol * 110), "fee": str(vol * 110 * 0.004)}
+    vente, rachat = bot.journee(etat, {"Bitcoin": (df, 116.0)}, "2026-02-11", courtier)
+    assert vente["genre"] == "stop" and vente["prix"] == 110.0
+    assert rachat["genre"] == "achat" and etat["positions"]["Bitcoin"]["stop_txid"] == "O4"
+
+
+def test_reel_repose_le_stop_s_il_a_disparu():
+    df = marche_en_hausse()
+    compte = FauxCompte()
+    etat = bot.etat_initial(200.0)
+    courtier = bot.Reel(compte, INFOS, attente=0)
+    bot.journee(etat, {"Bitcoin": (df, 117.0)}, "2026-02-10", courtier)
+    compte.ordres["O2"]["status"] = "canceled"
+    assert bot.journee(etat, {"Bitcoin": (df, 118.0)}, "2026-02-11", courtier) == []
+    assert etat["positions"]["Bitcoin"]["stop_txid"] == "O3"
+    assert compte.appels[-1][1]["ordertype"] == "stop-loss"
+
+
+def test_reel_vente_refusee_remet_le_stop():
+    df = marche_en_hausse()
+    compte = FauxCompte()
+    etat = bot.etat_initial(200.0)
+    courtier = bot.Reel(compte, INFOS, attente=0)
+    bot.journee(etat, {"Bitcoin": (df, 117.0)}, "2026-02-10", courtier)
+    position = etat["positions"]["Bitcoin"]
+    compte.refuser.add(("AddOrder", "market"))
+    try:
+        courtier.vendre("Bitcoin", position, 116.0)
+        raise AssertionError("la vente aurait dû échouer")
+    except RuntimeError:
+        pass
+    assert compte.ordres["O2"]["status"] == "canceled" and position["stop_txid"] == "O3"
+
+
+def test_reel_achat_refuse_ne_change_rien():
+    df = marche_en_hausse()
+    compte = FauxCompte(refuser=[("AddOrder", "market")])
+    etat = bot.etat_initial(200.0)
+    assert bot.journee(etat, {"Bitcoin": (df, 117.0)}, "2026-02-10", bot.Reel(compte, INFOS, attente=0)) == []
+    assert etat["cash"] == 200.0 and etat["positions"] == {}
+
+
+def test_erreur_en_cours_de_route_garde_les_operations_deja_faites():
+    df = marche_en_hausse()
+    compte = FauxCompte()
+    etat = bot.etat_initial(1000.0)
+    courtier = bot.Reel(compte, {**INFOS, "ETHEUR": INFOS["XBTEUR"]}, attente=0)
+    bot.journee(etat, {"Bitcoin": (df, 117.0), "Ethereum": (df, 117.0)}, "2026-02-10", courtier)
+    vol = etat["positions"]["Bitcoin"]["quantite"]
+    stop_btc, stop_eth = etat["positions"]["Bitcoin"]["stop_txid"], etat["positions"]["Ethereum"]["stop_txid"]
+    compte.ordres[stop_btc] = {"status": "closed", "price": "110.0", "cost": str(vol * 110), "fee": "0"}
+    del compte.ordres[stop_eth]  # Kraken ne trouve plus l'ordre : erreur au 2e marché
+    operations = []
+    try:
+        bot.journee(etat, {"Bitcoin": (df, 117.0), "Ethereum": (df, 117.0)}, "2026-02-11", courtier, operations)
+        raise AssertionError("une erreur était attendue")
+    except KeyError:
+        pass
+    assert [op["genre"] for op in operations] == ["stop"] and "Bitcoin" not in etat["positions"]
+
+
 if __name__ == "__main__":
     for nom, f in list(globals().items()):
         if nom.startswith("test_"):

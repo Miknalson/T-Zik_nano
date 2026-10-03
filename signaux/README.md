@@ -130,5 +130,25 @@ parier sur la baisse (`test_spot.py` : la méthode reste gagnante en achat seul 
 - Mode papier : portefeuille fictif de 1 000 €, ordres simulés au prix Kraken avec 0,4 % de
   frais par ordre. État dans `bot_portefeuille.json`, opérations dans `bot_journal.csv`,
   résumé en haut de la page, notification « Bot : … » à chaque achat ou vente.
-- Argent réel : pas encore branché. Il faudra un compte Kraken et une clé d'API **sans droit
-  de retrait**, enregistrée dans les secrets GitHub (jamais dans le code ni dans un message).
+- Le mode papier tourne toujours, même quand l'argent réel est branché : il sert de référence.
+
+### Brancher l'argent réel
+
+1. **Clé d'API Kraken** (Kraken → Paramètres → API → créer une clé). Cocher seulement :
+   consulter les fonds, consulter les ordres ouverts et fermés, créer et modifier des ordres,
+   annuler des ordres. **Ne jamais cocher le retrait** : même volée, la clé ne pourrait pas
+   sortir l'argent du compte.
+2. **Secrets GitHub** (dépôt → Settings → Secrets and variables → Actions → New repository
+   secret) : `KRAKEN_API_KEY` (la clé) et `KRAKEN_API_SECRET` (la clé privée). Ne jamais les
+   copier ailleurs.
+3. **Vérification** : Actions → « Bot crypto Kraken » → Run workflow → cocher « Vérifier la clé
+   Kraken ». Kraken valide un achat et un stop par crypto **sans rien exécuter** ; le résultat
+   arrive en notification.
+4. **Mise en route** : même page, onglet **Variables** → `BOT_BUDGET` = euros confiés au bot
+   (ex. `100`) puis `BOT_MODE` = `reel`. Il faut au moins ce montant en euros sur Kraken.
+5. **Arrêt** : supprimer la variable `BOT_MODE`. Les positions déjà ouvertes restent chez
+   Kraken avec leur stop ; les fermer à la main si besoin.
+
+En réel, le stop est un vrai ordre stop-loss posé chez Kraken : il protège la position même
+entre deux passages du bot. État dans `bot_reel.json`, opérations dans `bot_reel_journal.csv`.
+En cas d'erreur, une notification « Bot : ERREUR (argent réel) » arrive.
