@@ -1,0 +1,24 @@
+name: Test accès plateformes crypto
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  tester:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Joindre les API publiques depuis GitHub
+        run: |
+          for u in \
+            "https://api.kraken.com/0/public/AssetPairs?pair=XBTEUR,ETHEUR,XRPEUR,XDGEUR,XLMEUR" \
+            "https://api.kraken.com/0/public/AssetPairs?pair=VETEUR" \
+            "https://api.binance.com/api/v3/ping" \
+            "https://testnet.binance.vision/api/v3/exchangeInfo?symbols=%5B%22BTCUSDT%22,%22ETHUSDT%22,%22XRPUSDT%22,%22DOGEUSDT%22,%22XLMUSDT%22,%22VETUSDT%22%5D" \
+            "https://api.bitvavo.com/v2/markets"; do
+            echo "== $u"
+            code=$(curl -s -m 20 -o r.txt -w "%{http_code}" "$u"); echo "HTTP $code"
+            head -c 600 r.txt; echo
+          done
