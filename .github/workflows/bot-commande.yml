@@ -1,4 +1,5 @@
 name: "🛑 Bot : arrêter ou reprendre"
+run-name: "🛑 ${{ inputs.commande }}"
 
 on:
   workflow_dispatch:
