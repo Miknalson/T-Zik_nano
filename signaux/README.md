@@ -146,8 +146,21 @@ parier sur la baisse (`test_spot.py` : la méthode reste gagnante en achat seul 
    arrive en notification.
 4. **Mise en route** : même page, onglet **Variables** → `BOT_BUDGET` = euros confiés au bot
    (ex. `100`) puis `BOT_MODE` = `reel`. Il faut au moins ce montant en euros sur Kraken.
-5. **Arrêt** : supprimer la variable `BOT_MODE`. Les positions déjà ouvertes restent chez
-   Kraken avec leur stop ; les fermer à la main si besoin.
+5. **Arrêt** : voir le bouton ci-dessous. Pour débrancher complètement l'argent réel,
+   supprimer la variable `BOT_MODE`.
+
+### Bouton d'arrêt
+
+Actions → « 🛑 Bot : arrêter ou reprendre » → Run workflow, puis choisir :
+
+- **Arrêter (garder les positions)** : plus aucun achat. Les positions gardent leur stop et
+  sont vendues normalement quand la tendance finit.
+- **Arrêter et tout vendre** : vend tout de suite toutes les positions (stops annulés chez
+  Kraken), puis plus aucun achat.
+- **Reprendre** : le bot recommence à acheter dès le passage de la nuit.
+
+L'état est dans `bot_arret.json` ; la carte du bot sur la page affiche « ⏸ ARRÊTÉ ».
+Une notification confirme chaque commande.
 
 En réel, le stop est un vrai ordre stop-loss posé chez Kraken : il protège la position même
 entre deux passages du bot. État dans `bot_reel.json`, opérations dans `bot_reel_journal.csv`.

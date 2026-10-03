@@ -558,10 +558,17 @@ def bloc_bot(chemin=os.path.join(DOSSIER, "bot_portefeuille.json")):
         etat = json.load(f)
     if not etat.get("maj"):
         return ""
+    chemin_arret = os.path.join(os.path.dirname(chemin), "bot_arret.json")
+    arrete = False
+    if os.path.exists(chemin_arret):
+        with open(chemin_arret, encoding="utf-8") as f:
+            arrete = json.load(f).get("arret", False)
     positions = [f"{nom} (stop {prix(p['stop'])} €)" for nom, p in etat["positions"].items()]
     lignes = [f"Valeur : {etat['valeur']:.2f} € (départ 1 000 €), dont {etat['cash']:.2f} € en liquide.",
               "Positions : " + (", ".join(positions) if positions else "aucune pour l'instant."),
-              f"Dernier passage : {dt.date.fromisoformat(etat['maj']):%d/%m/%Y}. Il agit seul, rien à faire."]
+              f"Dernier passage : {dt.date.fromisoformat(etat['maj']):%d/%m/%Y}. "
+              + ("⏸ ARRÊTÉ : plus aucun achat (bouton « Reprendre » dans GitHub Actions)." if arrete
+                 else "Il agit seul, rien à faire.")]
     detail = "<br>".join(html.escape(l) for l in lignes)
     return (f'<div class="carte gris" data-marche="" data-suivie="1"><div class="marche">🤖 Bot Kraken'
             f'<span>argent fictif</span></div><div class="detail">{detail}</div></div>')

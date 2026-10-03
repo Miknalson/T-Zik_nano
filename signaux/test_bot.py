@@ -84,6 +84,42 @@ def test_notifications():
     assert bot.notification(stop)["message"] == "Stop touché : vendu à 68 000 €\nRésultat : -4.29 €"
 
 
+def test_a_l_arret_le_bot_n_achete_plus_mais_gere_ses_positions():
+    df = marche_en_hausse()
+    etat = bot.etat_initial()
+    assert bot.journee(etat, {"Bitcoin": (df, 117.0)}, "2026-02-10", achats=False) == []
+    assert etat["positions"] == {}
+    bot.journee(etat, {"Bitcoin": (df, 117.0)}, "2026-02-10")
+    niveau = s.niveau_sortie(df, "Cassure 20 jours", 1)
+    df2 = lendemain(df, 117.0, 117.5, niveau - 0.5, niveau - 0.1)
+    etat["positions"]["Bitcoin"]["stop"] = niveau - 10
+    [vente] = bot.journee(etat, {"Bitcoin": (df2, niveau)}, "2026-02-11", achats=False)
+    assert vente["genre"] == "vente"
+
+
+def test_tout_vendre_vend_tout_et_ne_rachete_pas():
+    df = marche_en_hausse()
+    compte = FauxCompte()
+    etat = bot.etat_initial(200.0)
+    courtier = bot.Reel(compte, INFOS, attente=0)
+    bot.journee(etat, {"Bitcoin": (df, 117.0)}, "2026-02-10", courtier)
+    [vente] = bot.journee(etat, {"Bitcoin": (df, 117.0)}, "2026-02-10", courtier, tout_vendre=True)
+    assert vente["genre"] == "vente" and etat["positions"] == {}
+    assert compte.ordres["O2"]["status"] == "canceled"  # le stop chez Kraken est annulé
+    assert [m for m, _ in compte.appels[-4:]] == ["QueryOrders", "CancelOrder", "AddOrder", "QueryOrders"]
+    assert compte.appels[-2][1]["type"] == "sell" and compte.appels[-2][1]["ordertype"] == "market"
+
+
+def test_interrupteur_d_arret():
+    import tempfile, os
+    chemin = os.path.join(tempfile.mkdtemp(), "arret.json")
+    assert not bot.est_arrete(chemin)
+    bot.regler_arret(True, chemin)
+    assert bot.est_arrete(chemin)
+    bot.regler_arret(False, chemin)
+    assert not bot.est_arrete(chemin)
+
+
 def test_signature_kraken_exemple_de_la_documentation():
     secret = "kQH5HW/8p1uGOVjbgWA7FunAmGO8lsSUXNsu3eow76sz84Q18fWxnyRzBHCd3pd5nE9qa99HAZtuZuj6F1huXg=="
     donnees = {"nonce": "1616492376594", "ordertype": "limit", "pair": "XBTUSD", "price": "37500",

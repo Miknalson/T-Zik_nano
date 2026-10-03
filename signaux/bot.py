@@ -41,6 +41,7 @@ ETAT = os.path.join(DOSSIER, "bot_portefeuille.json")
 JOURNAL = os.path.join(DOSSIER, "bot_journal.csv")
 ETAT_REEL = os.path.join(DOSSIER, "bot_reel.json")
 JOURNAL_REEL = os.path.join(DOSSIER, "bot_reel_journal.csv")
+ARRET = os.path.join(DOSSIER, "bot_arret.json")  # bouton « Bot : arrêter ou reprendre »
 API = "https://api.kraken.com"
 
 
@@ -203,11 +204,12 @@ def cloturer(etat, nom, vente, genre, aujourd_hui):
             "prix": vente["prix"], "stop": p["stop"], "resultat": vente["recette"] - p["cout"]}
 
 
-def journee(etat, marche, aujourd_hui, courtier=None, operations=None):
+def journee(etat, marche, aujourd_hui, courtier=None, operations=None, achats=True, tout_vendre=False):
     """Une passe du bot. `marche` : {nom: (bougies terminées, prix actuel)}. Modifie `etat`.
 
     Les opérations sont ajoutées à `operations` au fur et à mesure : en cas d'erreur en cours
-    de route, celles déjà exécutées restent connues de l'appelant.
+    de route, celles déjà exécutées restent connues de l'appelant. `achats=False` : bot à
+    l'arrêt, il ne fait que gérer ses positions. `tout_vendre` : vend toutes les positions.
     """
     courtier = courtier or Papier()
     operations = [] if operations is None else operations
@@ -225,12 +227,12 @@ def journee(etat, marche, aujourd_hui, courtier=None, operations=None):
                                 "recette": position["quantite"] * touche[1] * (1 - FRAIS_ORDRE)}
         if vente:
             operations.append(cloturer(etat, nom, vente, "stop", aujourd_hui))
-        elif voulu[nom] == 0:
+        elif voulu[nom] == 0 or tout_vendre:
             operations.append(cloturer(etat, nom, courtier.vendre(nom, position, prix), "vente", aujourd_hui))
 
     total = valeur(etat, {nom: prix for nom, (_, prix) in marche.items()})
     for nom, (df, prix) in marche.items():
-        if nom in etat["positions"] or voulu[nom] != 1:
+        if not achats or tout_vendre or nom in etat["positions"] or voulu[nom] != 1:
             continue
         distance = s.K_STOP * float(s.atr(df).iloc[-1])
         montant = min(total * RISQUE * prix / distance, etat["cash"] / (1 + FRAIS_ORDRE))
@@ -308,12 +310,24 @@ def enregistrer(etat, operations, chemin_etat, chemin_journal):
                         f"{op['prix']:.8g}", f"{op['stop']:.8g}", f"{op['resultat']:.2f}"])
 
 
-def passe(mode, marche, courtier, chemin_etat, chemin_journal, capital, sujet):
+def est_arrete(chemin=ARRET):
+    if not os.path.exists(chemin):
+        return False
+    with open(chemin, encoding="utf-8") as f:
+        return json.load(f).get("arret", False)
+
+
+def regler_arret(arret, chemin=ARRET):
+    with open(chemin, "w", encoding="utf-8") as f:
+        json.dump({"arret": arret, "depuis": dt.datetime.now(dt.timezone.utc).isoformat(timespec="minutes")}, f)
+
+
+def passe(mode, marche, courtier, chemin_etat, chemin_journal, capital, sujet, achats=True, tout_vendre=False):
     etat = charger(chemin_etat, capital)
     aujourd_hui = dt.datetime.now(dt.timezone.utc).date().isoformat()
     operations = []
     try:
-        journee(etat, marche, aujourd_hui, courtier, operations)
+        journee(etat, marche, aujourd_hui, courtier, operations, achats, tout_vendre)
     finally:
         # En réel, ce qui a été exécuté avant une erreur doit rester enregistré.
         enregistrer(etat, operations, chemin_etat, chemin_journal)
@@ -329,12 +343,37 @@ def passe(mode, marche, courtier, chemin_etat, chemin_journal, capital, sujet):
             print(f"Notification non envoyée : {exc}")
 
 
+MESSAGES_COMMANDE = {
+    "arreter": ("Bot : arrêté", "Plus aucun achat. Les positions gardent leur stop et seront vendues "
+                                "quand la tendance finit. Bouton « Reprendre » pour relancer."),
+    "tout-vendre": ("Bot : arrêté, tout vendu", "Toutes les positions ont été vendues. Plus aucun achat "
+                                                "jusqu'au bouton « Reprendre »."),
+    "reprendre": ("Bot : repris", "Le bot recommence à acheter dès le prochain passage de la nuit."),
+}
+
+
 def main():
     ap = argparse.ArgumentParser(description="Bot crypto Kraken.")
     ap.add_argument("--mode", choices=["papier", "verifier", "reel"], default="papier")
     ap.add_argument("--budget", type=float, default=0, help="mode reel : euros confiés au bot")
+    ap.add_argument("--commande", choices=list(MESSAGES_COMMANDE),
+                    help="bouton d'arrêt : arreter, tout-vendre ou reprendre")
     args = ap.parse_args()
     sujet = os.environ.get("NTFY_TOPIC", "").strip()
+
+    if args.commande in ("arreter", "reprendre"):
+        regler_arret(args.commande == "arreter")
+        titre, message = MESSAGES_COMMANDE[args.commande]
+        print(f"{titre}. {message}")
+        if sujet:
+            s.envoyer(sujet, {"title": titre, "message": message, "tags": ["robot"]})
+        return
+    tout_vendre = args.commande == "tout-vendre"
+    if tout_vendre:
+        regler_arret(True)
+    achats = not est_arrete()
+    if not achats:
+        print("Bot à l'arrêt : aucun achat, positions gérées jusqu'à leur vente.")
 
     marche = {}
     for nom, paire in PAIRES.items():
@@ -343,8 +382,11 @@ def main():
         except Exception as exc:  # un marché en panne ne bloque pas les autres
             print(f"{nom} : données Kraken indisponibles ({exc}), ignoré aujourd'hui")
 
-    passe("papier", marche, Papier(), ETAT, JOURNAL, CAPITAL_DEPART, sujet)
+    passe("papier", marche, Papier(), ETAT, JOURNAL, CAPITAL_DEPART, sujet, achats, tout_vendre)
     if args.mode == "papier":
+        if tout_vendre and sujet:
+            s.envoyer(sujet, {"title": MESSAGES_COMMANDE["tout-vendre"][0],
+                              "message": MESSAGES_COMMANDE["tout-vendre"][1], "tags": ["robot"]})
         return
 
     cle = os.environ.get("KRAKEN_API_KEY", "").strip()
@@ -359,15 +401,22 @@ def main():
         if sujet:
             s.envoyer(sujet, {"title": "Bot : vérification Kraken", "message": "\n".join(lignes)})
         return
-    if args.budget <= 0:
+    if tout_vendre and not os.path.exists(ETAT_REEL):
+        print("Aucune position réelle à vendre (le bot n'a jamais tourné en réel).")
+        return
+    if args.budget <= 0 and not tout_vendre:
         raise SystemExit("Mode reel : indique le budget confié au bot (variable BOT_BUDGET).")
     try:
-        passe("réel", marche, Reel(compte, infos), ETAT_REEL, JOURNAL_REEL, args.budget, sujet)
+        passe("réel", marche, Reel(compte, infos), ETAT_REEL, JOURNAL_REEL, args.budget, sujet,
+              achats, tout_vendre)
     except Exception as exc:
         if sujet:
             s.envoyer(sujet, {"title": "Bot : ERREUR (argent réel)", "priority": 5, "tags": ["warning"],
                               "message": f"{exc}\nVérifie tes positions dans Kraken."})
         raise
+    if tout_vendre and sujet:
+        s.envoyer(sujet, {"title": MESSAGES_COMMANDE["tout-vendre"][0],
+                          "message": MESSAGES_COMMANDE["tout-vendre"][1], "tags": ["robot"]})
 
 
 if __name__ == "__main__":

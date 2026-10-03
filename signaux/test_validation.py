@@ -270,6 +270,10 @@ def test_bloc_bot():
     bloc = s.bloc_bot(chemin)
     assert "Valeur : 1012.50 € (départ 1 000 €), dont 900.00 € en liquide." in bloc
     assert "Positions : Bitcoin (stop 68 000 €)" in bloc and "04/10/2026" in bloc
+    assert "ARRÊTÉ" not in bloc
+    with open(os.path.join(os.path.dirname(chemin), "bot_arret.json"), "w") as f:
+        json.dump({"arret": True}, f)
+    assert "⏸ ARRÊTÉ" in s.bloc_bot(chemin)
 
 
 def test_carte_non_suivie_sans_consigne():
