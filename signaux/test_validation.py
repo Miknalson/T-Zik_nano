@@ -260,6 +260,18 @@ def test_niveau_de_sortie_correspond_a_la_regle():
     assert s.regle_cassure(avec_derniere_cloture(niveau + 0.01)).iloc[-1] == 1
 
 
+def test_bloc_bot():
+    import json, tempfile, os
+    chemin = os.path.join(tempfile.mkdtemp(), "bot.json")
+    assert s.bloc_bot(chemin) == ""
+    with open(chemin, "w") as f:
+        json.dump({"cash": 900.0, "valeur": 1012.5, "maj": "2026-10-04",
+                   "positions": {"Bitcoin": {"stop": 68000.0}}}, f)
+    bloc = s.bloc_bot(chemin)
+    assert "Valeur : 1012.50 € (départ 1 000 €), dont 900.00 € en liquide." in bloc
+    assert "Positions : Bitcoin (stop 68 000 €)" in bloc and "04/10/2026" in bloc
+
+
 def test_carte_non_suivie_sans_consigne():
     r = resultat("GC=F", "Cassure 20 jours", "INVERSER", sens=-1, position_sens=1)
     r["eval"], r["suivi"] = {"valide": False, "raisons": ["pas mieux que le hasard"]}, None

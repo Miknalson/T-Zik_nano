@@ -15,6 +15,7 @@ import argparse
 import csv
 import datetime as dt
 import html
+import json
 import os
 import sys
 import time
@@ -549,6 +550,23 @@ def carte_html(r):
             f'<div class="detail">{detail}</div></div>')
 
 
+def bloc_bot(chemin=os.path.join(DOSSIER, "bot_portefeuille.json")):
+    """Résumé du portefeuille du bot (argent fictif), s'il a déjà tourné."""
+    if not os.path.exists(chemin):
+        return ""
+    with open(chemin, encoding="utf-8") as f:
+        etat = json.load(f)
+    if not etat.get("maj"):
+        return ""
+    positions = [f"{nom} (stop {prix(p['stop'])} €)" for nom, p in etat["positions"].items()]
+    lignes = [f"Valeur : {etat['valeur']:.2f} € (départ 1 000 €), dont {etat['cash']:.2f} € en liquide.",
+              "Positions : " + (", ".join(positions) if positions else "aucune pour l'instant."),
+              f"Dernier passage : {dt.date.fromisoformat(etat['maj']):%d/%m/%Y}. Il agit seul, rien à faire."]
+    detail = "<br>".join(html.escape(l) for l in lignes)
+    return (f'<div class="carte gris" data-marche="" data-suivie="1"><div class="marche">🤖 Bot Kraken'
+            f'<span>argent fictif</span></div><div class="detail">{detail}</div></div>')
+
+
 def ecrire_html(resultats, chemin, capital, risque, demo):
     suivies = sorted((r for r in resultats if suivie(r)), key=priorite)
     autres = sorted((r for r in resultats if not suivie(r)), key=priorite)
@@ -559,7 +577,7 @@ def ecrire_html(resultats, chemin, capital, risque, demo):
               else "Rien d'obligatoire aujourd'hui.")
     if possibles:
         resume += f" Si tu n'es pas dedans, tu peux entrer sur : {', '.join(possibles)}."
-    cartes = ([carte_html(r) for r in suivies]
+    cartes = ([bloc_bot()] + [carte_html(r) for r in suivies]
               + ['<h2 id="autres">Pas tes méthodes : n\'agis pas dessus</h2>']
               + [carte_html(r) for r in autres])
 

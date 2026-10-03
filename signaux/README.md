@@ -116,3 +116,19 @@ python test_validation.py
 Vérifie que le filtre rejette le hasard pur et reconnaît un vrai avantage, que le stop-loss
 est exécuté au bon prix (y compris en cas de gap), que les entrées et sorties se font à
 l'ouverture suivante, et qu'aucune règle n'utilise de données futures.
+
+## Bot crypto Kraken (argent fictif pour l'instant)
+
+`bot.py` passe les ordres tout seul, chaque jour juste après 00 h 00 UTC (2 h du matin à
+Paris l'été) : achat quand la cassure 20 jours est en tendance haussière, stop à 2 × ATR posé
+à l'achat, vente quand le cours clôture sous le plus bas des 10 derniers jours, rachat si la
+tendance continue après un stop. Achat seulement : une plateforme au comptant ne permet pas de
+parier sur la baisse (`test_spot.py` : la méthode reste gagnante en achat seul sur les 6 cryptos).
+
+- Marchés : Bitcoin, Ethereum, XRP, Dogecoin, Stellar, VeChain, en euros sur Kraken. Binance
+  refuse les serveurs de GitHub (pays interdit), Kraken les accepte.
+- Mode papier : portefeuille fictif de 1 000 €, ordres simulés au prix Kraken avec 0,4 % de
+  frais par ordre. État dans `bot_portefeuille.json`, opérations dans `bot_journal.csv`,
+  résumé en haut de la page, notification « Bot : … » à chaque achat ou vente.
+- Argent réel : pas encore branché. Il faudra un compte Kraken et une clé d'API **sans droit
+  de retrait**, enregistrée dans les secrets GitHub (jamais dans le code ni dans un message).

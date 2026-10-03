@@ -1,0 +1,48 @@
+name: Bot crypto (papier)
+
+on:
+  schedule:
+    # Juste après la clôture journalière de Kraken (00 h 00 UTC). Un passage en double
+    # le même jour ne refait rien : le bot n'achète que s'il n'a pas déjà la position.
+    - cron: "7 0 * * *"
+    - cron: "37 0 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: bot
+  cancel-in-progress: false
+
+jobs:
+  bot:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: signaux/requirements.txt
+
+      - run: pip install -r signaux/requirements.txt
+
+      - name: Tests du bot
+        run: cd signaux && python test_bot.py
+
+      - name: Passe du jour
+        env:
+          NTFY_TOPIC: ${{ secrets.NTFY_TOPIC }}
+        run: python signaux/bot.py
+
+      - name: Enregistrer le portefeuille
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add signaux/bot_portefeuille.json signaux/bot_journal.csv
+          if git diff --cached --quiet; then exit 0; fi
+          git commit -m "Bot papier du $(date -u +%F)"
+          git pull --rebase origin "$GITHUB_REF_NAME"
+          git push origin HEAD:"$GITHUB_REF_NAME"
