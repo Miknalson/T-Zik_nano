@@ -30,12 +30,17 @@ import pandas as pd
 
 import signaux as s
 
+# Les 6 méthodes suivies + les 8 grosses cryptos retenues par test_kraken.py (03/10/2026).
 PAIRES = {"Bitcoin": "XBTEUR", "Ethereum": "ETHEUR", "XRP": "XRPEUR",
-          "Dogecoin": "XDGEUR", "Stellar": "XLMEUR", "VeChain": "VETEUR"}
+          "Dogecoin": "XDGEUR", "Stellar": "XLMEUR", "VeChain": "VETEUR",
+          "Solana": "SOLEUR", "BNB": "BNBEUR", "Tron": "TRXEUR", "Avalanche": "AVAXEUR",
+          "NEAR": "NEAREUR", "Hedera": "HBAREUR", "Polkadot": "DOTEUR", "Algorand": "ALGOEUR"}
 FRAIS_ORDRE = 0.004   # Kraken, ordre au marché, petit volume
 RISQUE = 0.01         # un stop touché coûte 1 % du portefeuille
 CAPITAL_DEPART = 1000.0
 ORDRE_MIN = 5.0       # en dessous, Kraken refuse l'ordre
+MAX_POSITIONS = 5     # cryptos tenues en même temps (variable GitHub BOT_MAX)
+ELAN = 90             # jours : quand les places manquent, les plus fortes sur cette durée d'abord
 DOSSIER = os.path.dirname(os.path.abspath(__file__))
 ETAT = os.path.join(DOSSIER, "bot_portefeuille.json")
 JOURNAL = os.path.join(DOSSIER, "bot_journal.csv")
@@ -204,12 +209,21 @@ def cloturer(etat, nom, vente, genre, aujourd_hui):
             "prix": vente["prix"], "stop": p["stop"], "resultat": vente["recette"] - p["cout"]}
 
 
-def journee(etat, marche, aujourd_hui, courtier=None, operations=None, achats=True, tout_vendre=False):
+def elan(df):
+    """Hausse sur ELAN jours : sert à choisir les plus fortes quand les places manquent."""
+    if len(df) <= ELAN:
+        return float("-inf")
+    return float(df["Close"].iloc[-1] / df["Close"].iloc[-1 - ELAN] - 1)
+
+
+def journee(etat, marche, aujourd_hui, courtier=None, operations=None, achats=True, tout_vendre=False,
+            max_positions=MAX_POSITIONS):
     """Une passe du bot. `marche` : {nom: (bougies terminées, prix actuel)}. Modifie `etat`.
 
     Les opérations sont ajoutées à `operations` au fur et à mesure : en cas d'erreur en cours
     de route, celles déjà exécutées restent connues de l'appelant. `achats=False` : bot à
     l'arrêt, il ne fait que gérer ses positions. `tout_vendre` : vend toutes les positions.
+    Au plus `max_positions` cryptos en même temps : les plus fortes sur ELAN jours d'abord.
     """
     courtier = courtier or Papier()
     operations = [] if operations is None else operations
@@ -231,11 +245,15 @@ def journee(etat, marche, aujourd_hui, courtier=None, operations=None, achats=Tr
             operations.append(cloturer(etat, nom, courtier.vendre(nom, position, prix), "vente", aujourd_hui))
 
     total = valeur(etat, {nom: prix for nom, (_, prix) in marche.items()})
-    for nom, (df, prix) in marche.items():
-        if not achats or tout_vendre or nom in etat["positions"] or voulu[nom] != 1:
-            continue
+    candidats = [] if not achats or tout_vendre else sorted(
+        (nom for nom in marche if nom not in etat["positions"] and voulu[nom] == 1),
+        key=lambda nom: -elan(marche[nom][0]))
+    for nom in candidats:
+        if len(etat["positions"]) >= max_positions:
+            break
+        df, prix = marche[nom]
         distance = s.K_STOP * float(s.atr(df).iloc[-1])
-        montant = min(total * RISQUE * prix / distance, etat["cash"] / (1 + FRAIS_ORDRE))
+        montant = min(total * RISQUE * prix / distance, total / max_positions, etat["cash"] / (1 + FRAIS_ORDRE))
         if montant < ORDRE_MIN:
             continue
         achat = courtier.acheter(nom, montant / prix, prix, prix - distance)
@@ -330,14 +348,15 @@ def ajuster_budget(etat, budget):
         etat["depart"] = budget
 
 
-def passe(mode, marche, courtier, chemin_etat, chemin_journal, capital, sujet, achats=True, tout_vendre=False):
+def passe(mode, marche, courtier, chemin_etat, chemin_journal, capital, sujet, achats=True, tout_vendre=False,
+          max_positions=MAX_POSITIONS):
     etat = charger(chemin_etat, capital)
     if courtier.stops_chez_le_courtier:
         ajuster_budget(etat, capital)
     aujourd_hui = dt.datetime.now(dt.timezone.utc).date().isoformat()
     operations = []
     try:
-        journee(etat, marche, aujourd_hui, courtier, operations, achats, tout_vendre)
+        journee(etat, marche, aujourd_hui, courtier, operations, achats, tout_vendre, max_positions)
     finally:
         # En réel, ce qui a été exécuté avant une erreur doit rester enregistré.
         enregistrer(etat, operations, chemin_etat, chemin_journal)
@@ -366,6 +385,8 @@ def main():
     ap = argparse.ArgumentParser(description="Bot crypto Kraken.")
     ap.add_argument("--mode", choices=["papier", "verifier", "reel"], default="papier")
     ap.add_argument("--budget", type=float, default=0, help="mode reel : euros confiés au bot")
+    ap.add_argument("--max-positions", default=str(MAX_POSITIONS),
+                    help="cryptos tenues en même temps (variable BOT_MAX)")
     ap.add_argument("--commande", choices=list(MESSAGES_COMMANDE),
                     help="bouton d'arrêt : arreter, tout-vendre ou reprendre")
     args = ap.parse_args()
@@ -392,7 +413,12 @@ def main():
         except Exception as exc:  # un marché en panne ne bloque pas les autres
             print(f"{nom} : données Kraken indisponibles ({exc}), ignoré aujourd'hui")
 
-    passe("papier", marche, Papier(), ETAT, JOURNAL, CAPITAL_DEPART, sujet, achats, tout_vendre)
+    try:
+        max_positions = max(int(args.max_positions), 1)
+    except ValueError:  # BOT_MAX mal tapé dans GitHub : on garde la valeur par défaut
+        print(f"BOT_MAX = « {args.max_positions} » n'est pas un nombre : {MAX_POSITIONS} utilisé.")
+        max_positions = MAX_POSITIONS
+    passe("papier", marche, Papier(), ETAT, JOURNAL, CAPITAL_DEPART, sujet, achats, tout_vendre, max_positions)
     if args.mode == "papier":
         if tout_vendre and sujet:
             s.envoyer(sujet, {"title": MESSAGES_COMMANDE["tout-vendre"][0],
@@ -418,7 +444,7 @@ def main():
         raise SystemExit("Mode reel : indique le budget confié au bot (variable BOT_BUDGET).")
     try:
         passe("réel", marche, Reel(compte, infos), ETAT_REEL, JOURNAL_REEL, args.budget, sujet,
-              achats, tout_vendre)
+              achats, tout_vendre, max_positions)
     except Exception as exc:
         if sujet:
             s.envoyer(sujet, {"title": "Bot : ERREUR (argent réel)", "priority": 5, "tags": ["warning"],

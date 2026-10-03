@@ -46,7 +46,8 @@ jobs:
           KRAKEN_API_SECRET: ${{ secrets.KRAKEN_API_SECRET }}
           MODE: ${{ inputs.verifier && 'verifier' || ((vars.BOT_MODE == 'reel' || vars.BOT_MODE == 'réel') && 'reel' || 'papier') }}
           BUDGET: ${{ vars.BOT_BUDGET || '0' }}
-        run: python signaux/bot.py --mode "$MODE" --budget "$BUDGET"
+          MAX: ${{ vars.BOT_MAX || '5' }}
+        run: python signaux/bot.py --mode "$MODE" --budget "$BUDGET" --max-positions "$MAX"
 
       - name: Enregistrer le portefeuille
         if: always()

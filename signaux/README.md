@@ -125,7 +125,15 @@ Paris l'été) : achat quand la cassure 20 jours est en tendance haussière, sto
 tendance continue après un stop. Achat seulement : une plateforme au comptant ne permet pas de
 parier sur la baisse (`test_spot.py` : la méthode reste gagnante en achat seul sur les 6 cryptos).
 
-- Marchés : Bitcoin, Ethereum, XRP, Dogecoin, Stellar, VeChain, en euros sur Kraken. Binance
+- Marchés : Bitcoin, Ethereum, XRP, Dogecoin, Stellar, VeChain, plus Solana, BNB, Tron,
+  Avalanche, NEAR, Hedera, Polkadot et Algorand (retenues par `test_kraken.py`), en euros sur
+  Kraken.
+- **Au plus 5 cryptos en même temps** (variable GitHub `BOT_MAX` pour changer ce nombre) :
+  quand il y a plus de candidates que de places, il prend celles qui ont le plus monté sur
+  90 jours. Chaque position est plafonnée à 1/`BOT_MAX` du portefeuille. Test sur 10 ans
+  (`test_portefeuille.py`) : 1 000 € → 30 377 € avec 5 maximum (pire baisse −38 %), contre
+  108 859 € sans limite (pire baisse −47 %) ; le classement « les plus fortes d'abord » ne fait
+  pas nettement mieux qu'un choix au hasard (p = 0,21). Binance
   refuse les serveurs de GitHub (pays interdit), Kraken les accepte.
 - Mode papier : portefeuille fictif de 1 000 €, ordres simulés au prix Kraken avec 0,4 % de
   frais par ordre. État dans `bot_portefeuille.json`, opérations dans `bot_journal.csv`,

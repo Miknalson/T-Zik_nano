@@ -42,8 +42,9 @@ jobs:
           KRAKEN_API_SECRET: ${{ secrets.KRAKEN_API_SECRET }}
           MODE: ${{ (vars.BOT_MODE == 'reel' || vars.BOT_MODE == 'réel') && 'reel' || 'papier' }}
           BUDGET: ${{ vars.BOT_BUDGET || '0' }}
+          MAX: ${{ vars.BOT_MAX || '5' }}
           COMMANDE: ${{ inputs.commande == 'Reprendre' && 'reprendre' || (inputs.commande == 'Arrêter et tout vendre' && 'tout-vendre' || 'arreter') }}
-        run: python signaux/bot.py --commande "$COMMANDE" --mode "$MODE" --budget "$BUDGET"
+        run: python signaux/bot.py --commande "$COMMANDE" --mode "$MODE" --budget "$BUDGET" --max-positions "$MAX"
 
       - name: Enregistrer
         if: always()

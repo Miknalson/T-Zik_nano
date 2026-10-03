@@ -21,7 +21,8 @@ def lendemain(df, o, h, l, c):
 def test_achat_avec_stop_et_taille_au_risque():
     df = marche_en_hausse()
     etat = bot.etat_initial()
-    [op] = bot.journee(etat, {"Bitcoin": (df, 117.0)}, "2026-02-10")
+    # max_positions=1 : seule la règle du risque limite la taille (pas le plafond d'1/N du portefeuille).
+    [op] = bot.journee(etat, {"Bitcoin": (df, 117.0)}, "2026-02-10", max_positions=1)
     distance = s.K_STOP * float(s.atr(df).iloc[-1])
     assert op["genre"] == "achat" and op["prix"] == 117.0 and op["stop"] == 117.0 - distance
     montant = 1000 * bot.RISQUE * 117.0 / distance
@@ -119,6 +120,31 @@ def test_changer_le_budget_ajoute_ou_retire_des_liquidites():
     assert etat["cash"] == 90.0
     bot.ajuster_budget(etat, 50.0)  # moins que ce qui est investi : plus d'achats
     assert etat["cash"] == 0.0 and etat["depart"] == 50.0
+
+
+def test_au_plus_max_positions_et_les_plus_fortes_d_abord():
+    lente = marche_en_hausse()
+    # Même cassure mais hausse plus forte : son élan sur 90 jours est plus grand.
+    forte = lente.copy()
+    forte[["Open", "High", "Low", "Close"]] = forte[["Open", "High", "Low", "Close"]] * 1.0
+    forte.iloc[-15:, :] = forte.iloc[-15:, :] * 1.5
+    longues = {nom: pd.concat([lente.iloc[:1].reindex(pd.date_range("2025-09-01", periods=100, freq="D"),
+                                                       method="ffill").fillna(100.0), df])
+               for nom, df in {"Lente": lente, "Forte": forte}.items()}
+    marche = {"Bitcoin": (longues["Lente"], 117.0), "Ethereum": (longues["Forte"], 175.5)}
+    etat = bot.etat_initial()
+    [achat] = bot.journee(etat, marche, "2026-02-10", max_positions=1)
+    assert achat["marche"] == "Ethereum" and list(etat["positions"]) == ["Ethereum"]
+    assert bot.journee(etat, marche, "2026-02-10", max_positions=1) == []  # plus de place
+    bot.journee(etat, marche, "2026-02-10", max_positions=2)
+    assert set(etat["positions"]) == {"Bitcoin", "Ethereum"}
+
+
+def test_une_position_ne_depasse_pas_sa_part_du_portefeuille():
+    df = marche_en_hausse()
+    etat = bot.etat_initial()
+    [achat] = bot.journee(etat, {"Bitcoin": (df, 117.0)}, "2026-02-10", max_positions=20)
+    assert achat["quantite"] * achat["prix"] <= 1000 / 20 + 1e-9
 
 
 def test_interrupteur_d_arret():
