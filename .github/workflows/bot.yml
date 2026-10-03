@@ -37,14 +37,14 @@ jobs:
       - name: Tests du bot
         run: cd signaux && python test_bot.py
 
-      # Mode réel seulement si la variable de dépôt BOT_MODE vaut « reel » (réglée à la main
+      # Mode réel seulement si la variable de dépôt BOT_MODE vaut « reel » ou « réel » (réglée à la main
       # dans GitHub). Sinon : papier, ou vérification si elle est demandée au lancement manuel.
       - name: Passe du jour
         env:
           NTFY_TOPIC: ${{ secrets.NTFY_TOPIC }}
           KRAKEN_API_KEY: ${{ secrets.KRAKEN_API_KEY }}
           KRAKEN_API_SECRET: ${{ secrets.KRAKEN_API_SECRET }}
-          MODE: ${{ inputs.verifier && 'verifier' || (vars.BOT_MODE == 'reel' && 'reel' || 'papier') }}
+          MODE: ${{ inputs.verifier && 'verifier' || ((vars.BOT_MODE == 'reel' || vars.BOT_MODE == 'réel') && 'reel' || 'papier') }}
           BUDGET: ${{ vars.BOT_BUDGET || '0' }}
         run: python signaux/bot.py --mode "$MODE" --budget "$BUDGET"
 

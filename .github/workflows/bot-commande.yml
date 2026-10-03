@@ -40,7 +40,7 @@ jobs:
           NTFY_TOPIC: ${{ secrets.NTFY_TOPIC }}
           KRAKEN_API_KEY: ${{ secrets.KRAKEN_API_KEY }}
           KRAKEN_API_SECRET: ${{ secrets.KRAKEN_API_SECRET }}
-          MODE: ${{ vars.BOT_MODE == 'reel' && 'reel' || 'papier' }}
+          MODE: ${{ (vars.BOT_MODE == 'reel' || vars.BOT_MODE == 'réel') && 'reel' || 'papier' }}
           BUDGET: ${{ vars.BOT_BUDGET || '0' }}
           COMMANDE: ${{ inputs.commande == 'Reprendre' && 'reprendre' || (inputs.commande == 'Arrêter et tout vendre' && 'tout-vendre' || 'arreter') }}
         run: python signaux/bot.py --commande "$COMMANDE" --mode "$MODE" --budget "$BUDGET"
