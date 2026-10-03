@@ -571,7 +571,8 @@ def bloc_bot(chemin=os.path.join(DOSSIER, "bot_portefeuille.json")):
                  else "Il agit seul, rien à faire.")]
     detail = "<br>".join(html.escape(l) for l in lignes)
     return (f'<div class="carte gris" data-marche="" data-suivie="1"><div class="marche">🤖 Bot Kraken'
-            f'<span>argent fictif</span></div><div class="detail">{detail}</div></div>')
+            f'<span>argent fictif</span></div><div class="detail">{detail}<br>'
+            f'<a href="bot.html">Voir le détail : gains, pertes et opérations →</a></div></div>')
 
 
 def ecrire_html(resultats, chemin, capital, risque, demo):
@@ -822,6 +823,8 @@ def main():
     rapport = args.sortie
     os.makedirs(os.path.dirname(os.path.abspath(rapport)), exist_ok=True)
     ecrire_html(resultats, rapport, args.capital, args.risque, args.demo)
+    import page_bot  # ici : page_bot importe ce module
+    page_bot.ecrire(os.path.join(os.path.dirname(os.path.abspath(rapport)), "bot.html"))
     nouvelles = set()
     if not args.demo:
         nouvelles = journaliser(resultats, os.path.join(DOSSIER, "journal_signaux.csv"))

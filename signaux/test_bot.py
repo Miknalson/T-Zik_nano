@@ -147,6 +147,53 @@ def test_une_position_ne_depasse_pas_sa_part_du_portefeuille():
     assert achat["quantite"] * achat["prix"] <= 1000 / 20 + 1e-9
 
 
+def test_historique_un_point_par_jour_et_prix_actuel():
+    df = marche_en_hausse()
+    etat = bot.etat_initial()
+    bot.journee(etat, {"Bitcoin": (df, 117.0)}, "2026-02-10")
+    bot.journee(etat, {"Bitcoin": (df, 118.0)}, "2026-02-10")
+    assert [h["date"] for h in etat["historique"]] == ["2026-02-10"]
+    assert etat["positions"]["Bitcoin"]["prix_actuel"] == 118.0
+    bot.journee(etat, {"Bitcoin": (df, 119.0)}, "2026-02-11")
+    assert [h["date"] for h in etat["historique"]] == ["2026-02-10", "2026-02-11"]
+    assert etat["historique"][-1]["valeur"] == round(etat["valeur"], 2)
+
+
+def test_valeur_garde_le_dernier_prix_si_kraken_ne_repond_pas():
+    df = marche_en_hausse()
+    etat = bot.etat_initial()
+    bot.journee(etat, {"Bitcoin": (df, 117.0)}, "2026-02-10")
+    assert bot.journee(etat, {}, "2026-02-11") == []  # aucune donnée : pas de plantage
+    assert abs(etat["valeur"] - bot.valeur(etat, {"Bitcoin": 117.0})) < 1e-9
+
+
+def test_page_du_bot():
+    import json, os, tempfile
+    import page_bot
+    dossier = tempfile.mkdtemp()
+    etat = {"cash": 900.0, "valeur": 1012.5, "maj": "2026-10-04", "depart": 1000.0,
+            "historique": [{"date": "2026-10-03", "valeur": 998.0}, {"date": "2026-10-04", "valeur": 1012.5}],
+            "positions": {"Solana": {"quantite": 1.0, "prix_entree": 100.0, "prix_actuel": 112.5, "stop": 90.0,
+                                     "cout": 100.4, "date": "2026-10-03"}}}
+    with open(os.path.join(dossier, "bot_portefeuille.json"), "w") as f:
+        json.dump(etat, f)
+    with open(os.path.join(dossier, "bot_journal.csv"), "w") as f:
+        f.write("date;marche;operation;quantite;prix;stop;resultat\n"
+                "2026-10-03;Bitcoin;achat;0.001;70000;66000;0.00\n"
+                "2026-10-03;Bitcoin;stop;0.001;66000;66000;-4.56\n"
+                "2026-10-03;Solana;achat;1;100;90;0.00\n")
+    sortie = os.path.join(dossier, "bot.html")
+    page_bot.ecrire(sortie, dossier)
+    page = open(sortie, encoding="utf-8").read()
+    nb = " "
+    assert f"1{nb}012,50{nb}€" in page and f"▲ +12,50{nb}€ (+1,25{nb}%)" in page
+    assert f"▼ −4,56{nb}€" in page and "Stop touché" in page   # perte réalisée
+    assert f"▲ +12,10{nb}€" in page                          # gain en cours sur Solana
+    assert "1 sur 1" not in page and "0 sur 1" in page        # ventes gagnantes
+    assert "Réel" not in page.split("<main>")[1].split("</main>")[0]  # pas de section réelle sans fichier
+    assert "<polyline" in page
+
+
 def test_interrupteur_d_arret():
     import tempfile, os
     chemin = os.path.join(tempfile.mkdtemp(), "arret.json")

@@ -139,6 +139,11 @@ parier sur la baisse (`test_spot.py` : la méthode reste gagnante en achat seul 
   frais par ordre. État dans `bot_portefeuille.json`, opérations dans `bot_journal.csv`,
   résumé en haut de la page, notification « Bot : … » à chaque achat ou vente.
 - Le mode papier tourne toujours, même quand l'argent réel est branché : il sert de référence.
+- **Page du bot** (`bot.html`, lien depuis la carte « 🤖 Bot Kraken ») : valeur, gain ou perte
+  depuis le départ, gains réalisés et en cours, courbe de la valeur jour après jour (touche la
+  courbe pour lire une date), positions ouvertes et historique de toutes les opérations. Une
+  partie « Réel » apparaît dès que le bot a tourné en argent réel. Mise à jour après chaque
+  passage du bot.
 
 ### Brancher l'argent réel
 

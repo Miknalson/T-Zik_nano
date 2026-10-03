@@ -199,7 +199,9 @@ def stop_touche(position, df):
 
 
 def valeur(etat, prix):
-    return etat["cash"] + sum(p["quantite"] * prix[nom] for nom, p in etat["positions"].items())
+    """Liquidités + positions au prix du jour (dernier prix connu si Kraken n'a rien renvoyé)."""
+    return etat["cash"] + sum(p["quantite"] * prix.get(nom, p.get("prix_actuel", p["prix_entree"]))
+                              for nom, p in etat["positions"].items())
 
 
 def cloturer(etat, nom, vente, genre, aujourd_hui):
@@ -267,8 +269,15 @@ def journee(etat, marche, aujourd_hui, courtier=None, operations=None, achats=Tr
         operations.append({"date": aujourd_hui, "marche": nom, "genre": "achat", "quantite": achat["quantite"],
                            "prix": achat["prix"], "stop": prix - distance, "resultat": 0.0})
 
-    etat["valeur"] = valeur(etat, {nom: prix for nom, (_, prix) in marche.items()})
+    prix_du_jour = {nom: prix for nom, (_, prix) in marche.items()}
+    for nom, p in etat["positions"].items():  # pour la page du bot : gain ou perte en cours
+        p["prix_actuel"] = prix_du_jour.get(nom, p.get("prix_actuel", p["prix_entree"]))
+    etat["valeur"] = valeur(etat, prix_du_jour)
     etat["maj"] = aujourd_hui
+    historique = etat.setdefault("historique", [])
+    if historique and historique[-1]["date"] == aujourd_hui:
+        historique.pop()  # un seul point par jour : le dernier passage fait foi
+    historique.append({"date": aujourd_hui, "valeur": round(etat["valeur"], 2)})
     return operations
 
 
