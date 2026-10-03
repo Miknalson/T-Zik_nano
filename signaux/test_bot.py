@@ -110,6 +110,17 @@ def test_tout_vendre_vend_tout_et_ne_rachete_pas():
     assert compte.appels[-2][1]["type"] == "sell" and compte.appels[-2][1]["ordertype"] == "market"
 
 
+def test_changer_le_budget_ajoute_ou_retire_des_liquidites():
+    etat = bot.etat_initial(100.0)
+    etat["cash"] = 40.0  # 60 € déjà investis
+    bot.ajuster_budget(etat, 150.0)
+    assert etat["cash"] == 90.0 and etat["depart"] == 150.0
+    bot.ajuster_budget(etat, 150.0)
+    assert etat["cash"] == 90.0
+    bot.ajuster_budget(etat, 50.0)  # moins que ce qui est investi : plus d'achats
+    assert etat["cash"] == 0.0 and etat["depart"] == 50.0
+
+
 def test_interrupteur_d_arret():
     import tempfile, os
     chemin = os.path.join(tempfile.mkdtemp(), "arret.json")

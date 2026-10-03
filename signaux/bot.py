@@ -322,8 +322,18 @@ def regler_arret(arret, chemin=ARRET):
         json.dump({"arret": arret, "depuis": dt.datetime.now(dt.timezone.utc).isoformat(timespec="minutes")}, f)
 
 
+def ajuster_budget(etat, budget):
+    """Suit la variable BOT_BUDGET : la différence avec l'ancien budget s'ajoute aux liquidités
+    (ou s'en retire, sans descendre sous zéro : le bot n'achète alors plus rien)."""
+    if budget > 0 and budget != etat.get("depart", budget):
+        etat["cash"] = max(etat["cash"] + budget - etat.get("depart", budget), 0.0)
+        etat["depart"] = budget
+
+
 def passe(mode, marche, courtier, chemin_etat, chemin_journal, capital, sujet, achats=True, tout_vendre=False):
     etat = charger(chemin_etat, capital)
+    if courtier.stops_chez_le_courtier:
+        ajuster_budget(etat, capital)
     aujourd_hui = dt.datetime.now(dt.timezone.utc).date().isoformat()
     operations = []
     try:

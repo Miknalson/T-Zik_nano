@@ -146,6 +146,8 @@ parier sur la baisse (`test_spot.py` : la méthode reste gagnante en achat seul 
    arrive en notification.
 4. **Mise en route** : même page, onglet **Variables** → `BOT_BUDGET` = euros confiés au bot
    (ex. `100`) puis `BOT_MODE` = `reel`. Il faut au moins ce montant en euros sur Kraken.
+   Le budget peut être modifié à tout moment : la différence est ajoutée aux liquidités du bot
+   (ou retirée) au passage suivant. Le bot ne dépense jamais plus que ses liquidités.
 5. **Arrêt** : voir le bouton ci-dessous. Pour débrancher complètement l'argent réel,
    supprimer la variable `BOT_MODE`.
 
