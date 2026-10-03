@@ -228,12 +228,36 @@ def test_conseil_en_cours_propose_d_entrer():
 
 def test_carte_suivie_en_cours_donne_l_ordre_libertex():
     r = resultat("BTC-USD", "Cassure 20 jours", "EN COURS", sens=1, position_sens=1)
-    r["conseil"].update({"depuis": pd.Timestamp("2026-09-22"), "stop_position": 81745.0})
+    r["conseil"].update({"depuis": pd.Timestamp("2026-09-22"), "stop_position": 81745.0, "sortie": 80123.4})
     titre, lignes, style = s.consigne(r)
     assert titre == "Tendance ACHAT en cours" and style == "achat"
-    assert lignes[0] == "Déjà dedans ? Ne touche à rien (stop à 81 745 si tu es entré le 22/09)."
-    assert lignes[1:4] == ["Pas dedans ? Tu peux entrer avec cet ordre :", "Instrument : BTCUSD",
+    assert lignes[:2] == ["Déjà dedans ? Garde ton stop loss et ne touche à rien.",
+                          "Quand sortir : notification FERME si le cours clôture sous 80 123 "
+                          "(plus bas des 10 derniers jours, il suit la tendance)."]
+    assert lignes[2:5] == ["Pas dedans ? Tu peux entrer avec cet ordre :", "Instrument : BTCUSD",
                            "Direction : Acheter"]
+
+
+def test_niveau_de_sortie_de_la_cassure():
+    df = marche_plat()
+    df.iloc[-3, df.columns.get_loc("Low")] = 97.0
+    assert s.niveau_sortie(df, "Cassure 20 jours", 1) == 97.0
+    assert s.niveau_sortie(df, "Cassure 20 jours", -1) == 101.0
+    assert s.niveau_sortie(df, "Retour à la moyenne (RSI 2)", 1) is None
+
+
+def test_niveau_de_sortie_correspond_a_la_regle():
+    prix_ = [100.0] * 25 + [102.0 + i for i in range(15)]
+    index = pd.bdate_range("2024-01-01", periods=len(prix_) + 1)
+    def avec_derniere_cloture(c):
+        close = prix_ + [c]
+        return pd.DataFrame({"Open": close, "High": [x + 1 for x in close],
+                             "Low": [x - 1 for x in close], "Close": close}, index=index)
+    df = avec_derniere_cloture(116.0).iloc[:-1]
+    assert s.regle_cassure(df).iloc[-1] == 1
+    niveau = s.niveau_sortie(df, "Cassure 20 jours", 1)
+    assert s.regle_cassure(avec_derniere_cloture(niveau - 0.01)).iloc[-1] == 0
+    assert s.regle_cassure(avec_derniere_cloture(niveau + 0.01)).iloc[-1] == 1
 
 
 def test_carte_non_suivie_sans_consigne():

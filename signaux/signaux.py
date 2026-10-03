@@ -440,6 +440,22 @@ def entrer_en_cours(c):
             f"stop-loss à {prix(c['stop_estime'])} ({c['stop_pct']:.1%}), pas de take-profit.")
 
 
+def niveau_sortie(df, regle, sens):
+    """Cours de clôture qui déclenchera FERME demain (méthode cassure uniquement)."""
+    if regle != "Cassure 20 jours" or sens == 0:
+        return None
+    return float(df["Low"].tail(10).min() if sens > 0 else df["High"].tail(10).max())
+
+
+def quand_sortir(c):
+    if c.get("sortie") is None:
+        return "Quand sortir : attends la notification FERME."
+    cote = "sous" if c["sens"] > 0 else "au-dessus de"
+    extreme = "plus bas" if c["sens"] > 0 else "plus haut"
+    return (f"Quand sortir : notification FERME si le cours clôture {cote} {prix(c['sortie'])} "
+            f"({extreme} des 10 derniers jours, il suit la tendance).")
+
+
 def consigne_suivie(r):
     """Carte d'une méthode suivie, en clair et avec les cases de l'ordre Libertex."""
     c = r["conseil"]
@@ -451,15 +467,14 @@ def consigne_suivie(r):
         titre = f"{'ACHÈTE' if c['sens'] > 0 else 'VENDS'} à l'ouverture"
         if c["apres_stop"]:
             ticket = ["Ton stop a été touché, la tendance continue : on rentre."] + ticket
-        return titre, ticket, style
+        return titre, ticket + [quand_sortir(c)], style
     if c["action"] == "INVERSER":
         return (f"FERME puis {'ACHÈTE' if c['sens'] > 0 else 'VENDS'}",
-                [f"1) {fermer}", "2) Nouvel ordre :"] + ticket, style)
+                [f"1) {fermer}", "2) Nouvel ordre :"] + ticket + [quand_sortir(c)], style)
     if c["action"] == "SORTIR":
         return "FERME ta position", [fermer], "sortir"
     if c["action"] == "EN COURS":
-        lignes = [f"Déjà dedans ? Ne touche à rien (stop à {prix(c['stop_position'])} si tu es entré le "
-                  f"{c['depuis']:%d/%m})." if c["depuis"] is not None else "Déjà dedans ? Ne touche à rien."]
+        lignes = ["Déjà dedans ? Garde ton stop loss et ne touche à rien.", quand_sortir(c)]
         if c["en_cours"]:
             lignes += ["Pas dedans ? Tu peux entrer avec cet ordre :"] + ticket
         return f"Tendance {SENS[c['sens']]} en cours", lignes, style
@@ -752,6 +767,7 @@ def analyser(demo, annees, capital, risque):
                 base["eval"] = evaluer(df, voulu, FRAIS[classe], en_cours=en_cours)
                 base["conseil"] = conseil_du_jour(df, voulu, base["eval"]["execution"], capital, risque,
                                                   en_cours)
+                base["conseil"]["sortie"] = niveau_sortie(df, nom_regle, base["conseil"]["sens"])
                 base["suivi"] = suivi_depuis(df, base["eval"]["execution"], FRAIS[classe])
                 base["date_cloture"] = df.index[-1]
                 base["brut"] = brut
