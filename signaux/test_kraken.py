@@ -10,6 +10,7 @@ Mêmes réglages et mêmes frais que le bot (test_spot.py). Historique Yahoo (US
 le prix Kraken pour écarter les homonymes (Yahoo donne parfois une autre crypto du même nom).
 """
 import json
+import time
 import urllib.request
 
 import pandas as pd
@@ -50,25 +51,47 @@ def prix_kraken(cles):
     return prix
 
 
+def historiques(tickers, paquet=20, pause=8):
+    """Télécharge par petits paquets : Yahoo bloque les gros téléchargements (« Too Many Requests »)."""
+    resultat, manquants = {}, list(tickers)
+    for tour in range(3):
+        restants = []
+        for i in range(0, len(manquants), paquet):
+            lot = manquants[i:i + paquet]
+            donnees = yf.download(lot, period="10y", interval="1d", auto_adjust=True, progress=False,
+                                  group_by="ticker", threads=False)
+            for t in lot:
+                try:
+                    df = donnees[t][["Open", "High", "Low", "Close"]].dropna()
+                except KeyError:
+                    df = pd.DataFrame()
+                df = df[(df > 0).all(axis=1)]  # Yahoo met parfois des prix à zéro
+                if df.empty:
+                    restants.append(t)
+                else:
+                    df.index = pd.to_datetime(df.index).tz_localize(None)
+                    resultat[t] = df
+            time.sleep(pause)
+        manquants = restants
+        if not manquants:
+            break
+        time.sleep(60)  # laisse passer la limite de Yahoo avant de réessayer les absents
+    return resultat
+
+
 def main():
     bases = paires_kraken()
     prix_eur = prix_kraken(list(bases.values()))
     tickers = {base: f"{YAHOO.get(base, base)}-USD" for base in bases}
-    donnees = yf.download(list(tickers.values()), period="10y", interval="1d", auto_adjust=True,
-                          progress=False, group_by="ticker", threads=True)
+    donnees = historiques(list(tickers.values()))
 
     lignes, retenus, testes, recents, douteux, absents = [], [], 0, [], [], []
     for base, ticker in sorted(tickers.items()):
-        try:
-            df = donnees[ticker][["Open", "High", "Low", "Close"]].dropna()
-        except KeyError:
+        df = donnees.get(ticker)
+        df = s.seances_terminees(df, "crypto") if df is not None else None
+        if df is None or len(df) < 2:
             absents.append(base)
             continue
-        if df.empty:
-            absents.append(base)
-            continue
-        df.index = pd.to_datetime(df.index).tz_localize(None)
-        df = s.seances_terminees(df, "crypto")
         annees = (df.index[-1] - df.index[0]).days / 365.25
         if annees < ANS_MIN:
             recents.append(f"{base} ({annees:.1f} an)")
@@ -97,6 +120,8 @@ def main():
     print(f"Retenues : {', '.join(retenus) or 'aucune'}. "
           f"Par pur hasard, on en attendrait au plus environ {testes * P_STRICT:.0f}.")
     print(f"\nTrop récentes : {', '.join(recents)}")
+    print(f"Sans historique Yahoo : {', '.join(absents)}")
+    print(f"Homonymes écartés : {', '.join(douteux)}")
 
 
 if __name__ == "__main__":
