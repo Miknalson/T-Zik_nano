@@ -148,6 +148,16 @@ def test_notification_entrer_reprend_les_cases_libertex():
     assert "notification FERME" in m["message"]
 
 
+def test_ticket_forex_avec_multiplicateur_dix():
+    r = resultat("EURGBP=X", "Retour à la moyenne (RSI 2)", "ENTRER")
+    r["conseil"].update({"multiplicateur": 10, "nominal": 1000.0, "stop_pct": 0.01,
+                         "cloture": 0.86123, "stop_estime": 0.85262})
+    [m] = s.notifications([r])
+    assert "Instrument : EURGBP\n" in m["message"]
+    assert "Montant : 100 €\nMultiplicateur : ×10\n" in m["message"]
+    assert "(≈ −10 € si touché)" in m["message"]
+
+
 def test_notification_vente():
     [m] = s.notifications([resultat("BTC-USD", "Cassure 20 jours", "ENTRER", sens=-1)])
     assert m["title"] == "Bitcoin : VENDS (démo)" and "Direction : Vendre" in m["message"]

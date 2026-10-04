@@ -38,6 +38,7 @@ MARCHES = [
     ("^GSPC", "S&P 500", "indice"),
     ("EURUSD=X", "EUR/USD", "forex"),
     ("GBPUSD=X", "GBP/USD", "forex"),
+    ("EURGBP=X", "EUR/GBP", "forex"),
 ]
 
 # Coûts en fraction du nominal. Crypto : mesuré sur Libertex (commission 0,10 %
@@ -149,6 +150,9 @@ METHODE_SUIVIE = {
     "DOGE-USD": "Cassure 20 jours",
     "XLM-USD": "Cassure 20 jours",
     "VET-USD": "Cassure 20 jours",
+    # Ajoutée le 04/10/2026 : seule méthode forex confirmée hors échantillon (test_forex.py),
+    # gain faible (~1 %/an de la position) : à juger sur le compte démo.
+    "EURGBP=X": "Retour à la moyenne (RSI 2)",
     "^GSPC": "Retour à la moyenne (RSI 2)",
 }
 
@@ -437,7 +441,8 @@ def entrer_en_cours(c):
     if not c["en_cours"]:
         return "Pas encore dedans ? N'entre pas en cours de route : attends le prochain ENTRER."
     return (f"Pas encore dedans ? Tu peux entrer en {SENS[c['sens']]} à l'ouverture : "
-            f"montant {eur(int(c['nominal'] / MULTIPLICATEUR))} × {MULTIPLICATEUR}, "
+            f"montant {eur(int(c['nominal'] / c.get('multiplicateur', MULTIPLICATEUR)))} × "
+            f"{c.get('multiplicateur', MULTIPLICATEUR)}, "
             f"stop-loss à {prix(c['stop_estime'])} ({c['stop_pct']:.1%}), pas de take-profit.")
 
 
@@ -699,20 +704,24 @@ def journaliser(resultats, chemin):
 
 
 MULTIPLICATEUR = 2  # plafond européen sur la crypto ; le montant investi reste ≫ la perte au stop
+# Forex : stops d'environ 1 %, il faut plus de levier pour une position de taille utile
+# (Libertex autorise jusqu'à ×30 sur les grandes paires).
+MULTIPLICATEURS = {"forex": 10}
 # Nom de l'instrument tel qu'il apparaît dans Libertex.
 NOM_LIBERTEX = {"BTC-USD": "BTCUSD", "ETH-USD": "ETHUSD", "XRP-USD": "XRPUSD", "DOGE-USD": "DOGEUSD",
-                "XLM-USD": "XLMUSD", "VET-USD": "VETUSD", "^GSPC": "US SPX 500 Cash"}
+                "XLM-USD": "XLMUSD", "VET-USD": "VETUSD", "^GSPC": "US SPX 500 Cash", "EURGBP=X": "EURGBP"}
 FERMER = "onglet « Actif » → ta position {nom} → « Fermer »"
 
 
 def ticket_libertex(instrument, c):
     """Les cases de l'écran d'ordre Libertex, dans l'ordre où elles apparaissent."""
-    montant = int(c["nominal"] / MULTIPLICATEUR)
-    perte = montant * MULTIPLICATEUR * c["stop_pct"]
+    levier = c.get("multiplicateur", MULTIPLICATEUR)
+    montant = int(c["nominal"] / levier)
+    perte = montant * levier * c["stop_pct"]
     return (f"Instrument : {instrument}\n"
             f"Direction : {'Acheter' if c['sens'] > 0 else 'Vendre'}\n"
             f"Montant : {eur(montant)}\n"
-            f"Multiplicateur : ×{MULTIPLICATEUR}\n"
+            f"Multiplicateur : ×{levier}\n"
             "Take Profit : laisser vide\n"
             f"Stop Loss : {prix(c['stop_estime'])} (≈ −{perte:.0f} € si touché)\n"
             f"Prix de référence : {prix(c['cloture'])}")
@@ -794,6 +803,7 @@ def analyser(demo, annees, capital, risque):
                 base["conseil"] = conseil_du_jour(df, voulu, base["eval"]["execution"], capital, risque,
                                                   en_cours)
                 base["conseil"]["sortie"] = niveau_sortie(df, nom_regle, base["conseil"]["sens"])
+                base["conseil"]["multiplicateur"] = MULTIPLICATEURS.get(classe, MULTIPLICATEUR)
                 base["suivi"] = suivi_depuis(df, base["eval"]["execution"], FRAIS[classe])
                 base["date_cloture"] = df.index[-1]
                 base["brut"] = brut

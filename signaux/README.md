@@ -1,6 +1,6 @@
 # Signaux quotidiens
 
-Analyse chaque matin 13 marchés (crypto, gaz, pétrole, or, CAC 40, S&P 500, EUR/USD, GBP/USD)
+Analyse chaque matin 14 marchés (crypto, gaz, pétrole, or, CAC 40, S&P 500, EUR/USD, GBP/USD)
 avec 3 règles simples, et n'affiche un signal que si la règle a battu le hasard sur
 l'historique en simulant **exactement les consignes affichées** : entrée à l'ouverture,
 stop-loss chez le courtier, frais et financement overnight compris. Sinon : « pas de signal fiable ».
@@ -51,6 +51,7 @@ stop loss), FERME, ou stop touché.
 |---|---|
 | Bitcoin, Ethereum, XRP | Cassure 20 jours |
 | Dogecoin, Stellar, VeChain (ajoutés le 30/09/2026) | Cassure 20 jours |
+| EUR/GBP (ajouté le 04/10/2026, multiplicateur ×10) | Retour à la moyenne (RSI 2) |
 | S&P 500 | Retour à la moyenne (RSI 2) |
 
 Ces méthodes ont été fixées le 27/09/2026 et ne doivent pas changer pendant le test.
