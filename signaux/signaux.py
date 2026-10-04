@@ -16,6 +16,7 @@ import csv
 import datetime as dt
 import html
 import json
+import math
 import os
 import sys
 import time
@@ -400,8 +401,15 @@ def eur(x):
 
 
 def prix(x):
-    # 73 970 plutôt que 7.397e+04 ; 1.1682 ou 2.874 gardent leurs décimales.
-    return f"{x:,.0f}".replace(",", " ") if abs(x) >= 1000 else f"{x:.5g}"
+    # 73 970 plutôt que 7.397e+04 ; 1.1682 ou 2.874 gardent leurs décimales ;
+    # 0.000041234 plutôt que 4.1234e-05 (petites cryptos comme FLOKI).
+    if abs(x) >= 1000:
+        return f"{x:,.0f}".replace(",", " ")
+    texte = f"{x:.5g}"
+    if "e" in texte:
+        decimales = 4 - math.floor(math.log10(abs(x)))
+        texte = f"{x:.{decimales}f}".rstrip("0").rstrip(".")
+    return texte
 
 
 SENS = {1: "ACHAT", -1: "VENTE"}

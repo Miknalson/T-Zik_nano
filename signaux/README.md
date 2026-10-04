@@ -127,7 +127,7 @@ tendance continue après un stop. Achat seulement : une plateforme au comptant n
 parier sur la baisse (`test_spot.py` : la méthode reste gagnante en achat seul sur les 6 cryptos).
 
 - Marchés : Bitcoin, Ethereum, XRP, Dogecoin, Stellar, VeChain, plus Solana, BNB, Tron,
-  Avalanche, NEAR, Hedera, Polkadot et Algorand (retenues par `test_kraken.py`), en euros sur
+  Avalanche, NEAR, Hedera, Polkadot, Algorand et FLOKI (retenues par `test_kraken.py`), en euros sur
   Kraken.
 - **Au plus 5 cryptos en même temps** (variable GitHub `BOT_MAX` pour changer ce nombre) :
   quand il y a plus de candidates que de places, il prend celles qui ont le plus monté sur

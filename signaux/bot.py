@@ -30,11 +30,14 @@ import pandas as pd
 
 import signaux as s
 
-# Les 6 méthodes suivies + les 8 grosses cryptos retenues par test_kraken.py (03/10/2026).
+# Les 6 méthodes suivies + les 8 grosses cryptos retenues par test_kraken.py (03/10/2026) + FLOKI.
 PAIRES = {"Bitcoin": "XBTEUR", "Ethereum": "ETHEUR", "XRP": "XRPEUR",
           "Dogecoin": "XDGEUR", "Stellar": "XLMEUR", "VeChain": "VETEUR",
           "Solana": "SOLEUR", "BNB": "BNBEUR", "Tron": "TRXEUR", "Avalanche": "AVAXEUR",
-          "NEAR": "NEAREUR", "Hedera": "HBAREUR", "Polkadot": "DOTEUR", "Algorand": "ALGOEUR"}
+          "NEAR": "NEAREUR", "Hedera": "HBAREUR", "Polkadot": "DOTEUR", "Algorand": "ALGOEUR",
+          # Ajoutée le 04/10/2026 : la plus nette des petites cryptos de test_kraken.py
+          # (+173 %/an, gagnante sur les deux moitiés, p = 0,005).
+          "FLOKI": "FLOKIEUR"}
 FRAIS_ORDRE = 0.004   # Kraken, ordre au marché, petit volume
 RISQUE = 0.01         # un stop touché coûte 1 % du portefeuille
 CAPITAL_DEPART = 1000.0

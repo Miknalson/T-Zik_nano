@@ -148,6 +148,11 @@ def test_notification_entrer_reprend_les_cases_libertex():
     assert "notification FERME" in m["message"]
 
 
+def test_prix_sans_notation_scientifique():
+    assert s.prix(0.0000412347) == "0.000041235" and s.prix(0.0001) == "0.0001"
+    assert s.prix(2.874) == "2.874" and s.prix(81745.0) == "81 745" and s.prix(96.0) == "96"
+
+
 def test_ticket_forex_avec_multiplicateur_dix():
     r = resultat("EURGBP=X", "Retour à la moyenne (RSI 2)", "ENTRER")
     r["conseil"].update({"multiplicateur": 10, "nominal": 1000.0, "stop_pct": 0.01,
