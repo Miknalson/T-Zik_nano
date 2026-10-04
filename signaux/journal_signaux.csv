@@ -251,3 +251,6 @@ date_execution;date_cloture;ticker;regle;valide;signal;cloture;stop
 2026-10-04;2026-10-02;EURGBP=X;Tendance (moyennes 50/200);0;EN COURS VENTE;0.84972;0.873036
 2026-10-04;2026-10-02;EURGBP=X;Cassure 20 jours;0;EN COURS VENTE;0.84972;0.857886
 2026-10-04;2026-10-02;EURGBP=X;Retour à la moyenne (RSI 2);0;RIEN;0.84972;
+2026-10-04;2026-10-02;V;Tendance (moyennes 50/200);0;EN COURS ACHAT;360.66;327.281
+2026-10-04;2026-10-02;V;Cassure 20 jours;0;EN COURS VENTE;360.66;372.649
+2026-10-04;2026-10-02;V;Retour à la moyenne (RSI 2);1;EN COURS ACHAT;360.66;346.921
