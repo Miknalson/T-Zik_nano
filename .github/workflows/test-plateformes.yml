@@ -12,14 +12,14 @@ jobs:
     steps:
       - name: Actions tokenisées (xStocks) disponibles par l'API Kraken
         run: |
-          curl -s -m 30 "https://api.kraken.com/0/public/AssetPairs" -o paires.json
+          curl -s -m 30 "https://api.kraken.com/0/public/AssetPairs?aclass_base=tokenized_asset" -o paires.json
+          head -c 300 paires.json; echo
           python3 - <<'PY'
           import json
-          paires = json.load(open("paires.json"))["result"]
-          xs = sorted({(v["altname"], v.get("status"), v.get("aclass_base")) for v in paires.values()
-                       if v.get("aclass_base") not in (None, "currency") or "x" in v["altname"][:6] and v["altname"][:1].isupper() and any(c.islower() for c in v["altname"])})
+          paires = json.load(open("paires.json")).get("result", {})
+          xs = sorted({(v["altname"], v.get("status"), v.get("aclass_base")) for v in paires.values()})
           print(f"{len(paires)} paires au total")
           print(f"Paires d'actions ou d'autres classes : {len(xs)}")
-          for alt, statut, classe in xs[:80]:
+          for alt, statut, classe in xs[:120]:
               print(alt, statut, classe)
           PY
