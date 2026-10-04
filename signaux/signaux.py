@@ -40,6 +40,7 @@ MARCHES = [
     ("EURUSD=X", "EUR/USD", "forex"),
     ("GBPUSD=X", "GBP/USD", "forex"),
     ("EURGBP=X", "EUR/GBP", "forex"),
+    ("V", "Visa", "action"),
 ]
 
 # Coûts en fraction du nominal. Crypto : mesuré sur Libertex (commission 0,10 %
@@ -51,6 +52,7 @@ FRAIS = {
     "matiere": {"aller_retour": 0.003,  "financement_jour": 0.0002},
     "indice":  {"aller_retour": 0.0005, "financement_jour": 0.0002},
     "forex":   {"aller_retour": 0.0002, "financement_jour": 0.0001},
+    "action":  {"aller_retour": 0.003,  "financement_jour": 0.0002},  # CFD action, prudent
 }
 
 K_STOP = 2.0          # stop-loss à 2 × l'ATR (variation moyenne d'une séance)
@@ -154,6 +156,9 @@ METHODE_SUIVIE = {
     # Ajoutée le 04/10/2026 : seule méthode forex confirmée hors échantillon (test_forex.py),
     # gain faible (~1 %/an de la position) : à juger sur le compte démo.
     "EURGBP=X": "Retour à la moyenne (RSI 2)",
+    # Ajoutée le 04/10/2026 : la plus nette des 30 actions de test_actions.py (p = 0,002 sur
+    # 2010-2018, puis +3,7 %/an et p = 0,04 sur 2019-2026, période non vue).
+    "V": "Retour à la moyenne (RSI 2)",
     "^GSPC": "Retour à la moyenne (RSI 2)",
 }
 
@@ -494,7 +499,7 @@ def consigne_suivie(r):
         return f"Tendance {SENS[c['sens']]} en cours", lignes, style
     if c["action"] == "STOP TOUCHÉ":
         return "Stop touché", ["Ta position a été fermée par le stop. Rien à faire."], "gris"
-    return "Rien à faire", ["Pas de tendance en ce moment. Attends la notification."], "gris"
+    return "Rien à faire", ["Pas de signal en ce moment. Attends la notification."], "gris"
 
 
 def consigne(r):
@@ -717,7 +722,8 @@ MULTIPLICATEUR = 2  # plafond européen sur la crypto ; le montant investi reste
 MULTIPLICATEURS = {"forex": 10}
 # Nom de l'instrument tel qu'il apparaît dans Libertex.
 NOM_LIBERTEX = {"BTC-USD": "BTCUSD", "ETH-USD": "ETHUSD", "XRP-USD": "XRPUSD", "DOGE-USD": "DOGEUSD",
-                "XLM-USD": "XLMUSD", "VET-USD": "VETUSD", "^GSPC": "US SPX 500 Cash", "EURGBP=X": "EURGBP"}
+                "XLM-USD": "XLMUSD", "VET-USD": "VETUSD", "^GSPC": "US SPX 500 Cash", "EURGBP=X": "EURGBP",
+                "V": "Visa"}
 FERMER = "onglet « Actif » → ta position {nom} → « Fermer »"
 
 
