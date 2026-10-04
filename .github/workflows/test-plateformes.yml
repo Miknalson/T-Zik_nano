@@ -10,15 +10,16 @@ jobs:
   tester:
     runs-on: ubuntu-latest
     steps:
-      - name: Joindre les API publiques depuis GitHub
+      - name: Actions tokenisées (xStocks) disponibles par l'API Kraken
         run: |
-          for u in \
-            "https://api.kraken.com/0/public/AssetPairs?pair=XBTEUR,ETHEUR,XRPEUR,XDGEUR,XLMEUR" \
-            "https://api.kraken.com/0/public/AssetPairs?pair=VETEUR" \
-            "https://api.binance.com/api/v3/ping" \
-            "https://testnet.binance.vision/api/v3/exchangeInfo?symbols=%5B%22BTCUSDT%22,%22ETHUSDT%22,%22XRPUSDT%22,%22DOGEUSDT%22,%22XLMUSDT%22,%22VETUSDT%22%5D" \
-            "https://api.bitvavo.com/v2/markets"; do
-            echo "== $u"
-            code=$(curl -s -m 20 -o r.txt -w "%{http_code}" "$u"); echo "HTTP $code"
-            head -c 600 r.txt; echo
-          done
+          curl -s -m 30 "https://api.kraken.com/0/public/AssetPairs" -o paires.json
+          python3 - <<'PY'
+          import json
+          paires = json.load(open("paires.json"))["result"]
+          xs = sorted({(v["altname"], v.get("status"), v.get("aclass_base")) for v in paires.values()
+                       if v.get("aclass_base") not in (None, "currency") or "x" in v["altname"][:6] and v["altname"][:1].isupper() and any(c.islower() for c in v["altname"])})
+          print(f"{len(paires)} paires au total")
+          print(f"Paires d'actions ou d'autres classes : {len(xs)}")
+          for alt, statut, classe in xs[:80]:
+              print(alt, statut, classe)
+          PY
