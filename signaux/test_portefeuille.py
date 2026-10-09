@@ -20,7 +20,7 @@ from bot import FRAIS_ORDRE, RISQUE
 UNIVERS = {"Bitcoin": "BTC-USD", "Ethereum": "ETH-USD", "XRP": "XRP-USD", "Dogecoin": "DOGE-USD",
            "Stellar": "XLM-USD", "VeChain": "VET-USD", "Solana": "SOL-USD", "BNB": "BNB-USD",
            "Tron": "TRX-USD", "Avalanche": "AVAX-USD", "NEAR": "NEAR-USD", "Hedera": "HBAR-USD",
-           "Polkadot": "DOT-USD", "Algorand": "ALGO-USD"}
+           "Polkadot": "DOT-USD", "Algorand": "ALGO-USD", "FLOKI": "FLOKI-USD"}
 MAX_POSITIONS = 5
 ELAN = 90  # jours pour mesurer « le plus monté »
 CAPITAL = 1000.0
@@ -40,8 +40,13 @@ def preparer(donnees):
     return {k: v.to_numpy(float) for k, v in t.items()}, list(donnees), dates
 
 
-def simuler(t, noms, max_positions=MAX_POSITIONS, hasard=None):
-    """Valeur du portefeuille chaque soir. `hasard` : générateur pour classer au hasard."""
+def simuler(t, noms, max_positions=MAX_POSITIONS, hasard=None, tp_atr=None, suiveur_atr=None):
+    """Valeur du portefeuille chaque soir. `hasard` : générateur pour classer au hasard.
+
+    Variantes de sortie (test_sorties.py) : `tp_atr` vend dès que le cours monte de tp_atr × ATR
+    au-dessus du prix d'achat ; `suiveur_atr` remonte le stop chaque soir à suiveur_atr × ATR
+    sous la clôture (il ne redescend jamais).
+    """
     o, h, l, c = t["Open"], t["High"], t["Low"], t["Close"]
     cash, positions, valeurs, trades = CAPITAL, {}, [], 0
     dernier = np.full(len(noms), np.nan)
@@ -49,10 +54,10 @@ def simuler(t, noms, max_positions=MAX_POSITIONS, hasard=None):
         # 1. Sorties à l'ouverture : la règle a dit « plus en tendance » à la clôture de la veille.
         for j in list(positions):
             if not np.isnan(o[i, j]) and t["voulu"][i, j] == 0:
-                q, _ = positions.pop(j)
+                q = positions.pop(j)[0]
                 cash += q * o[i, j] * (1 - FRAIS_ORDRE)
         # 2. Entrées à l'ouverture, les plus fortes d'abord, dans la limite des places.
-        valeur = cash + sum(q * (o[i, j] if not np.isnan(o[i, j]) else dernier[j]) for j, (q, _) in positions.items())
+        valeur = cash + sum(p[0] * (o[i, j] if not np.isnan(o[i, j]) else dernier[j]) for j, p in positions.items())
         candidats = [j for j in range(len(noms)) if j not in positions and t["voulu"][i, j] == 1
                      and not np.isnan(o[i, j]) and not np.isnan(t["atr"][i, j]) and not np.isnan(t["elan"][i, j])]
         if hasard is not None:
@@ -65,17 +70,28 @@ def simuler(t, noms, max_positions=MAX_POSITIONS, hasard=None):
             if montant < 5:
                 continue
             cash -= montant * (1 + FRAIS_ORDRE)
-            positions[j] = (montant / o[i, j], o[i, j] - distance)
+            objectif = o[i, j] + tp_atr * t["atr"][i, j] if tp_atr else np.inf
+            positions[j] = [montant / o[i, j], o[i, j] - distance, objectif, t["atr"][i, j]]
             trades += 1
         assert len(positions) <= max_positions
-        # 3. Stops dans la séance (au prix d'ouverture si le marché ouvre déjà dessous).
+        # 3. Stops dans la séance (au prix d'ouverture si le marché ouvre déjà dessous), puis
+        #    objectif de gain s'il y en a un. Si les deux sont touchés le même jour, on suppose
+        #    le stop d'abord (hypothèse prudente).
         for j in list(positions):
-            q, stop = positions[j]
+            q, stop, objectif, _ = positions[j]
             if not np.isnan(l[i, j]) and l[i, j] <= stop:
                 positions.pop(j)
                 cash += q * min(o[i, j], stop) * (1 - FRAIS_ORDRE)
+            elif not np.isnan(h[i, j]) and h[i, j] >= objectif:
+                positions.pop(j)
+                cash += q * max(o[i, j], objectif) * (1 - FRAIS_ORDRE)
+        # 4. Stop suiveur : remonté à la clôture, jamais redescendu.
+        if suiveur_atr:
+            for j, p in positions.items():
+                if not np.isnan(c[i, j]):
+                    p[1] = max(p[1], c[i, j] - suiveur_atr * p[3])
         dernier = np.where(np.isnan(c[i]), dernier, c[i])
-        valeurs.append(cash + sum(q * dernier[j] for j, (q, _) in positions.items()))
+        valeurs.append(cash + sum(p[0] * dernier[j] for j, p in positions.items()))
     return np.array(valeurs), trades
 
 
