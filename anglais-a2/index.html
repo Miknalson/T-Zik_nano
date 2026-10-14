@@ -440,7 +440,7 @@ const TIPS=['Parlez à voix haute, même seul : votre bouche doit s’habituer a
 /* ============================ ÉTAT ============================ */
 const KEY='speakup-a2-v1';
 let S;try{S=JSON.parse(localStorage.getItem(KEY))}catch(e){}
-S=Object.assign({xp:0,streak:0,last:'',done:{},cards:{},lvl:20,placed:false,tested:false,key:'',model:'claude-haiku-5-5',errs:{},extra:{},speed:'auto',fr:true,hist:{},day:{},ex:{ok:0,n:0},convos:0},S||{});
+S=Object.assign({xp:0,streak:0,last:'',done:{},cards:{},lvl:20,placed:false,tested:false,key:'',model:'claude-haiku-5-5',errs:{},extra:{},words:[],verbs:{},plSave:null,speed:'auto',fr:true,hist:{},day:{},ex:{ok:0,n:0},convos:0},S||{});
 const save=()=>{try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){}};
 function dayRec(){if(S.day.d!==today())S.day={d:today(),rev:false,learn:false,turns:0};return S.day}
 const LV=[[18,'A1 – débutant'],[30,'A2 – début'],[50,'A2 solide'],[68,'A2+ (vers B1)'],[101,'B1']];
@@ -547,13 +547,13 @@ const verdict=s=>s>=85?'🎉 Excellent !':s>=60?'👍 Bien, encore une fois pour
 
 /* ============================ NAVIGATION ============================ */
 let tab='home',cur=null;
-const TABS=[['home','🏠','Aujourd’hui'],['course','📚','Cours'],['chat','🤖','Tuteur'],['cards','🃏','Révision'],['prog','📈','Progrès']];
+const TABS=[['home','🏠','Aujourd’hui'],['course','📚','Cours'],['chat','🤖','Tuteur'],['dico','📖','Dico'],['cards','🃏','Révision'],['prog','📈','Progrès']];
 function drawNav(){$('nav').innerHTML=TABS.map(([k,i,l])=>`<button class="${tab===k?'on':''}" onclick="go('${k}')"><span>${i}</span>${l}</button>`).join('')}
 function go(t){tab=t;cur=null;spk++;try{speechSynthesis.cancel()}catch(e){}render()}
 function render(){
   head();drawNav();window.scrollTo(0,0);
   if(!S.tested){return vWelcome()}
-  ({home:vHome,course:vCourse,chat:vChat,cards:vCards,prog:vProg})[tab]();
+  ({home:vHome,course:vCourse,chat:vChat,dico:vDico,cards:vCards,prog:vProg})[tab]();
 }
 const ring=(p,size=92,w=9,col='#fff',bg='rgba(255,255,255,.25)')=>{const r=(size-w)/2,c=2*Math.PI*r;return `<svg width="${size}" height="${size}"><circle cx="${size/2}" cy="${size/2}" r="${r}" fill="none" stroke="${bg}" stroke-width="${w}"/><circle cx="${size/2}" cy="${size/2}" r="${r}" fill="none" stroke="${col}" stroke-width="${w}" stroke-linecap="round" stroke-dasharray="${c}" stroke-dashoffset="${c*(1-p/100)}"/></svg>`};
 
@@ -561,12 +561,14 @@ const ring=(p,size=92,w=9,col='#fff',bg='rgba(255,255,255,.25)')=>{const r=(size
 function vWelcome(){
   $('view').innerHTML=`<div class="hero" style="flex-direction:column;align-items:flex-start;gap:8px"><div class="big">Bienvenue 👋<br>Parlons anglais !</div><small>Votre professeur de poche : cours, exercices, conversation à la voix et corrections, à votre niveau.</small></div>
   <div class="card"><h3>Commençons par un test de niveau</h3><p class="mute">Environ 5 minutes : 16 questions qui s’adaptent à vos réponses (grammaire, vocabulaire, écoute, lecture) puis une courte épreuve orale. Il mesure votre vrai niveau et règle le cours et la vitesse du tuteur. Répondez sans tricher : « je ne sais pas » est permis.</p>
-  <button class="btn primary big" onclick="startPlacement()">Faire le test de niveau</button>
+  ${S.plSave?`<button class="btn primary big" onclick="resumePl()">Reprendre mon test (question ${Math.min(S.plSave.n+1,16)}/16)</button><button class="btn big" style="margin-top:8px" onclick="startPlacement()">Recommencer le test</button>`:`<button class="btn primary big" onclick="startPlacement()">Faire le test de niveau</button>`}
   <div class="row"><button class="btn ghost" onclick="S.tested=true;S.placed=true;save();render()">Passer le test (je garde mon niveau actuel)</button></div></div>`;
 }
 let PL=null;
 const SKN={g:'🔤 Grammaire',v:'📖 Vocabulaire',l:'🎧 Écoute',r:'📄 Lecture'},PL_N=16;
-function startPlacement(){PL={n:0,d:2,used:new Set(),ds:[],best:{g:-1,v:-1,c:-1},ask:{g:0,v:0,l:0,r:0},oral:[]};$('nav').style.display='none';nextPl()}
+function savePl(phase){S.plSave={phase,n:PL.n,d:PL.d,ds:PL.ds,best:PL.best,ask:PL.ask,used:[...PL.used].map(x=>PLB.indexOf(x)),oral:PL.oral,os:PL.os||null,oi:PL.oi||0};save()}
+function resumePl(){const r=S.plSave;if(!r)return startPlacement();PL={n:r.n,d:r.d,ds:r.ds,best:r.best,ask:r.ask,used:new Set(r.used.map(i=>PLB[i])),oral:r.oral||[],os:r.os,oi:r.oi||0};$('nav').style.display='none';if(r.phase==='oral'&&PL.os)showOral();else nextPl()}
+function startPlacement(){S.plSave=null;PL={n:0,d:2,used:new Set(),ds:[],best:{g:-1,v:-1,c:-1},ask:{g:0,v:0,l:0,r:0},oral:[]};$('nav').style.display='none';nextPl()}
 function pickPl(){
   for(const k of [0,1,-1,2,-2,3,-3,4,-4,5]){
     const d=PL.d+k;if(d<0||d>5)continue;
@@ -590,11 +592,11 @@ function nextPl(){
 function plPick(i){
   const it=PL.cur,ok=i===it.a,k=it.k==='g'||it.k==='v'?it.k:'c';
   PL.ds.push(PL.d);if(ok&&it.d>PL.best[k])PL.best[k]=it.d;
-  PL.d=ok?Math.min(5,PL.d+1):Math.max(0,PL.d-1);PL.n++;nextPl();
+  PL.d=ok?Math.min(5,PL.d+1):Math.max(0,PL.d-1);PL.n++;savePl('mcq');nextPl();
 }
 const plEst=()=>{const a=PL.ds.slice(-10).concat(PL.d),e=a.reduce((x,y)=>x+y,0)/a.length;return Math.max(0,Math.min(5,e))};
 const plLvl=e=>{const i=Math.min(4,Math.floor(e));return PL_PTS[i]+(PL_PTS[i+1]-PL_PTS[i])*(e-i)};
-function startOral(){PL.oi=0;const b=Math.max(0,Math.min(2,Math.round(plEst()/5*3)));PL.os=ORAL.slice(b,b+3);showOral()}
+function startOral(){PL.oi=0;const b=Math.max(0,Math.min(2,Math.round(plEst()/5*3)));PL.os=ORAL.slice(b,b+3);savePl('oral');showOral()}
 function showOral(){
   if(PL.oi>=PL.os.length)return finishPl();
   const t=PL.os[PL.oi];
@@ -608,7 +610,7 @@ async function oralTry(){
   const t=PL.os[PL.oi],m=$('mic'),r=$('res');
   if(!canMic()){r.textContent=errMsg('unsupported');return}
   m.classList.add('rec');r.textContent='Je vous écoute… parlez !';
-  try{const c=await bestMatch(t);PL.oral.push(c.score);r.innerHTML=`<b>${c.score}%</b> ${c.html}`;m.classList.remove('rec');setTimeout(()=>{PL.oi++;showOral()},1400);return}
+  try{const c=await bestMatch(t);PL.oral.push(c.score);r.innerHTML=`<b>${c.score}%</b> ${c.html}`;m.classList.remove('rec');setTimeout(()=>{PL.oi++;savePl('oral');showOral()},1400);return}
   catch(e){r.textContent=errMsg(e)}
   m.classList.remove('rec');
 }
@@ -617,7 +619,7 @@ function finishPl(){
   const sc=PL.oral.length?Math.round(PL.oral.reduce((a,b)=>a+b,0)/PL.oral.length):null;
   if(sc!==null)lvl+=(sc-75)/100*8;
   lvl=Math.max(5,Math.min(90,lvl));
-  S.lvl=lvl;S.tested=true;S.placed=true;S.tests=(S.tests||[]).concat([{d:today(),l:Math.round(lvl)}]);save();
+  S.plSave=null;S.lvl=lvl;S.tested=true;S.placed=true;S.tests=(S.tests||[]).concat([{d:today(),l:Math.round(lvl)}]);save();
   $('nav').style.display='';drawNav();confetti();
   const lab=d=>d<0?'A1 −':CEFR[d];
   $('view').innerHTML=`<div class="hero"><div class="ring">${ring(S.lvl)}<b>${Math.round(S.lvl)}</b></div><div class="t"><small>Votre niveau mesuré</small><div class="big">${lvlName()}</div><small>sur ${PL.n} questions${sc!==null?' et un oral':''}</small></div></div>
@@ -1136,6 +1138,410 @@ function copyProf(){
   const t=profPrompt(),el=$('pp');
   try{navigator.clipboard.writeText(t).then(()=>toast('Texte copié ✅ Collez-le dans Claude.',3000),()=>{el.focus();el.select();toast('Sélectionné : faites Copier.',4000)})}
   catch(e){el.focus();el.select();toast('Sélectionné : faites Copier.',4000)}
+}
+
+/* ============================ DICTIONNAIRE · VERBES · CONJUGAISON ============================ */
+const VERB_DATA=(`be|was|been|être|etre
+become|became|become|devenir|devenir
+begin|began|begun|commencer|cer
+break|broke|broken|casser|er
+bring|brought|brought|apporter|er
+build|built|built|construire|construire
+buy|bought|bought|acheter|acheter
+catch|caught|caught|attraper|er
+choose|chose|chosen|choisir|ir
+come|came|come|venir|venir
+cost|cost|cost|coûter|er
+cut|cut|cut|couper|er
+deal|dealt|dealt|traiter|er
+do|did|done|faire|faire
+draw|drew|drawn|dessiner|er
+drink|drank|drunk|boire|boire
+drive|drove|driven|conduire|conduire
+eat|ate|eaten|manger|ger
+fall|fell|fallen|tomber|er
+feel|felt|felt|sentir|sentir
+find|found|found|trouver|er
+fly|flew|flown|voler|er
+forget|forgot|forgotten|oublier|er
+forgive|forgave|forgiven|pardonner|er
+get|got|got|obtenir|obtenir
+give|gave|given|donner|er
+go|went|gone|aller|aller
+grow|grew|grown|grandir|ir
+hang|hung|hung|accrocher|er
+have|had|had|avoir|avoir
+hear|heard|heard|entendre|re
+hide|hid|hidden|cacher|er
+hit|hit|hit|frapper|er
+hold|held|held|tenir|tenir
+hurt|hurt|hurt|blesser|er
+keep|kept|kept|garder|er
+know|knew|known|savoir|savoir
+lay|laid|laid|poser|er
+lead|led|led|diriger|ger
+leave|left|left|partir|partir
+lend|lent|lent|prêter|er
+let|let|let|laisser|er
+lose|lost|lost|perdre|re
+make|made|made|faire|faire
+mean|meant|meant|signifier|er
+meet|met|met|rencontrer|er
+pay|paid|paid|payer|yer
+put|put|put|mettre|mettre
+quit|quit|quit|quitter|er
+read|read|read|lire|lire
+ring|rang|rung|sonner|er
+run|ran|run|courir|courir
+say|said|said|dire|dire
+see|saw|seen|voir|voir
+seek|sought|sought|chercher|er
+sell|sold|sold|vendre|re
+send|sent|sent|envoyer|envoyer
+set|set|set|fixer|er
+shake|shook|shaken|secouer|er
+shine|shone|shone|briller|er
+show|showed|shown|montrer|er
+shut|shut|shut|fermer|er
+sing|sang|sung|chanter|er
+sleep|slept|slept|dormir|dormir
+speak|spoke|spoken|parler|er
+spend|spent|spent|dépenser|er
+spread|spread|spread|répandre|re
+steal|stole|stolen|voler|er
+swim|swam|swum|nager|ger
+take|took|taken|prendre|prendre
+teach|taught|taught|enseigner|er
+tear|tore|torn|déchirer|er
+tell|told|told|dire|dire
+think|thought|thought|penser|er
+throw|threw|thrown|jeter|jeter
+understand|understood|understood|comprendre|comprendre
+wake|woke|woken|réveiller|er
+wear|wore|worn|porter|er
+win|won|won|gagner|er
+write|wrote|written|écrire|écrire
+work|-|-|travailler|er
+help|-|-|aider|er
+call|-|-|appeler|appeler
+ask|-|-|demander|er
+use|-|-|utiliser|er
+need|-|-|avoir besoin de|avoir
+want|-|-|vouloir|vouloir
+like|-|-|aimer|er
+love|-|-|adorer|er
+live|-|-|habiter|er
+start|-|-|commencer|cer
+finish|-|-|finir|ir
+open|-|-|ouvrir|ouvrir
+close|-|-|fermer|er
+play|-|-|jouer|er
+watch|-|-|regarder|er
+listen|-|-|écouter|er
+talk|-|-|parler|er
+walk|-|-|marcher|er
+travel|-|-|voyager|ger
+study|-|-|étudier|er
+learn|-|-|apprendre|apprendre
+try|-|-|essayer|yer
+change|-|-|changer|ger
+stay|-|-|rester|er
+wait|-|-|attendre|re
+arrive|-|-|arriver|er
+return|-|-|retourner|er
+visit|-|-|visiter|er
+invite|-|-|inviter|er
+plan|-|-|planifier|er
+decide|-|-|décider|er
+explain|-|-|expliquer|er
+order|-|-|commander|er
+check|-|-|vérifier|er
+cook|-|-|cuisiner|er
+clean|-|-|nettoyer|yer
+enjoy|-|-|apprécier|er
+answer|-|-|répondre|re
+share|-|-|partager|ger
+organize|-|-|organiser|er
+offer|-|-|offrir|offrir
+stop|-|-|arrêter|er
+look|-|-|regarder|er
+ask|-|-|demander|er`).trim().split('\n').map(l=>{const [b,p,pp,fr,k]=l.split('|');return {b,p:p==='-'?null:p,pp:pp==='-'?null:pp,fr,k}});
+const VMAP=new Map();VERB_DATA.forEach(v=>{if(!VMAP.has(v.b))VMAP.set(v.b,v)});
+const VERBS=[...VMAP.values()].sort((a,b)=>a.b.localeCompare(b.b));
+const cap=s=>s.charAt(0).toUpperCase()+s.slice(1);
+
+/* ---- anglais ---- */
+const DBL=new Set(['stop','plan','run','get','put','sit','begin','swim','cut','hit','let','set','shut','win','forget','prefer','admit','drop','travel','quit','hug','jog']);
+function pastReg(b){return b.endsWith('e')?b+'d':/[^aeiou]y$/.test(b)?b.slice(0,-1)+'ied':DBL.has(b)?b+b.slice(-1)+'ed':b+'ed'}
+function enForms(v){
+  const b=v.b;let s3,ing;
+  if(b==='be'){s3='is';ing='being'}
+  else{
+    s3=b==='have'?'has':b==='do'?'does':b==='go'?'goes':/(s|x|z|ch|sh|o)$/.test(b)?b+'es':/[^aeiou]y$/.test(b)?b.slice(0,-1)+'ies':b+'s';
+    ing=b.endsWith('ie')?b.slice(0,-2)+'ying':/[^eoy]e$/.test(b)?b.slice(0,-1)+'ing':DBL.has(b)?b+b.slice(-1)+'ing':b+'ing';
+  }
+  return {b,s3,ing,past:v.p||pastReg(b),pp:v.pp||pastReg(b)};
+}
+const SUBJ=['I','you','he/she/it','we','you','they'];
+const CONTR={'do not':"don't",'does not':"doesn't",'did not':"didn't",'have not':"haven't",'has not':"hasn't",'had not':"hadn't",'will not':"won't",'would not':"wouldn't",'is not':"isn't",'are not':"aren't",'was not':"wasn't",'were not':"weren't"};
+function enBuild(f,id,k){
+  const be=f.b==='be',bePres=['am','are','is','are','are','are'][k],bePast=['was','were','was','were','were','were'][k],have=k===2?'has':'have',base=f.b;
+  switch(id){
+    case 'ps':return be?{aux:bePres,rest:''}:{simple:1,v:k===2?f.s3:base,doAux:k===2?'does':'do',base};
+    case 'pc':return {aux:bePres,rest:f.ing};
+    case 'pas':return be?{aux:bePast,rest:''}:{simple:1,v:f.past,doAux:'did',base};
+    case 'pac':return {aux:bePast,rest:f.ing};
+    case 'pp':return {aux:have,rest:f.pp};
+    case 'ppc':return {aux:have,rest:'been '+f.ing};
+    case 'pap':return {aux:'had',rest:f.pp};
+    case 'fs':return {aux:'will',rest:base};
+    case 'fg':return {aux:bePres,rest:'going to '+base};
+    case 'fp':return {aux:'will',rest:'have '+f.pp};
+    case 'co':return {aux:'would',rest:base};
+    default:return {aux:'would',rest:'have '+f.pp};
+  }
+}
+function enSentence(f,id,k,mode){
+  const o=enBuild(f,id,k),s=SUBJ[k];
+  if(o.simple){
+    if(mode==='aff')return `${s} ${o.v}`;
+    if(mode==='neg')return `${s} ${CONTR[o.doAux+' not']} ${o.base}`;
+    return `${cap(o.doAux)} ${s} ${o.base}?`;
+  }
+  const r=o.rest?' '+o.rest:'';
+  if(mode==='aff')return `${s} ${o.aux}${r}`;
+  if(mode==='neg')return `${s} ${CONTR[o.aux+' not']||o.aux+' not'}${r}`;
+  return `${cap(o.aux)} ${s}${r}?`;
+}
+
+/* ---- français ---- */
+const FRI={
+ etre:{p:['suis','es','est','sommes','êtes','sont'],i:'ét',f:'ser',pp:'été'},
+ avoir:{p:['ai','as','a','avons','avez','ont'],i:'av',f:'aur',pp:'eu'},
+ aller:{p:['vais','vas','va','allons','allez','vont'],i:'all',f:'ir',pp:'allé'},
+ faire:{p:['fais','fais','fait','faisons','faites','font'],i:'fais',f:'fer',pp:'fait'},
+ dire:{p:['dis','dis','dit','disons','dites','disent'],i:'dis',f:'dir',pp:'dit'},
+ voir:{p:['vois','vois','voit','voyons','voyez','voient'],i:'voy',f:'verr',pp:'vu'},
+ prendre:{p:['prends','prends','prend','prenons','prenez','prennent'],i:'pren',f:'prendr',pp:'pris'},
+ venir:{p:['viens','viens','vient','venons','venez','viennent'],i:'ven',f:'viendr',pp:'venu'},
+ tenir:{p:['tiens','tiens','tient','tenons','tenez','tiennent'],i:'ten',f:'tiendr',pp:'tenu'},
+ vouloir:{p:['veux','veux','veut','voulons','voulez','veulent'],i:'voul',f:'voudr',pp:'voulu'},
+ savoir:{p:['sais','sais','sait','savons','savez','savent'],i:'sav',f:'saur',pp:'su'},
+ mettre:{p:['mets','mets','met','mettons','mettez','mettent'],i:'mett',f:'mettr',pp:'mis'},
+ 'écrire':{p:['écris','écris','écrit','écrivons','écrivez','écrivent'],i:'écriv',f:'écrir',pp:'écrit'},
+ lire:{p:['lis','lis','lit','lisons','lisez','lisent'],i:'lis',f:'lir',pp:'lu'},
+ boire:{p:['bois','bois','boit','buvons','buvez','boivent'],i:'buv',f:'boir',pp:'bu'},
+ partir:{p:['pars','pars','part','partons','partez','partent'],i:'part',f:'partir',pp:'parti'},
+ dormir:{p:['dors','dors','dort','dormons','dormez','dorment'],i:'dorm',f:'dormir',pp:'dormi'},
+ sentir:{p:['sens','sens','sent','sentons','sentez','sentent'],i:'sent',f:'sentir',pp:'senti'},
+ courir:{p:['cours','cours','court','courons','courez','courent'],i:'cour',f:'courr',pp:'couru'},
+ conduire:{p:['conduis','conduis','conduit','conduisons','conduisez','conduisent'],i:'conduis',f:'conduir',pp:'conduit'},
+ construire:{p:['construis','construis','construit','construisons','construisez','construisent'],i:'construis',f:'construir',pp:'construit'},
+ ouvrir:{p:['ouvre','ouvres','ouvre','ouvrons','ouvrez','ouvrent'],i:'ouvr',f:'ouvrir',pp:'ouvert'},
+ offrir:{p:['offre','offres','offre','offrons','offrez','offrent'],i:'offr',f:'offrir',pp:'offert'},
+ envoyer:{p:['envoie','envoies','envoie','envoyons','envoyez','envoient'],i:'envoy',f:'enverr',pp:'envoyé'},
+ acheter:{p:['achète','achètes','achète','achetons','achetez','achètent'],i:'achet',f:'achèter',pp:'acheté'},
+ appeler:{p:['appelle','appelles','appelle','appelons','appelez','appellent'],i:'appel',f:'appeller',pp:'appelé'},
+ jeter:{p:['jette','jettes','jette','jetons','jetez','jettent'],i:'jet',f:'jetter',pp:'jeté'}};
+const FRD={comprendre:['prendre',0,'com'],apprendre:['prendre',0,'ap'],devenir:['venir',0,'de'],obtenir:['tenir',0,'ob']};
+const FR_ETRE=new Set(['aller','venir','devenir','partir','sortir','arriver','rester','tomber','retourner']);
+const AUXF={avoir:{p:['ai','as','a','avons','avez','ont'],i:['avais','avais','avait','avions','aviez','avaient'],f:['aurai','auras','aura','aurons','aurez','auront'],c:['aurais','aurais','aurait','aurions','auriez','auraient']},
+ 'être':{p:['suis','es','est','sommes','êtes','sont'],i:['étais','étais','était','étions','étiez','étaient'],f:['serai','seras','sera','serons','serez','seront'],c:['serais','serais','serait','serions','seriez','seraient']}};
+const FRE={i:['ais','ais','ait','ions','iez','aient'],f:['ai','as','a','ons','ez','ont'],c:['ais','ais','ait','ions','iez','aient']};
+const PRO=['je','tu','il/elle','nous','vous','ils/elles'];
+function frBase(key,inf){
+  if(FRI[key]){const d=FRI[key];return {p:d.p,ia:d.i,ib:d.i,f:d.f,pp:d.pp}}
+  if(FRD[key]){const [from,strip,pre]=FRD[key],d=FRI[from];return {p:d.p.map(x=>pre+x.slice(strip)),ia:pre+d.i.slice(strip),ib:pre+d.i.slice(strip),f:pre+d.f.slice(strip),pp:pre+d.pp.slice(strip)}}
+  const st=inf.slice(0,-2);
+  if(key==='ir')return {p:[st+'is',st+'is',st+'it',st+'issons',st+'issez',st+'issent'],ia:st+'iss',ib:st+'iss',f:inf,pp:st+'i'};
+  if(key==='re')return {p:[st+'s',st+'s',st,st+'ons',st+'ez',st+'ent'],ia:st,ib:st,f:inf.slice(0,-1),pp:st+'u'};
+  let sA=st,nous=st+'ons',p,fS=inf;
+  if(key==='ger'){nous=st+'eons';sA=st+'e'}
+  if(key==='cer'){nous=st.slice(0,-1)+'çons';sA=st.slice(0,-1)+'ç'}
+  if(key==='yer'){const s2=st.slice(0,-1)+'i';p=[s2+'e',s2+'es',s2+'e',st+'ons',st+'ez',s2+'ent'];fS=s2+'er';sA=st}
+  else p=[st+'e',st+'es',st+'e',nous,st+'ez',st+'ent'];
+  return {p,ia:sA,ib:st,f:fS,pp:st+'é'};
+}
+function frData(fr,key){
+  const parts=fr.split(' '),inf=parts[0],rest=parts.slice(1).join(' ');
+  return Object.assign(frBase(key,inf),{aux:FR_ETRE.has(inf)?'être':'avoir',inf,rest:rest?' '+rest:''});
+}
+const vow=s=>/^[aeiouhàâéèêëîïôùûœ]/i.test(s);
+function frSentence(d,id,k,mode){
+  const A=AUXF[d.aux],pres=d.p[k],imp=(k===3||k===4?d.ib:d.ia)+FRE.i[k],fut=d.f+FRE.f[k],cond=d.f+FRE.c[k];
+  const agree=d.aux==='être'?(k===0||k===1||k===2?'(e)':k===4?'(e)(s)':'(e)s'):'';
+  const pp=d.pp+agree,eng=vow(d.inf)?'d’':'de ';
+  let v,tail='';
+  switch(id){
+    case 'ps':v=pres;break;
+    case 'pc':v=AUXF['être'].p[k];tail='en train '+eng+d.inf;break;
+    case 'pas':case 'pp':v=A.p[k];tail=pp;break;
+    case 'pac':v=imp;break;
+    case 'ppc':v=pres;tail='depuis…';break;
+    case 'pap':v=A.i[k];tail=pp;break;
+    case 'fs':v=fut;break;
+    case 'fg':v=FRI.aller.p[k];tail=d.inf;break;
+    case 'fp':v=A.f[k];tail=pp;break;
+    case 'co':v=cond;break;
+    default:v=A.c[k];tail=pp;
+  }
+  const t=tail?' '+tail:'',r=d.rest||'';
+  if(mode==='neg')return `${PRO[k]} ${vow(v)?'n’':'ne '}${v} pas${t}${r}`;
+  const aff=k===0&&vow(v)?'j’'+v:PRO[k]+' '+v;
+  if(mode==='q')return `Est-ce qu${k===2||k===5?'’':'e '}${aff}${t}${r} ?`;
+  return `${aff}${t}${r}`;
+}
+
+const TENSES=[
+ {id:'ps',en:'Present simple',fr:'Présent',use:'Habitudes, faits, vérités générales, horaires.',sig:'always, usually, every day, often'},
+ {id:'pc',en:'Present continuous',fr:'Présent (« être en train de »)',use:'Action en cours en ce moment, ou projet proche.',sig:'now, at the moment, today'},
+ {id:'pas',en:'Past simple',fr:'Passé composé (ou passé simple à l’écrit)',use:'Action terminée à un moment précis du passé.',sig:'yesterday, last week, in 2020, ago'},
+ {id:'pac',en:'Past continuous',fr:'Imparfait',use:'Action en cours à un moment du passé, ou arrière-plan d’une histoire.',sig:'while, when, at 8 pm yesterday'},
+ {id:'pp',en:'Present perfect',fr:'Passé composé',use:'Lien entre passé et présent : expérience, résultat actuel.',sig:'already, ever, never, just, yet, recently'},
+ {id:'ppc',en:'Present perfect continuous',fr:'Présent + « depuis »',use:'Action commencée dans le passé et toujours en cours.',sig:'for, since, how long'},
+ {id:'pap',en:'Past perfect',fr:'Plus-que-parfait',use:'Action antérieure à une autre action passée.',sig:'before, by the time, already'},
+ {id:'fs',en:'Future simple (will)',fr:'Futur simple',use:'Décision spontanée, prédiction, promesse.',sig:'tomorrow, I think, probably, maybe'},
+ {id:'fg',en:'Future (going to)',fr:'Futur proche (aller + infinitif)',use:'Projet décidé, intention, événement qu’on voit venir.',sig:'next week, soon, I plan to'},
+ {id:'fp',en:'Future perfect',fr:'Futur antérieur',use:'Action qui sera terminée avant un moment futur.',sig:'by Friday, by the time, by then'},
+ {id:'co',en:'Conditional',fr:'Conditionnel présent',use:'Hypothèse, souhait, demande polie.',sig:'if + past simple, I would like'},
+ {id:'cop',en:'Past conditional',fr:'Conditionnel passé',use:'Regret, hypothèse irréalisable dans le passé.',sig:'if + past perfect'}];
+const MODES=[['aff','Affirmatif'],['neg','Négatif'],['q','Question']];
+
+/* ---- interface ---- */
+let dsub='search',cmode='aff',cverb='go',iq='';
+const DSUBS=[['search','🔎 Dictionnaire'],['irr','🔁 Irréguliers'],['conj','⏱️ Conjuguer'],['words','⭐ Mes mots']];
+function vDico(){
+  $('view').innerHTML=`<h2>📖 Dico</h2><div class="row" style="margin:0 0 12px">${DSUBS.map(([k,l])=>`<button class="btn ${dsub===k?'primary':''}" onclick="dsub='${k}';vDico()">${l}</button>`).join('')}</div><div id="dbody"></div>`;
+  ({search:dSearch,irr:dIrr,conj:dConj,words:dWords})[dsub]();
+}
+const clean=w=>w.trim().toLowerCase().replace(/^to\s+/,'').replace(/[^a-zàâçéèêëîïôùûüœ' -]/g,'');
+function localFind(q){
+  const out=[];
+  VERBS.forEach(v=>{const f=enForms(v);if([v.b,f.s3,f.ing,f.past,f.pp].includes(q))out.push(v)});
+  return out;
+}
+function exampleFind(q){
+  const r=[],re=new RegExp('\\b'+q.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')+'\\b','i');
+  UNITS.forEach(u=>u.phrases.forEach(p=>{if(r.length<4&&re.test(p[0]))r.push(p)}));return r;
+}
+let ddir='en';
+function dSearch(){
+  $('dbody').innerHTML=`<div class="card"><div class="row" style="margin:0 0 8px"><button class="btn ${ddir==='en'?'primary':''}" onclick="ddir='en';dSearch()">Anglais → Français</button><button class="btn ${ddir==='fr'?'primary':''}" onclick="ddir='fr';dSearch()">Français → Anglais</button></div>
+  <div class="row" style="margin:0"><input type="text" id="dq" placeholder="${ddir==='en'?'Un mot en anglais…':'Un mot en français…'}" style="flex:1" autocapitalize="off" autocorrect="off" spellcheck="false" onkeydown="if(event.key==='Enter')doSearch()"><button class="btn primary" onclick="doSearch()">Chercher</button></div>
+  <p class="mute">Vous ne comprenez pas un mot ? Tapez-le ici. Les verbes irréguliers (went, bought…) sont reconnus.</p></div><div id="dres"></div>`;
+}
+async function fetchJSON(u){const r=await fetch(u);if(!r.ok)throw new Error('http '+r.status);return r.json()}
+async function doSearch(){
+  const raw=$('dq').value,q=clean(raw),el=$('dres');if(!q)return;
+  let html='';
+  if(ddir==='en'){
+    localFind(q).forEach(v=>{const f=enForms(v);html+=`<div class="card"><b>${esc(v.b)}</b> <span class="mute">verbe · ${v.p?'irrégulier':'régulier'}</span><div>${esc(v.fr)}</div><div class="mute">${v.b} – ${f.past} – ${f.pp}</div><div class="row"><button class="btn" onclick="cverb='${v.b}';dsub='conj';vDico()">⏱️ Conjuguer</button></div></div>`});
+    const ex=exampleFind(q);if(ex.length)html+=`<div class="card"><h3>Dans vos leçons</h3>${ex.map(p=>`<div class="tip"><b>${esc(p[0])}</b><div class="mute">${esc(p[1])}</div></div>`).join('')}</div>`;
+  }
+  el.innerHTML=html+'<div class="mute" style="padding:8px">🔎 Recherche dans le dictionnaire en ligne…</div>';
+  try{
+    const lp=ddir==='en'?'en|fr':'fr|en';
+    const [a,b]=await Promise.allSettled([fetchJSON('https://api.mymemory.translated.net/get?q='+encodeURIComponent(q)+'&langpair='+lp),ddir==='en'?fetchJSON('https://api.dictionaryapi.dev/api/v2/entries/en/'+encodeURIComponent(q)):Promise.reject()]);
+    const tr=[];
+    if(a.status==='fulfilled'){const d=a.value,seen=new Set([q]);
+      const add=t=>{t=(t||'').trim();const k=t.toLowerCase();if(t&&!seen.has(k)&&t.length<60){seen.add(k);tr.push(t)}};
+      add(d.responseData&&d.responseData.translatedText);
+      (d.matches||[]).slice().sort((x,y)=>(y.quality*y.match)-(x.quality*x.match)).forEach(m=>add(m.translation));
+    }
+    let def=null;if(b.status==='fulfilled'&&Array.isArray(b.value))def=b.value[0];
+    if(ddir==='fr'&&tr[0]&&!/\s/.test(tr[0])){try{const r=await fetchJSON('https://api.dictionaryapi.dev/api/v2/entries/en/'+encodeURIComponent(tr[0].toLowerCase()));if(Array.isArray(r))def=r[0]}catch(e){}}
+    if(a.status==='rejected'&&!html){throw new Error('offline')}
+    const enWord=ddir==='en'?q:(tr[0]||'');
+    if(tr.length){const best=tr.slice(0,5);const k=T(ddir==='en'?q:best[0]),fr=ddir==='en'?best[0]:q,en=ddir==='en'?q:best[0];
+      html+=`<div class="card"><div class="row" style="margin:0"><div style="flex:1"><div class="en">${esc(ddir==='en'?q:best[0])}</div>${def&&def.phonetic?`<div class="mute">${esc(def.phonetic)}</div>`:''}</div><button class="btn" onclick="sp(${k})">🔊</button><button class="btn" onclick="sp(${k},1)">🐢</button></div>
+      <h3 style="margin-top:12px">${ddir==='en'?'En français':'En anglais'}</h3><div style="font-size:19px;font-weight:800">${best.map(esc).join(' · ')}</div>
+      <div class="row"><button class="btn primary" onclick="addWord(${T(en)},${T(fr)})">⭐ Ajouter à mes mots</button></div></div>`}
+    if(def&&def.meanings){html+=`<div class="card"><h3>Définitions (anglais)</h3>${def.meanings.slice(0,3).map(m=>`<div style="margin-top:8px"><b>${esc(m.partOfSpeech)}</b>${(m.definitions||[]).slice(0,2).map(d=>`<div>• ${esc(d.definition)}${d.example?`<div class="mute">« ${esc(d.example)} »</div>`:''}</div>`).join('')}</div>`).join('')}</div>`}
+    if(!tr.length&&!def&&!html)html='<div class="card">Aucun résultat pour « '+esc(q)+' ». Vérifiez l’orthographe.</div>';
+    el.innerHTML=html;
+  }catch(e){
+    el.innerHTML=(html||'')+`<div class="card">⚠️ Le dictionnaire en ligne est indisponible (connexion ?). Les verbes et exemples de vos leçons restent consultables ci-dessus et dans les onglets voisins.</div>`;
+  }
+}
+function addWord(i,j){
+  const en=_t[i],fr=_t[j];S.words=S.words||[];
+  if(!S.words.find(w=>w.en===en)){S.words.push({en,fr});S.cards[en]=S.cards[en]||{box:0,due:0};S.extra[en]=fr;save();toast('⭐ Ajouté à vos mots et à la révision.',2500)}
+  else toast('Déjà dans vos mots.',2000);
+}
+function dWords(){
+  const w=S.words||[];
+  $('dbody').innerHTML=w.length?w.map((x,i)=>`<div class="card" style="display:flex;gap:10px;align-items:center"><div style="flex:1"><b>${esc(x.en)}</b><div class="mute">${esc(x.fr)}</div></div><button class="btn" onclick="sp(${T(x.en)})">🔊</button><button class="btn ghost" onclick="S.words.splice(${i},1);save();dWords()">✕</button></div>`).join('')
+   :'<div class="card">Aucun mot enregistré. Cherchez un mot dans le dictionnaire puis touchez « ⭐ Ajouter à mes mots » : il rejoindra vos révisions.</div>';
+}
+/* verbes irréguliers */
+function dIrr(){
+  $('dbody').innerHTML=`<div class="card"><button class="btn primary big" onclick="startIQ()">🎯 M’entraîner (10 verbes)</button>
+  <input type="text" id="iq" value="${esc(iq)}" placeholder="Filtrer : go, aller, bought…" style="width:100%;margin-top:10px" oninput="iq=this.value;irrList()" autocapitalize="off" autocorrect="off" spellcheck="false"></div><div id="ilist"></div>`;
+  irrList();
+}
+function irrList(){
+  const q=iq.trim().toLowerCase(),L=VERBS.filter(v=>v.p&&(!q||[v.b,v.p,v.pp,v.fr].some(x=>x.toLowerCase().includes(q))));
+  $('ilist').innerHTML=`<div class="mute" style="margin:0 0 6px">${L.length} verbes irréguliers · infinitif — passé simple — participe passé</div>`+L.map(v=>{const t=T(v.b+', '+v.p+', '+v.pp);const w=S.verbs&&S.verbs[v.b];
+    return `<div class="card" style="padding:12px 14px;display:flex;gap:8px;align-items:center"><div style="flex:1;min-width:0"><b>${v.b}</b> – ${v.p} – ${v.pp}<div class="mute">${esc(v.fr)}${w?` · ${w.ok}/${w.n} réussis`:''}</div></div><button class="btn" onclick="sp(${t},1)">🔊</button><button class="btn" onclick="cverb='${v.b}';dsub='conj';vDico()">⏱️</button></div>`}).join('');
+}
+let IQ=null;
+function startIQ(){
+  const irr=VERBS.filter(v=>v.p),pool=[];S.verbs=S.verbs||{};
+  irr.forEach(v=>{const x=S.verbs[v.b],w=x?Math.max(1,x.n-x.ok+1):2;for(let i=0;i<w;i++)pool.push(v)});
+  const picks=[];sh(pool).forEach(v=>{if(picks.length<10&&!picks.includes(v))picks.push(v)});
+  IQ={list:picks.map(v=>({v,t:Math.random()<.5?'p':'pp'})),i:0,ok:0};showIQ();
+}
+function showIQ(){
+  if(IQ.i>=IQ.list.length){const a=IQ.ok/IQ.list.length;addXP(10,'atelier','verbs');bump((a-.6)*1.2);if(a>=.8)confetti();
+    $('view').innerHTML=`<a class="back" onclick="dsub='irr';vDico()">← Verbes irréguliers</a><div class="card" style="text-align:center"><div style="font-size:54px">${a>=.8?'🏆':'💪'}</div><h2>${IQ.ok}/${IQ.list.length}</h2><p class="mute">Les verbes ratés reviendront plus souvent.</p><button class="btn primary" onclick="startIQ()">Rejouer</button></div>`;return}
+  const q=IQ.list[IQ.i],v=q.v,ans=q.t==='p'?v.p:v.pp;
+  const wrongs=[...new Set([pastReg(v.b),...sh(VERBS.filter(x=>x.p&&x!==v)).map(x=>x[q.t==='p'?'p':'pp'])].filter(x=>x!==ans))].slice(0,2),o=[ans,...wrongs];
+  IQ.cur={ans,o:sh(o),v,t:q.t};IQ.lock=false;
+  $('view').innerHTML=`<a class="back" onclick="dsub='irr';vDico()">← Verbes irréguliers</a><div class="card"><div class="mute">Verbe ${IQ.i+1}/${IQ.list.length}</div><div class="bar" style="margin:6px 0 12px"><i style="width:${IQ.i/IQ.list.length*100}%"></i></div>
+  <div style="font-size:20px;font-weight:800">${q.t==='p'?'Passé simple':'Participe passé'} de <span style="color:var(--brand)">to ${v.b}</span> <span class="mute">(${esc(v.fr)})</span> ?</div>
+  ${IQ.cur.o.map((x,i)=>`<button class="opt" id="iq${i}" onclick="iqPick(${i})">${esc(x)}</button>`).join('')}<div id="fbk"></div></div>`;
+}
+function iqPick(i){
+  if(IQ.lock)return;IQ.lock=true;const c=IQ.cur,ok=c.o[i]===c.ans,gi=c.o.indexOf(c.ans);
+  $('iq'+gi).classList.add('right');if(!ok)$('iq'+i).classList.add('wrong');
+  const w=S.verbs[c.v.b]=S.verbs[c.v.b]||{ok:0,n:0};w.n++;if(ok){w.ok++;IQ.ok++;addXP(2)}else save();
+  $('fbk').innerHTML=`<div class="fbk ${ok?'ok':'no'}"><b>${ok?'✅ Bravo !':'❌ Pas tout à fait.'}</b><div><b>${c.v.b} – ${c.v.p} – ${c.v.pp}</b></div><div class="row"><button class="btn" onclick="sp(${T(c.v.b+', '+c.v.p+', '+c.v.pp)},1)">🔊</button></div><button class="btn primary big" style="margin-top:10px" onclick="IQ.i++;showIQ()">Continuer</button></div>`;
+}
+/* conjugaison */
+let cFr=null;
+function resolveVerb(raw){
+  let w=clean(raw);if(!w)return null;
+  if(VMAP.has(w))return VMAP.get(w);
+  const hit=VERBS.find(v=>v.p&&(v.p===w||v.pp===w||enForms(v).s3===w||enForms(v).ing===w));
+  if(hit)return hit;
+  return {b:w,p:null,pp:null,fr:null,k:'er',unknown:1};
+}
+function dConj(){
+  $('dbody').innerHTML=`<div class="card"><div class="row" style="margin:0"><input type="text" id="cv" list="vl" value="${esc(cverb)}" placeholder="Un verbe : work, go, be…" style="flex:1" autocapitalize="off" autocorrect="off" spellcheck="false" onkeydown="if(event.key==='Enter')doConj()"><button class="btn primary" onclick="doConj()">Conjuguer</button></div>
+  <datalist id="vl">${VERBS.map(v=>`<option value="${v.b}">`).join('')}</datalist>
+  <div class="row">${['be','have','do','go','make','take','work','get','see','come'].map(b=>`<button class="btn" onclick="cverb='${b}';dConj()">${b}</button>`).join('')}</div></div><div id="cres"></div>`;
+  renderConj();
+}
+function doConj(){cverb=clean($('cv').value)||cverb;dConj()}
+async function renderConj(){
+  const v=resolveVerb(cverb),el=$('cres');if(!v)return;
+  const f=enForms(v);let fd=null,note='';
+  if(v.fr){fd=frData(v.fr,v.k)}
+  else{ // verbe non listé : on tente une traduction en ligne
+    el.innerHTML='<div class="mute" style="padding:8px">…</div>';
+    try{const d=await fetchJSON('https://api.mymemory.translated.net/get?q='+encodeURIComponent('to '+v.b)+'&langpair=en|fr');
+      let t=((d.responseData&&d.responseData.translatedText)||'').toLowerCase().replace(/^(pour|à|de)\s+/,'').trim();
+      if(/^[a-zàâçéèêëîïôùûüœ]+(er|ir|re)$/.test(t)){const k=t.endsWith('ger')?'ger':t.endsWith('cer')?'cer':t.endsWith('yer')?'yer':t.endsWith('er')?'er':t.endsWith('ir')?'ir':'re';v.fr=t;v.k=k;fd=frData(t,k);note='Verbe non listé : conjugaison française estimée (vérifiez les irrégularités).'}
+    }catch(e){}
+    note=(note?note+' ':'')+(v.p?'':'L’anglais est conjugué comme un verbe régulier : vérifiez s’il n’est pas irrégulier.');
+  }
+  const head=`<div class="card"><div class="row" style="margin:0"><div style="flex:1"><div class="en">to ${esc(f.b)}</div><div class="fr">${v.fr?esc(v.fr):'(français non disponible)'}${v.p===null&&!v.unknown?' · verbe régulier':''}${v.p?' · verbe irrégulier':''}</div></div><button class="btn" onclick="sp(${T(f.b+', '+f.past+', '+f.pp)},1)">🔊</button></div>
+   <div class="grid2" style="margin-top:10px"><div class="stat" style="box-shadow:none"><b style="font-size:17px">${esc(f.s3)}</b>he/she/it</div><div class="stat" style="box-shadow:none"><b style="font-size:17px">${esc(f.ing)}</b>-ing</div><div class="stat" style="box-shadow:none"><b style="font-size:17px">${esc(f.past)}</b>passé simple</div><div class="stat" style="box-shadow:none"><b style="font-size:17px">${esc(f.pp)}</b>participe passé</div></div>
+   ${note?`<div class="tip">${esc(note)}</div>`:''}
+   <div class="row">${MODES.map(([k,l])=>`<button class="btn ${cmode===k?'primary':''}" onclick="cmode='${k}';renderConj()">${l}</button>`).join('')}</div></div>`;
+  const body=TENSES.map((t,ti)=>`<details class="card" style="padding:0" ${ti===0?'open':''}><summary style="padding:14px 16px;font-weight:900;cursor:pointer">${t.en} <span class="mute">· ${esc(t.fr)}</span></summary><div style="padding:0 16px 14px"><div class="mute">${esc(t.use)}</div><div class="mute">Mots-clés : <i>${esc(t.sig)}</i></div>
+   ${[0,1,2,3,4,5].map(k=>{const en=enSentence(f,t.id,k,cmode),fr=fd?frSentence(fd,t.id,k,cmode):'';return `<div style="display:flex;gap:8px;align-items:center;margin-top:8px"><div style="flex:1;min-width:0"><b>${esc(en)}</b>${fr?`<div class="mute">${esc(fr)}</div>`:''}</div><button class="btn" onclick="sp(${T(en)},1)">🔊</button></div>`}).join('')}</div></details>`).join('');
+  el.innerHTML=head+body;
 }
 
 render();
