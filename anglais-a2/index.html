@@ -981,7 +981,8 @@ function vProg(){
    <div style="font-weight:800;margin-bottom:6px">Votre métier</div><div class="row" style="margin:0 0 12px"><input type="text" id="jobin" value="${esc(S.job||'')}" placeholder="ex. contrôleur de gestion" style="flex:1"><button class="btn primary" onclick="S.job=$('jobin').value.trim();save();toast('Métier enregistré ✅',2000)">OK</button></div>
    <div class="row" style="margin:0 0 12px"><button class="btn primary" onclick="vMicTest()">🎙️ Tester mon micro</button></div>
    <div class="row"><button class="btn" onclick="startPlacement()">Refaire le test de niveau</button><button class="btn" onclick="S.key='';save();go('chat')">🔑 Clé du tuteur IA</button></div>
-   <div class="row"><button class="btn bad" id="rst" onclick="rstGo()">Réinitialiser</button></div></div>`;
+   <div class="row"><button class="btn bad" id="rst" onclick="rstGo()">Réinitialiser</button></div>
+   <p class="mute" style="margin:10px 0 0">Version : ${BUILD===UNSTAMPED?'locale':BUILD}</p></div>`;
 }
 function rstGo(){const b=$('rst');if(b.dataset.ok){try{localStorage.removeItem(KEY)}catch(e){}location.reload()}else{b.dataset.ok=1;b.textContent='Confirmer : tout effacer'}}
 
@@ -1824,6 +1825,22 @@ async function micTestGo(){
   catch(e){$('res').textContent=errMsg(e)}
   m.classList.remove('rec');
 }
+/* --- mise à jour automatique : le déploiement estampille le numéro de version dans la constante BUILD --- */
+const BUILD='__BUILD__',UNSTAMPED='__'+'BUILD'+'__';
+async function checkUpdate(){
+  if(BUILD===UNSTAMPED||!/^https?:/.test(location.protocol))return;
+  try{
+    const t=await (await fetch(location.pathname+'?c='+Date.now(),{cache:'no-store'})).text();
+    const m=t.match(/const BUILD='([^']*)'/);
+    if(m&&m[1]!==BUILD&&m[1]!==UNSTAMPED){
+      const d=document.createElement('div');
+      d.style.cssText='position:fixed;left:12px;right:12px;top:calc(8px + env(safe-area-inset-top));z-index:50;background:var(--brand);color:#fff;border-radius:16px;padding:12px 14px;display:flex;gap:10px;align-items:center;box-shadow:0 8px 24px rgba(0,0,0,.3);font-weight:800';
+      d.innerHTML='<span style="flex:1">🔄 Une nouvelle version est disponible.</span><button class="btn" style="background:#fff;color:var(--brand)" onclick="location.href=location.pathname+\'?v=\'+Date.now()">Mettre à jour</button>';
+      document.body.appendChild(d);
+    }
+  }catch(e){}
+}
+checkUpdate();document.addEventListener('visibilitychange',()=>{if(!document.hidden)checkUpdate()});
 render();
 </script>
 </body>

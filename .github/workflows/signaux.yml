@@ -45,7 +45,9 @@ jobs:
           cp signaux/icone.png site/
 
       - name: Ajouter l'application d'anglais au site
-        run: cp -r anglais-a2 site/anglais
+        run: |
+          cp -r anglais-a2 site/anglais
+          sed -i "s/__BUILD__/${GITHUB_SHA::7}/" site/anglais/index.html
 
       - name: Enregistrer le journal
         run: |
