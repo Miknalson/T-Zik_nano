@@ -219,7 +219,7 @@ const UNITS = [
 const KEY='speakup-a2-v1';
 let S;
 try{S=JSON.parse(localStorage.getItem(KEY))}catch(e){}
-S=Object.assign({xp:0,streak:0,last:'',done:{},cards:{},minutes:0,lvl:20,key:'',model:'claude-haiku-5-5',errs:{},extra:{},chats:0},S||{});
+S=Object.assign({xp:0,streak:0,last:'',done:{},cards:{},minutes:0,lvl:20,key:'',model:'claude-haiku-5-5',errs:{},extra:{},speed:'auto',chats:0},S||{});
 const save=()=>{try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){}};
 const today=()=>new Date().toISOString().slice(0,10);
 function addXP(n,unit,kind){
@@ -308,6 +308,17 @@ const SCEN={free:['Conversation libre','Free conversation about daily life, work
  phone:['Appel téléphonique','Phone call at a company. You are the receptionist or a client'],
  meeting:['Réunion','Work meeting. You are a colleague'],
  small:['Conversation légère','Small talk with a colleague at work']};
+const ttsRate=()=>S.speed==='auto'?Math.max(.55,Math.min(1,.55+(S.lvl-20)/65*.45)):+S.speed;
+let spk=0;
+async function say(text,slow){
+  const t=++spk,r=slow?.5:ttsRate(),gap=slow?900:S.lvl<50?700:S.lvl<68?350:100;
+  for(const sen of text.split(/(?<=[.!?])\s+/)){
+    if(t!==spk)return;
+    await speak(sen,r);
+    if(t!==spk)return;
+    await new Promise(z=>setTimeout(z,gap));
+  }
+}
 let chat=[],logHTML='',fb=[],scen='free',hands=false,busy=false;
 
 async function api(system,messages,max=800){
@@ -318,10 +329,17 @@ async function api(system,messages,max=800){
   if(!r.ok)throw new Error(j.error&&j.error.message||('Erreur '+r.status));
   return j.content.map(c=>c.text||'').join('');
 }
+function style(){
+  const l=S.lvl;
+  if(l<30)return 'VERY simple. 1-2 sentences, max 8 words each, present simple only, the 500 most common words, no phrasal verbs, no idioms, no contractions. Yes/no or very short-answer questions.';
+  if(l<50)return 'Simple. 2 sentences, max 12 words each, present/past/future simple, everyday words, no idioms. Easy open questions.';
+  if(l<68)return 'Intermediate. 2-3 sentences, max 16 words each, may use present perfect, modals, contractions and common phrasal verbs. Open questions.';
+  return 'Natural, like a normal conversation with a friendly colleague: 3-4 sentences, normal vocabulary, contractions, occasional idioms (briefly explained in corrections only if the learner struggles). Open, thought-provoking questions.';
+}
 function sysPrompt(){
   const errs=Object.entries(S.errs).sort((a,b)=>b[1]-a[1]).slice(0,4).map(e=>e[0]).join('; ')||'none yet';
   return `You are a warm, patient English tutor for a French-speaking adult who wants to speak English at work. Learner level score: ${Math.round(S.lvl)}/100 (10=A1, 35=A2, 55=A2+, 70=B1, 90=B2). Scenario: ${SCEN[scen][1]}.
-Rules: use simple English slightly above the learner's level (short sentences, common words, no idioms). Reply in 1-3 short sentences and end with ONE easy question so the learner keeps talking. If the learner gets stronger, gradually use richer language; if they struggle, simplify.
+Style for this level: ${style()} Always end with ONE question so the learner keeps talking. Stay just slightly above the learner's level and never switch to French in 'reply'.
 The learner's messages come from speech recognition, so ignore capitalization and punctuation. A speech recognition confidence (0-1) may be appended: a low value suggests unclear pronunciation.
 Return ONLY a JSON object, no other text:
 {"reply": English text,
@@ -347,6 +365,7 @@ function vChat(){
   $v.innerHTML=`<div class="card">
    <div class="row" style="margin:0 0 10px">
     <select id="scen" onchange="scen=this.value;chat=[];logHTML='';fb=[];vChat()">${Object.entries(SCEN).map(([k,v])=>`<option value="${k}" ${k===scen?'selected':''}>${v[0]}</option>`).join('')}</select>
+    <select onchange="S.speed=this.value;save()" title="Vitesse de la voix">${[['auto','Vitesse auto (selon mon niveau)'],['.55','Très lent'],['.7','Lent'],['.85','Moyen'],['1','Normal']].map(([v,l])=>`<option value="${v}" ${S.speed===v?'selected':''}>${l}</option>`).join('')}</select>
     <label class="mute"><input type="checkbox" ${hands?'checked':''} onchange="hands=this.checked"> Mains libres</label>
     <button class="btn" onclick="chat=[];logHTML='';fb=[];vChat()">↺ Nouvelle</button>
     <button class="btn" onclick="S.key='';save();vChat()">🔑</button></div>
@@ -363,7 +382,7 @@ function sendTxt(){const t=document.getElementById('txt');const v=t.value.trim()
 function setStatus(h){const e=document.getElementById('status');if(e)e.innerHTML=h}
 function addLog(h){logHTML+=h;const l=document.getElementById('log');if(l){l.innerHTML=logHTML;l.scrollTop=l.scrollHeight}}
 async function talk(){
-  if(busy)return;
+  if(busy)return;spk++;speechSynthesis.cancel();
   if(!SR){setStatus(errMsg('unsupported'));return}
   const m=document.getElementById('mic');if(m)m.classList.add('rec');setStatus('Je vous écoute…');
   try{const a=await listen();setStatus('');if(m)m.classList.remove('rec');await send(a[0],a.conf)}
@@ -379,7 +398,7 @@ async function send(text,conf,hidden){
   catch(e){chat.pop();busy=false;setStatus(`⚠️ ${esc(e.message)}${/auth|key|401/i.test(e.message)?' — vérifiez votre clé (bouton 🔑).':''}`);return}
   chat.push({role:'assistant',content:raw});setStatus('');
   const i0=fb.length;
-  let h=`<div class="bubble bot">${esc(d.reply)}<div class="row" style="margin:6px 0 0"><button class="btn" onclick="speak(${esc(JSON.stringify(d.reply)).replace(/'/g,'&#39;')},.85)">🔊</button> <button class="btn" onclick="tr(this,${chat.length-1})">🇫🇷 Traduire</button></div></div>`;
+  let h=`<div class="bubble bot">${esc(d.reply)}<div class="row" style="margin:6px 0 0"><button class="btn" onclick="say(${esc(JSON.stringify(d.reply)).replace(/'/g,'&#39;')})">🔊</button> <button class="btn" onclick="say(${esc(JSON.stringify(d.reply)).replace(/'/g,'&#39;')},true)">🐢 Très lent</button> <button class="btn" onclick="tr(this,${chat.length-1})">🇫🇷 Traduire</button></div></div>`;
   const cs=(d.corrections||[]).filter(c=>c&&c.better);
   if(!hidden&&(cs.length||d.pronunciation||d.praise)){
     h+='<div class="tip">';
@@ -400,7 +419,7 @@ async function send(text,conf,hidden){
   addLog(h);
   if(!hidden&&typeof d.score==='number'){bump((d.score-S.lvl)*.1);addXP(4)}else save();
   head();busy=false;
-  await speak(d.reply,.85);
+  await say(d.reply);
   if(hands&&tab==='chat')talk();
 }
 async function tr(btn,idx){
