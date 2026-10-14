@@ -1,0 +1,478 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Speak Up A2 – Parler anglais au travail</title>
+<style>
+:root{--bg:#f6f7fb;--card:#fff;--ink:#1d2433;--mute:#667085;--brand:#2563eb;--ok:#16a34a;--warn:#d97706;--bad:#dc2626;--line:#e4e7ee}
+@media (prefers-color-scheme:dark){:root{--bg:#10141c;--card:#1a2030;--ink:#e8ecf4;--mute:#97a1b5;--brand:#6c9bff;--line:#2a3247}}
+*{box-sizing:border-box}
+body{margin:0;font:16px/1.5 system-ui,-apple-system,Segoe UI,Roboto,sans-serif;background:var(--bg);color:var(--ink)}
+header{padding:14px 16px;display:flex;align-items:center;gap:12px;flex-wrap:wrap;max-width:860px;margin:auto}
+header h1{font-size:20px;margin:0;flex:1}
+.pill{background:var(--card);border:1px solid var(--line);border-radius:99px;padding:4px 12px;font-size:14px}
+main{max-width:860px;margin:auto;padding:0 16px 60px}
+nav{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px}
+nav button,.btn{border:1px solid var(--line);background:var(--card);color:var(--ink);border-radius:10px;padding:9px 14px;font:inherit;cursor:pointer}
+nav button.on,.btn.primary{background:var(--brand);color:#fff;border-color:var(--brand)}
+.btn.ok{background:var(--ok);color:#fff;border-color:var(--ok)}
+.btn.bad{background:var(--bad);color:#fff;border-color:var(--bad)}
+.btn:disabled{opacity:.5;cursor:default}
+.card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:16px;margin-bottom:12px}
+.units{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:10px}
+.unit{cursor:pointer}.unit:hover{border-color:var(--brand)}
+.unit h3{margin:0 0 4px;font-size:16px}
+.bar{height:6px;background:var(--line);border-radius:9px;overflow:hidden;margin-top:8px}
+.bar i{display:block;height:100%;background:var(--ok)}
+.en{font-size:24px;font-weight:600;line-height:1.3}
+.fr{color:var(--mute);margin-top:4px}
+.tip{background:rgba(37,99,235,.09);border-radius:8px;padding:8px 10px;margin-top:10px;font-size:14px}
+.row{display:flex;gap:8px;flex-wrap:wrap;margin-top:14px;align-items:center}
+.score{font-size:15px;margin-top:12px}
+.w-ok{color:var(--ok);font-weight:600}.w-bad{color:var(--bad);font-weight:600;text-decoration:underline}
+.bubble{padding:10px 14px;border-radius:14px;margin:8px 0;max-width:85%}
+.bubble.bot{background:var(--line)}.bubble.you{background:var(--brand);color:#fff;margin-left:auto}
+.mic{width:64px;height:64px;border-radius:50%;font-size:26px;padding:0}
+.mic.rec{background:var(--bad);border-color:var(--bad);animation:p 1s infinite}
+@keyframes p{50%{transform:scale(1.08)}}
+.mute{color:var(--mute);font-size:14px}
+.hide{filter:blur(7px);user-select:none}
+h2{margin:6px 0 12px;font-size:20px}
+a.back{cursor:pointer;color:var(--brand);font-size:14px}
+textarea{width:100%;min-height:90px;border:1px solid var(--line);border-radius:10px;padding:10px;font:inherit;background:var(--card);color:var(--ink)}
+select{padding:8px;border-radius:8px;border:1px solid var(--line);background:var(--card);color:var(--ink);font:inherit}
+</style>
+</head>
+<body>
+<header>
+  <h1>🗣️ Speak Up A2</h1>
+  <span class="pill" id="streak"></span>
+  <span class="pill" id="xp"></span>
+</header>
+<main>
+  <nav id="nav"></nav>
+  <div id="view"></div>
+</main>
+
+<script>
+/* ============================ CONTENU ============================ */
+// Chaque unité : phrases clés, dialogue (jeu de rôle), questions de conversation libre.
+const UNITS = [
+{id:'intro', icon:'👋', title:'Se présenter', sub:'Introduce yourself',
+ phrases:[
+  ['Hello, my name is Marc.','Bonjour, je m’appelle Marc.','Dites votre vrai prénom à la place de Marc.'],
+  ['Nice to meet you.','Enchanté.','« meet » se prononce comme « mite » en français : /miit/.'],
+  ['I am from France.','Je viens de France.',''],
+  ['I live in Lyon.','J’habite à Lyon.','Le « live » du verbe se prononce /liv/ (court).'],
+  ['I speak French and a little English.','Je parle français et un peu anglais.','« a little » = un peu.'],
+  ['I am learning English for my career.','J’apprends l’anglais pour ma carrière.',''],
+  ['How are you today?','Comment allez-vous aujourd’hui ?',''],
+  ['Could you repeat that, please?','Pouvez-vous répéter, s’il vous plaît ?','Phrase la plus utile de l’anglais : utilisez-la sans honte !']],
+ dialogue:[
+  {w:'bot',en:'Hello! Nice to meet you. What is your name?',fr:'Bonjour ! Enchanté. Comment vous appelez-vous ?'},
+  {w:'you',en:'Hello, my name is Marc. Nice to meet you.',fr:'Bonjour, je m’appelle Marc. Enchanté.'},
+  {w:'bot',en:'Where are you from?',fr:'D’où venez-vous ?'},
+  {w:'you',en:'I am from France. I live in Lyon.',fr:'Je viens de France. J’habite à Lyon.'},
+  {w:'bot',en:'Do you speak English?',fr:'Parlez-vous anglais ?'},
+  {w:'you',en:'I speak a little English. I am learning every day.',fr:'Je parle un peu anglais. J’apprends tous les jours.'}],
+ talk:[
+  ['What is your name and where are you from?','My name is … I am from …'],
+  ['Where do you live?','I live in … It is a … city.'],
+  ['Why are you learning English?','I am learning English because …']]},
+
+{id:'job', icon:'💼', title:'Mon travail', sub:'Talk about your job',
+ phrases:[
+  ['I work as a sales assistant.','Je travaille comme assistant commercial.','Remplacez « sales assistant » par votre métier.'],
+  ['I work for a small company.','Je travaille pour une petite entreprise.',''],
+  ['I work from nine to five.','Je travaille de 9 h à 17 h.',''],
+  ['My job is to help customers.','Mon travail consiste à aider les clients.',''],
+  ['I work in a team of five people.','Je travaille dans une équipe de cinq personnes.',''],
+  ['I have three years of experience.','J’ai trois ans d’expérience.','Ne dites pas « I have 3 years » pour l’âge : l’âge = « I am 30 ».'],
+  ['I would like to learn new skills.','J’aimerais acquérir de nouvelles compétences.',''],
+  ['My goal is to work with international clients.','Mon objectif est de travailler avec des clients internationaux.','']],
+ dialogue:[
+  {w:'bot',en:'What do you do?',fr:'Que faites-vous dans la vie ?'},
+  {w:'you',en:'I work as a sales assistant. I work for a small company.',fr:'Je travaille comme assistant commercial pour une petite entreprise.'},
+  {w:'bot',en:'Do you like your job?',fr:'Aimez-vous votre travail ?'},
+  {w:'you',en:'Yes, I like it. I work in a team of five people.',fr:'Oui, je l’aime. Je travaille dans une équipe de cinq personnes.'},
+  {w:'bot',en:'What is your goal?',fr:'Quel est votre objectif ?'},
+  {w:'you',en:'My goal is to work with international clients.',fr:'Mon objectif est de travailler avec des clients internationaux.'}],
+ talk:[
+  ['What do you do?','I work as … I work for …'],
+  ['What do you do every day at work?','In the morning I … In the afternoon I …'],
+  ['What is your goal for your career?','My goal is to …']]},
+
+{id:'phone', icon:'📞', title:'Téléphone & e-mails', sub:'Phone and emails',
+ phrases:[
+  ['Hello, this is Marc from Alpha Company.','Bonjour, c’est Marc de la société Alpha.',''],
+  ['Can I speak to Mr Smith, please?','Puis-je parler à M. Smith, s’il vous plaît ?',''],
+  ['I am calling about your order.','J’appelle au sujet de votre commande.',''],
+  ['Could you speak more slowly, please?','Pouvez-vous parler plus lentement ?',''],
+  ['Can you spell that for me?','Pouvez-vous me l’épeler ?','Entraînez-vous à épeler votre nom en anglais : A (ei), E (i), I (aï), U (iou).'],
+  ['I will send you an email.','Je vous enverrai un e-mail.',''],
+  ['Thank you for your email.','Merci pour votre e-mail.',''],
+  ['Please find the document attached.','Veuillez trouver le document en pièce jointe.','Formule classique des e-mails pro.']],
+ dialogue:[
+  {w:'bot',en:'Good morning, Alpha Company. How can I help you?',fr:'Bonjour, société Alpha. Comment puis-je vous aider ?'},
+  {w:'you',en:'Hello, can I speak to Mr Smith, please?',fr:'Bonjour, puis-je parler à M. Smith, s’il vous plaît ?'},
+  {w:'bot',en:'I am sorry, he is in a meeting. Can I take a message?',fr:'Désolé, il est en réunion. Puis-je prendre un message ?'},
+  {w:'you',en:'Yes, please. I am calling about your order.',fr:'Oui, s’il vous plaît. J’appelle au sujet de votre commande.'},
+  {w:'bot',en:'What is your phone number?',fr:'Quel est votre numéro de téléphone ?'},
+  {w:'you',en:'Could you speak more slowly, please? I will send you an email.',fr:'Pouvez-vous parler plus lentement ? Je vous enverrai un e-mail.'}],
+ talk:[
+  ['Call a company. Say who you are and who you want to speak to.','Hello, this is … Can I speak to …?'],
+  ['Explain why you are calling.','I am calling about …'],
+  ['Write the end of an email: thank the person and say what you will do.','Thank you for … I will …']]},
+
+{id:'meeting', icon:'📊', title:'Réunions', sub:'Meetings',
+ phrases:[
+  ['Let’s start the meeting.','Commençons la réunion.',''],
+  ['I agree with you.','Je suis d’accord avec vous.',''],
+  ['I am sorry, I do not agree.','Désolé, je ne suis pas d’accord.','Poli et clair. « Sorry » adoucit tout.'],
+  ['I think we need more time.','Je pense qu’il nous faut plus de temps.',''],
+  ['Can I ask a question?','Puis-je poser une question ?',''],
+  ['What do you think?','Qu’en pensez-vous ?',''],
+  ['Let me explain.','Laissez-moi expliquer.',''],
+  ['We will finish this by Friday.','Nous terminerons ceci d’ici vendredi.','Le « th » : langue entre les dents pour « think » et « the ».']],
+ dialogue:[
+  {w:'bot',en:'Let’s start. We have a new project. What do you think?',fr:'Commençons. Nous avons un nouveau projet. Qu’en pensez-vous ?'},
+  {w:'you',en:'I think we need more time.',fr:'Je pense qu’il nous faut plus de temps.'},
+  {w:'bot',en:'Why do you need more time?',fr:'Pourquoi avez-vous besoin de plus de temps ?'},
+  {w:'you',en:'Let me explain. We have a small team.',fr:'Laissez-moi expliquer. Nous avons une petite équipe.'},
+  {w:'bot',en:'I understand. Can you finish by Friday?',fr:'Je comprends. Pouvez-vous terminer d’ici vendredi ?'},
+  {w:'you',en:'Yes, we will finish this by Friday.',fr:'Oui, nous terminerons d’ici vendredi.'}],
+ talk:[
+  ['Give your opinion about a project. Use “I think…”.','I think we need … because …'],
+  ['Say you disagree politely.','I am sorry, but I do not agree because …'],
+  ['Say what your team will do this week.','This week we will …']]},
+
+{id:'help', icon:'🆘', title:'Je ne comprends pas', sub:'Survival phrases',
+ phrases:[
+  ['Sorry, I do not understand.','Désolé, je ne comprends pas.',''],
+  ['Could you say that again?','Pouvez-vous le redire ?',''],
+  ['What does this word mean?','Que signifie ce mot ?',''],
+  ['How do you say this in English?','Comment dit-on ceci en anglais ?','Quand un mot vous manque, demandez-le : c’est comme ça qu’on progresse.'],
+  ['Can you give me an example?','Pouvez-vous me donner un exemple ?',''],
+  ['Let me think for a moment.','Laissez-moi réfléchir un instant.','Gagner du temps sans silence gênant.'],
+  ['I am not sure, but I think so.','Je n’en suis pas sûr, mais je pense que oui.',''],
+  ['Is that correct?','Est-ce correct ?','']],
+ dialogue:[
+  {w:'bot',en:'Our deadline is next Tuesday, and we need the budget approved.',fr:'Notre échéance est mardi prochain et il faut valider le budget.'},
+  {w:'you',en:'Sorry, I do not understand. Could you say that again?',fr:'Désolé, je ne comprends pas. Pouvez-vous le redire ?'},
+  {w:'bot',en:'The deadline is Tuesday. We need to finish the budget.',fr:'L’échéance est mardi. Il faut finir le budget.'},
+  {w:'you',en:'What does “deadline” mean?',fr:'Que signifie « deadline » ?'},
+  {w:'bot',en:'It means the last day to finish something.',fr:'C’est le dernier jour pour finir quelque chose.'},
+  {w:'you',en:'Ah, I understand. Thank you. Is that correct?',fr:'Ah, je comprends. Merci. Est-ce correct ?'}],
+ talk:[
+  ['Someone speaks too fast. What do you say?','Sorry, could you …'],
+  ['You do not know a word. What do you say?','How do you say … in English?'],
+  ['Ask for an example.','Can you give me …']]},
+
+{id:'interview', icon:'🎯', title:'Entretien d’embauche', sub:'Job interview',
+ phrases:[
+  ['Thank you for inviting me.','Merci de m’avoir invité.',''],
+  ['I am very interested in this position.','Ce poste m’intéresse beaucoup.',''],
+  ['My strengths are teamwork and honesty.','Mes points forts sont le travail d’équipe et l’honnêteté.','« strengths » est difficile : /strengkths/. Allez-y doucement.'],
+  ['I am a hard-working person.','Je suis quelqu’un de travailleur.',''],
+  ['I am improving my English every day.','J’améliore mon anglais chaque jour.','Dites-le avec confiance : c’est un atout, pas un défaut.'],
+  ['I can learn quickly.','Je peux apprendre vite.',''],
+  ['When can I start?','Quand puis-je commencer ?',''],
+  ['Thank you for your time.','Merci pour votre temps.','']],
+ dialogue:[
+  {w:'bot',en:'Welcome. Please tell me about yourself.',fr:'Bienvenue. Parlez-moi de vous.'},
+  {w:'you',en:'Thank you for inviting me. I have three years of experience.',fr:'Merci de m’avoir invité. J’ai trois ans d’expérience.'},
+  {w:'bot',en:'What are your strengths?',fr:'Quels sont vos points forts ?'},
+  {w:'you',en:'My strengths are teamwork and honesty. I can learn quickly.',fr:'Mes points forts sont le travail d’équipe et l’honnêteté. J’apprends vite.'},
+  {w:'bot',en:'How is your English?',fr:'Comment est votre anglais ?'},
+  {w:'you',en:'I am improving my English every day.',fr:'J’améliore mon anglais chaque jour.'}],
+ talk:[
+  ['Tell me about yourself.','I am … I have … years of experience in …'],
+  ['Why do you want this job?','I want this job because …'],
+  ['What are your strengths?','My strengths are …']]},
+
+{id:'small', icon:'☕', title:'Conversation légère', sub:'Small talk',
+ phrases:[
+  ['How was your weekend?','Comment était votre week-end ?',''],
+  ['It was very nice, thank you.','C’était très bien, merci.',''],
+  ['Do you want a coffee?','Voulez-vous un café ?',''],
+  ['The weather is nice today.','Il fait beau aujourd’hui.','« weather » : /ouèdheur/, comme « whether » (si).'],
+  ['What do you like to do on weekends?','Que aimez-vous faire le week-end ?',''],
+  ['I like to watch films and cook.','J’aime regarder des films et cuisiner.',''],
+  ['Have a good day!','Bonne journée !',''],
+  ['See you tomorrow.','À demain.','']],
+ dialogue:[
+  {w:'bot',en:'Good morning! How was your weekend?',fr:'Bonjour ! Comment était votre week-end ?'},
+  {w:'you',en:'It was very nice, thank you. And you?',fr:'C’était très bien, merci. Et vous ?'},
+  {w:'bot',en:'Great! Do you want a coffee?',fr:'Super ! Voulez-vous un café ?'},
+  {w:'you',en:'Yes, please. The weather is nice today.',fr:'Oui, s’il vous plaît. Il fait beau aujourd’hui.'},
+  {w:'bot',en:'What do you like to do on weekends?',fr:'Que aimez-vous faire le week-end ?'},
+  {w:'you',en:'I like to watch films and cook. Have a good day!',fr:'J’aime regarder des films et cuisiner. Bonne journée !'}],
+ talk:[
+  ['Talk about your last weekend.','Last weekend I … It was …'],
+  ['What do you like to do in your free time?','I like to … I also like …'],
+  ['Describe your morning today.','Today I woke up at … Then I …']]}
+];
+
+/* ============================ ÉTAT ============================ */
+const KEY='speakup-a2-v1';
+let S;
+try{S=JSON.parse(localStorage.getItem(KEY))}catch(e){}
+S=Object.assign({xp:0,streak:0,last:'',done:{},cards:{},minutes:0},S||{});
+const save=()=>{try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){}};
+const today=()=>new Date().toISOString().slice(0,10);
+function addXP(n,unit,kind){
+  S.xp+=n;
+  const t=today();
+  if(S.last!==t){
+    const y=new Date(Date.now()-864e5).toISOString().slice(0,10);
+    S.streak=(S.last===y)?S.streak+1:1; S.last=t;
+  }
+  if(unit){S.done[unit]=S.done[unit]||{};S.done[unit][kind]=true}
+  save();head();
+}
+function head(){
+  document.getElementById('streak').textContent='🔥 '+S.streak+' jour'+(S.streak>1?'s':'');
+  document.getElementById('xp').textContent='⭐ '+S.xp+' points';
+}
+
+/* ============================ VOIX ============================ */
+const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
+let voices=[];
+function loadVoices(){voices=speechSynthesis.getVoices().filter(v=>v.lang.startsWith('en'))}
+if('speechSynthesis' in window){loadVoices();speechSynthesis.onvoiceschanged=loadVoices}
+function speak(text,rate=.85){
+  return new Promise(res=>{
+    if(!('speechSynthesis' in window)){res();return}
+    speechSynthesis.cancel();
+    const u=new SpeechSynthesisUtterance(text);
+    u.lang='en-US';u.rate=rate;
+    const v=voices.find(v=>v.lang==='en-US')||voices[0];if(v)u.voice=v;
+    u.onend=res;u.onerror=res;speechSynthesis.speak(u);
+  });
+}
+function listen(){
+  return new Promise((res,rej)=>{
+    if(!SR){rej('unsupported');return}
+    const r=new SR();r.lang='en-US';r.interimResults=false;r.maxAlternatives=3;
+    r.onresult=e=>res(Array.from(e.results[0]).map(a=>a.transcript));
+    r.onerror=e=>rej(e.error);
+    r.onnomatch=()=>rej('nomatch');
+    r.start();
+  });
+}
+const norm=s=>s.toLowerCase().replace(/[’']/g,"'").replace(/[^a-z0-9' ]/g,' ').split(/\s+/).filter(Boolean);
+// Score = part des mots attendus dits dans le bon ordre (plus longue sous-séquence commune).
+function compare(target,heard){
+  const t=norm(target),h=norm(heard);
+  const dp=Array.from({length:t.length+1},()=>Array(h.length+1).fill(0));
+  for(let i=1;i<=t.length;i++)for(let j=1;j<=h.length;j++)
+    dp[i][j]=t[i-1]===h[j-1]?dp[i-1][j-1]+1:Math.max(dp[i-1][j],dp[i][j-1]);
+  const hit=new Set();let i=t.length,j=h.length;
+  while(i>0&&j>0){ if(t[i-1]===h[j-1]){hit.add(i-1);i--;j--} else if(dp[i-1][j]>=dp[i][j-1])i--; else j--; }
+  return {score:t.length?Math.round(100*hit.size/t.length):0,
+          html:t.map((w,k)=>`<span class="${hit.has(k)?'w-ok':'w-bad'}">${w}</span>`).join(' ')};
+}
+async function bestMatch(target){
+  const alts=await listen();
+  let best=null;
+  for(const a of alts){const c=compare(target,a);c.heard=a;if(!best||c.score>best.score)best=c}
+  return best;
+}
+const errMsg=e=>e==='unsupported'?'Reconnaissance vocale non disponible : ouvrez l’app dans Chrome, Edge ou Safari.'
+  :e==='not-allowed'?'Autorisez le micro dans votre navigateur.':'Je n’ai rien entendu. Réessayez, un peu plus fort.';
+const verdict=s=>s>=85?'🎉 Excellent !':s>=60?'👍 Bien, encore une fois pour être parfait.':'💪 Écoutez le modèle puis réessayez, plus lentement.';
+
+/* ============================ VUES ============================ */
+const $v=document.getElementById('view');
+let tab='learn',cur=null;
+const TABS=[['learn','📚 Leçons'],['cards','🃏 Révision'],['free','💬 Parler librement'],['plan','🗓️ Mon plan']];
+function nav(){
+  document.getElementById('nav').innerHTML=TABS.map(([k,l])=>`<button class="${tab===k?'on':''}" onclick="go('${k}')">${l}</button>`).join('');
+}
+function go(t){tab=t;cur=null;speechSynthesis&&speechSynthesis.cancel();render()}
+function render(){nav();head();({learn:vLearn,cards:vCards,free:vFree,plan:vPlan})[tab]()}
+
+function pct(u){const d=S.done[u.id]||{};return Math.round(100*(['phrases','dialogue','talk'].filter(k=>d[k]).length)/3)}
+
+/* --- Leçons --- */
+function vLearn(){
+  if(cur)return vUnit(cur);
+  $v.innerHTML=`<div class="card"><b>Bienvenue !</b> Pour chaque thème : 1) <b>écoutez et répétez</b> les phrases, 2) jouez un <b>dialogue</b> à voix haute, 3) <b>parlez librement</b>. Faites 15 minutes par jour : la régularité compte plus que la durée.</div>
+  <div class="units">${UNITS.map(u=>`<div class="card unit" onclick="openUnit('${u.id}')"><h3>${u.icon} ${u.title}</h3><span class="mute">${u.sub}</span><div class="bar"><i style="width:${pct(u)}%"></i></div></div>`).join('')}</div>`;
+}
+function openUnit(id){cur=UNITS.find(u=>u.id===id);render()}
+function vUnit(u){
+  $v.innerHTML=`<a class="back" onclick="go('learn')">← Toutes les leçons</a><h2>${u.icon} ${u.title}</h2>
+  <div class="units">
+   <div class="card unit" onclick="startPhrases()"><h3>1. Écoute & répète</h3><span class="mute">${u.phrases.length} phrases clés</span></div>
+   <div class="card unit" onclick="startDialogue()"><h3>2. Dialogue</h3><span class="mute">Jeu de rôle avec le micro</span></div>
+   <div class="card unit" onclick="startTalk()"><h3>3. Parle librement</h3><span class="mute">Questions + début de phrase</span></div>
+  </div>`;
+}
+
+/* 1. Phrases */
+let pi=0;
+function startPhrases(){pi=0;shPhrase()}
+function shPhrase(){
+  const u=cur,[en,fr,tip]=u.phrases[pi];
+  S.cards[en]=S.cards[en]||{box:0,due:0};
+  $v.innerHTML=`<a class="back" onclick="openUnit('${u.id}')">← ${u.title}</a>
+  <div class="card"><div class="mute">Phrase ${pi+1}/${u.phrases.length}</div>
+   <div class="en">${en}</div><div class="fr">${fr}</div>${tip?`<div class="tip">💡 ${tip}</div>`:''}
+   <div class="row"><button class="btn" onclick="speak(${JSON.stringify(en)},.8)">🔊 Écouter</button>
+    <button class="btn" onclick="speak(${JSON.stringify(en)},.55)">🐢 Lent</button>
+    <button class="btn primary mic" id="mic" onclick="tryPhrase()">🎤</button></div>
+   <div class="score" id="res">Écoutez, puis appuyez sur 🎤 et dites la phrase.</div>
+   <div class="row"><button class="btn" ${pi?'':'disabled'} onclick="pi--;shPhrase()">←</button>
+    <button class="btn" onclick="nextPhrase()">${pi<u.phrases.length-1?'Suivant →':'Terminer ✔'}</button></div></div>`;
+  speak(en,.8);
+}
+function nextPhrase(){
+  if(pi<cur.phrases.length-1){pi++;shPhrase()}
+  else{addXP(20,cur.id,'phrases');alert('Bravo ! +20 points');openUnit(cur.id)}
+}
+async function tryPhrase(){
+  const en=cur.phrases[pi][0],m=document.getElementById('mic'),r=document.getElementById('res');
+  if(!SR){ // sans reconnaissance vocale : auto-évaluation
+    r.innerHTML='Dites la phrase à voix haute, puis évaluez-vous : <button class="btn ok" onclick="self(true)">Bien dit</button> <button class="btn bad" onclick="self(false)">À refaire</button>';return}
+  m.classList.add('rec');r.textContent='Je vous écoute…';
+  try{
+    const c=await bestMatch(en);
+    r.innerHTML=`<b>${c.score}%</b> — ${verdict(c.score)}<br>${c.html}<div class="mute">J’ai entendu : « ${c.heard} »</div>`;
+    if(c.score>=70){addXP(2);rate(en,true)}else rate(en,false);
+  }catch(e){r.textContent=errMsg(e)}
+  m.classList.remove('rec');
+}
+function self(ok){rate(cur.phrases[pi][0],ok);if(ok)addXP(2);document.getElementById('res').textContent=ok?'👍 Bien !':'Réessayez, avec le modèle lent 🐢.'}
+// Révision espacée simple (boîtes de Leitner : 1, 2, 4, 8, 16 jours)
+function rate(en,ok){
+  const c=S.cards[en]=S.cards[en]||{box:0,due:0};
+  c.box=ok?Math.min(c.box+1,4):0;c.due=Date.now()+[0,1,2,4,8][c.box]*864e5;save();
+}
+
+/* 2. Dialogue */
+let di=0,hideText=false;
+function startDialogue(){di=0;shDialogue()}
+function shDialogue(){
+  const u=cur;
+  $v.innerHTML=`<a class="back" onclick="openUnit('${u.id}')">← ${u.title}</a>
+  <div class="card"><div class="row" style="margin:0 0 8px"><label class="mute"><input type="checkbox" ${hideText?'checked':''} onchange="hideText=this.checked;shDialogue()"> Masquer ma réplique (mode difficile)</label></div>
+  <div id="chat"></div><div class="score" id="res"></div><div class="row" id="ctl"></div></div>`;
+  for(let i=0;i<di;i++)bubble(u.dialogue[i]);
+  step();
+}
+function bubble(t,hide){
+  document.getElementById('chat').insertAdjacentHTML('beforeend',
+   `<div class="bubble ${t.w}"><div>${hide?`<span class="hide">${t.en}</span>`:t.en}</div><div class="mute" style="color:inherit;opacity:.75">${t.fr}</div></div>`);
+}
+async function step(){
+  const u=cur,t=u.dialogue[di],ctl=document.getElementById('ctl'),r=document.getElementById('res');
+  if(!t){addXP(30,u.id,'dialogue');r.innerHTML='🎉 Dialogue terminé ! +30 points';ctl.innerHTML=`<button class="btn" onclick="startDialogue()">Rejouer</button> <button class="btn primary" onclick="openUnit('${u.id}')">Retour</button>`;return}
+  if(t.w==='bot'){bubble(t);ctl.innerHTML='';await speak(t.en);di++;step();return}
+  bubble(t,hideText);
+  r.textContent='À vous ! Dites votre réplique.';
+  ctl.innerHTML=`<button class="btn" onclick="speak(${JSON.stringify(t.en)},.8)">🔊 Modèle</button>
+   <button class="btn primary mic" id="mic" onclick="tryTurn()">🎤</button>
+   <button class="btn" onclick="di++;document.getElementById('chat').innerHTML='';for(let i=0;i<di;i++)bubble(cur.dialogue[i]);step()">Passer →</button>`;
+}
+async function tryTurn(){
+  const t=cur.dialogue[di],m=document.getElementById('mic'),r=document.getElementById('res');
+  if(!SR){r.innerHTML='Dites-la à voix haute, puis : <button class="btn ok" onclick="di++;shDialogue()">Bien dit, suite →</button>';return}
+  m.classList.add('rec');r.textContent='Je vous écoute…';
+  try{
+    const c=await bestMatch(t.en);
+    r.innerHTML=`<b>${c.score}%</b> ${verdict(c.score)}<br>${c.html}`;
+    if(c.score>=65){addXP(3);m.classList.remove('rec');setTimeout(()=>{di++;shDialogue()},1500);return}
+  }catch(e){r.textContent=errMsg(e)}
+  m.classList.remove('rec');
+}
+
+/* 3. Parler librement */
+let ti=0;
+function startTalk(){ti=0;shTalk()}
+function shTalk(){
+  const u=cur,[q,starter]=u.talk[ti];
+  $v.innerHTML=`<a class="back" onclick="openUnit('${u.id}')">← ${u.title}</a>
+  <div class="card"><div class="mute">Question ${ti+1}/${u.talk.length}</div>
+   <div class="en">${q}</div><div class="tip">🧩 Commencez par : <b>${starter}</b></div>
+   <div class="row"><button class="btn" onclick="speak(${JSON.stringify(q)},.85)">🔊 Écouter la question</button>
+    <button class="btn primary mic" id="mic" onclick="tryTalk()">🎤</button></div>
+   <div class="score" id="res">Répondez en 1 à 3 phrases. Ne cherchez pas la perfection : parlez !</div>
+   <div class="row"><button class="btn" onclick="nextTalk()">${ti<u.talk.length-1?'Question suivante →':'Terminer ✔'}</button></div></div>`;
+  speak(q,.85);
+}
+async function tryTalk(){
+  const m=document.getElementById('mic'),r=document.getElementById('res');
+  if(!SR){r.textContent='Répondez à voix haute. (La transcription nécessite Chrome, Edge ou Safari.)';addXP(5);return}
+  m.classList.add('rec');r.textContent='Je vous écoute…';
+  try{
+    const alts=await listen();const said=alts[0];
+    const n=norm(said).length;
+    r.innerHTML=`Vous avez dit : <b>« ${said} »</b><div class="mute">${n} mots. ${n<6?'Essayez d’ajouter « because … » (parce que) pour allonger.':'Très bien : phrase complète !'}</div>
+    <div class="row"><button class="btn" onclick="speak(${JSON.stringify(said)},.9)">🔊 Réécouter ma phrase</button></div>`;
+    addXP(5);
+  }catch(e){r.textContent=errMsg(e)}
+  m.classList.remove('rec');
+}
+function nextTalk(){
+  if(ti<cur.talk.length-1){ti++;shTalk()}
+  else{addXP(20,cur.id,'talk');alert('Bravo ! +20 points');openUnit(cur.id)}
+}
+
+/* --- Révision --- */
+let deck=[],ci=0;
+function vCards(){
+  const all=UNITS.flatMap(u=>u.phrases.map(p=>({en:p[0],fr:p[1]})));
+  const seen=all.filter(p=>S.cards[p.en]);
+  deck=seen.filter(p=>S.cards[p.en].due<=Date.now()).sort(()=>Math.random()-.5);
+  ci=0;
+  if(!seen.length){$v.innerHTML='<div class="card">Commencez d’abord une leçon « Écoute & répète » : les phrases apparaîtront ici pour être révisées au bon moment.</div>';return}
+  if(!deck.length){$v.innerHTML=`<div class="card">✅ Rien à réviser maintenant. ${seen.length} phrases sont dans votre mémoire. Revenez demain !</div>`;return}
+  shCard();
+}
+function shCard(){
+  if(ci>=deck.length){addXP(10);$v.innerHTML='<div class="card">🎉 Révision terminée ! +10 points</div>';return}
+  const c=deck[ci];
+  $v.innerHTML=`<div class="card"><div class="mute">Carte ${ci+1}/${deck.length} — Dites la phrase en anglais</div>
+   <div class="en">${c.fr}</div><div class="row"><button class="btn" id="rv" onclick="this.parentNode.nextElementSibling.style.display='block'">Voir la réponse</button></div>
+   <div style="display:none;margin-top:12px"><div class="en">${c.en}</div>
+    <div class="row"><button class="btn" onclick="speak(${JSON.stringify(c.en)},.8)">🔊</button>
+    <button class="btn bad" onclick="rate(${JSON.stringify(c.en)},false);ci++;shCard()">Je ne savais pas</button>
+    <button class="btn ok" onclick="rate(${JSON.stringify(c.en)},true);ci++;shCard()">Je savais</button></div></div></div>`;
+}
+
+/* --- Parler librement (transcription libre) --- */
+function vFree(){
+  const qs=UNITS.flatMap(u=>u.talk.map(t=>t[0]));
+  $v.innerHTML=`<div class="card"><h2>💬 Parlez 1 minute</h2>
+  <p>Choisissez un sujet et parlez sans vous arrêter, même avec des erreurs. C’est l’exercice le plus efficace pour devenir fluide.</p>
+  <select id="topic">${qs.map(q=>`<option>${q}</option>`).join('')}</select>
+  <div class="row"><button class="btn" onclick="speak(topic.value)">🔊 Écouter</button>
+   <button class="btn primary mic" id="mic" onclick="freeTalk()">🎤</button></div>
+  <div class="score" id="res"></div></div>`;
+}
+async function freeTalk(){
+  const m=document.getElementById('mic'),r=document.getElementById('res');
+  if(!SR){r.textContent=errMsg('unsupported');return}
+  m.classList.add('rec');r.textContent='Je vous écoute…';
+  try{const a=await listen();r.innerHTML=`Vous avez dit : <b>« ${a[0]} »</b><div class="mute">${norm(a[0]).length} mots</div>`;addXP(5)}
+  catch(e){r.textContent=errMsg(e)}
+  m.classList.remove('rec');
+}
+
+/* --- Plan --- */
+function vPlan(){
+  const done=UNITS.reduce((n,u)=>n+pct(u),0)/UNITS.length|0;
+  $v.innerHTML=`<div class="card"><h2>🗓️ Plan de 15 min par jour</h2>
+  <ol><li><b>3 min</b> – Révision (onglet 🃏)</li><li><b>5 min</b> – Une leçon : écoute & répète</li><li><b>4 min</b> – Dialogue à voix haute</li><li><b>3 min</b> – Parler librement</li></ol>
+  <p>Progression globale : <b>${done}%</b>. Avec 15 min/jour, un thème se maîtrise en 3 jours : les 7 thèmes en ~3 semaines. Ensuite, passez le dialogue en <i>mode difficile</i> (réplique masquée).</p>
+  <div class="tip">💡 Conseils : parlez toujours <b>à voix haute</b>, répétez la même phrase 3 fois, écoutez la version lente 🐢, et n’ayez pas peur des erreurs.</div></div>
+  <div class="card"><b>Votre profil</b><p class="mute">Niveau visé : A2 → B1. Vos données restent sur votre appareil.</p>
+  <button class="btn bad" onclick="if(confirm('Effacer toute la progression ?')){localStorage.removeItem(KEY);location.reload()}">Réinitialiser</button></div>`;
+}
+
+render();
+</script>
+</body>
+</html>
