@@ -606,23 +606,37 @@ async function say(text,slow){
     if(t!==spk)return;await speak(sen,r);if(t!==spk)return;await new Promise(z=>setTimeout(z,gap));
   }
 }
-let REC=null;
-// Reconnaissance vocale protégée : fin d'écoute, délai maximum, erreurs de démarrage.
-function listen(){
+let REC=null,lastMic={err:'',stage:0};
+// Reconnaissance vocale : suit chaque étape (micro ouvert, son, voix, texte) pour pouvoir dire précisément ce qui manque.
+function micLine(m){const e=$('res')||$('status');if(e&&!e.dataset.keep)e.textContent=m}
+function listen(dbg){
   return new Promise((res,rej)=>{
+    lastMic={err:'',stage:0};
     if(!SR||srDead){rej('unsupported');return}
-    try{speechSynthesis.cancel()}catch(e){}
     try{REC&&REC.abort()}catch(e){}
-    let done=false,tm,r;
+    let done=false,tm,r,interim='',conf=null;
+    const log=m=>{if(dbg)dbg(m)};
     const fin=f=>{if(done)return;done=true;clearTimeout(tm);try{r.abort()}catch(e){};f()};
+    const fail=c=>fin(()=>{lastMic.err=c;rej(c)});
     try{r=new SR()}catch(e){rej('unsupported');return}
-    REC=r;r.lang='en-US';r.interimResults=false;r.maxAlternatives=3;r.continuous=false;
-    tm=setTimeout(()=>fin(()=>rej('timeout')),12000);
-    r.onresult=e=>{try{const a=Array.from(e.results[0]).map(x=>x.transcript);a.conf=e.results[0][0].confidence||null;fin(()=>res(a))}catch(x){fin(()=>rej('nomatch'))}};
-    r.onerror=e=>fin(()=>rej((e&&e.error)||'error'));
-    r.onnomatch=()=>fin(()=>rej('nomatch'));
-    r.onend=()=>setTimeout(()=>fin(()=>rej('nomatch')),400);
-    setTimeout(()=>{try{r.start()}catch(e){fin(()=>rej('start'))}},350);   // laisse l'audio iPhone passer de la voix au micro
+    REC=r;r.lang='en-US';r.interimResults=true;r.maxAlternatives=3;r.continuous=false;
+    tm=setTimeout(()=>fail('timeout'),14000);
+    r.onaudiostart=()=>{lastMic.stage=Math.max(lastMic.stage,1);if(!done){micLine('🎙️ Micro ouvert : parlez maintenant…');log('audiostart (micro ouvert)')}};
+    r.onsoundstart=()=>{lastMic.stage=Math.max(lastMic.stage,2);if(!done){micLine('👂 Je capte du son…');log('soundstart (son capté)')}};
+    r.onspeechstart=()=>{lastMic.stage=Math.max(lastMic.stage,3);if(!done){micLine('🗣️ Je vous entends…');log('speechstart (voix détectée)')}};
+    r.onresult=e=>{
+      try{
+        const rs=e.results[e.results.length-1];
+        if(rs.isFinal===false){interim=rs[0].transcript;lastMic.stage=3;if(!done){micLine('Je comprends : « '+interim+' »');log('texte provisoire : '+interim)}return}
+        const a=Array.from(rs).map(x=>x.transcript);a.conf=rs[0].confidence||null;log('résultat final : '+a[0]);fin(()=>res(a));
+      }catch(x){fail('nomatch')}
+    };
+    r.onerror=e=>{log('erreur : '+((e&&e.error)||'?'));fail((e&&e.error)||'error')};
+    r.onnomatch=()=>{log('aucune correspondance');fail('nomatch')};
+    r.onend=()=>{log('fin de l’écoute');setTimeout(()=>{if(done)return;if(interim){const a=[interim];a.conf=null;fin(()=>res(a))}else fail('nomatch')},350)};
+    const go=()=>{try{r.start();log('démarrage demandé')}catch(e){log('start() refusé : '+e.message);fail('start')}};
+    let speaking=false;try{speaking=speechSynthesis.speaking||speechSynthesis.pending}catch(e){}
+    if(speaking){try{speechSynthesis.cancel()}catch(e){}setTimeout(go,300)}else go();   // démarrage immédiat = dans le geste de l'utilisateur (exigé par iOS)
   });
 }
 const norm=s=>s.toLowerCase().replace(/[’']/g,"'").replace(/[^a-z0-9' ]/g,' ').split(/\s+/).filter(Boolean);
@@ -640,12 +654,18 @@ async function bestMatch(target){
   return best;
 }
 function errMsg(e){
+  const code=' (code : '+(e||lastMic.err||'?')+(lastMic.stage?', étape '+lastMic.stage+'/3':'')+')';
   if(e==='not-allowed'||e==='service-not-allowed'){srDead=true;return e==='service-not-allowed'
     ?'Le micro vocal est bloqué. Sur iPhone : Réglages → Général → Clavier → activez « Activer la dictée » (et Siri), puis rechargez. En attendant, utilisez l’écriture ou l’auto-évaluation.'
     :'Micro refusé. Autorisez-le : Safari → AA → Réglages du site → Micro → Autoriser, puis rechargez.'}
   if(e==='unsupported')return 'Reconnaissance vocale indisponible ici. Utilisez Safari, Chrome ou Edge, ou tapez votre réponse.';
-  if(e==='audio-capture')return 'Aucun micro détecté.';
-  return 'Je n’ai rien entendu. Appuyez sur 🎤, attendez une seconde, puis parlez clairement.';
+  if(e==='audio-capture')return 'Aucun micro détecté.'+code;
+  if(e==='network')return 'La reconnaissance vocale a besoin d’internet (Safari envoie votre voix à Apple). Vérifiez votre connexion.'+code;
+  if(e==='start')return 'Safari a refusé d’ouvrir le micro. Fermez l’onglet, rouvrez-le et appuyez sur 🎤 directement.'+code;
+  const st=lastMic.stage;
+  if(st===0)return 'Le micro ne s’est pas ouvert. Vérifiez : Réglages → Safari → Micro → Autoriser ; aucune autre appli n’utilise le micro ; fermez puis rouvrez Safari.'+code;
+  if(st===1)return 'Le micro est ouvert mais ne capte aucun son. Parlez plus près, vérifiez que rien ne couvre le micro (étui, doigt) et le volume des AirPods si connectés.'+code;
+  return 'J’ai entendu du son mais rien de compréhensible. Parlez plus fort, lentement, en anglais, en commençant dès que le micro s’ouvre.'+code;
 }
 const verdict=s=>s>=85?'🎉 Excellent !':s>=60?'👍 Bien, encore une fois pour être parfait.':'💪 Écoutez le modèle puis réessayez, plus lentement.';
 
@@ -801,8 +821,16 @@ async function tryPhrase(){
   try{const c=await bestMatch(en);
     r.innerHTML=`<b style="font-size:22px">${c.score}%</b> ${verdict(c.score)}<br>${c.html}<div class="mute">J’ai entendu : « ${esc(c.heard)} »</div>`;
     if(c.score>=70){addXP(2);bump(.15);rate(en,true)}else rate(en,false)}
-  catch(e){r.textContent=errMsg(e)}
+  catch(e){r.innerHTML=esc(errMsg(e))+'<div class="row"><button class="btn" onclick="typeTry()">⌨️ Écrire la phrase à la place</button></div>'}
   m.classList.remove('rec');
+}
+function typeTry(){
+  $('res').innerHTML='<div class="row" style="margin:0"><input type="text" id="tt" placeholder="Tapez la phrase en anglais" style="flex:1" autocapitalize="off" autocorrect="off" spellcheck="false"><button class="btn primary" onclick="typeCheck()">Vérifier</button></div><div id="ttr"></div>';
+}
+function typeCheck(){
+  const en=cur.phrases[pi][0],c=compare(en,$('tt').value);
+  $('ttr').innerHTML=`<div class="score"><b>${c.score}%</b> ${verdict(c.score)}<br>${c.html}</div>`;
+  if(c.score>=85){addXP(2);rate(en,true)}else rate(en,false);
 }
 function selfEval(ok){rate(cur.phrases[pi][0],ok);if(ok)addXP(2);$('res').textContent=ok?'👍 Bien !':'Réessayez avec le modèle lent 🐢.'}
 
@@ -951,6 +979,7 @@ function vProg(){
   <div class="card"><h3>À travailler</h3>${errs.length?'<ul style="margin:8px 0 0;padding-left:20px">'+errs.map(e=>`<li>${esc(e[0])} <span class="mute">(×${e[1]})</span></li>`).join('')+'</ul>':'<p class="mute" style="margin:6px 0 0">Vos erreurs fréquentes, relevées par le tuteur, apparaîtront ici.</p>'}</div>
   <div class="card"><h3>Réglages</h3>
    <div style="font-weight:800;margin-bottom:6px">Votre métier</div><div class="row" style="margin:0 0 12px"><input type="text" id="jobin" value="${esc(S.job||'')}" placeholder="ex. contrôleur de gestion" style="flex:1"><button class="btn primary" onclick="S.job=$('jobin').value.trim();save();toast('Métier enregistré ✅',2000)">OK</button></div>
+   <div class="row" style="margin:0 0 12px"><button class="btn primary" onclick="vMicTest()">🎙️ Tester mon micro</button></div>
    <div class="row"><button class="btn" onclick="startPlacement()">Refaire le test de niveau</button><button class="btn" onclick="S.key='';save();go('chat')">🔑 Clé du tuteur IA</button></div>
    <div class="row"><button class="btn bad" id="rst" onclick="rstGo()">Réinitialiser</button></div></div>`;
 }
@@ -1779,6 +1808,22 @@ function finList(){
   $('flist').innerHTML=L.map(g=>`<div class="card" style="padding:12px 14px;display:flex;gap:8px;align-items:center"><div style="flex:1;min-width:0"><b>${esc(g.en)}</b><div class="mute">${esc(g.fr)}</div></div><button class="btn" onclick="sp(${T(g.en)},1)">🔊</button><button class="btn" onclick="addWord(${T(g.en)},${T(g.fr)})">⭐</button></div>`).join('')||'<div class="card">Aucun terme trouvé.</div>';
 }
 
+/* --- test du micro --- */
+function vMicTest(){
+  $('view').innerHTML=`<a class="back" onclick="go('prog')">← Progrès</a><div class="card"><h2>🎙️ Test du micro</h2>
+  <p>Appuyez sur 🎤, attendez que « Micro ouvert » s’affiche, puis dites en anglais : <b>“Hello, my name is Marc.”</b></p>
+  <div class="row"><button class="mic" id="mic" onclick="micTestGo()">🎤</button></div>
+  <div class="score" id="res">En attente…</div><div id="mtlog" class="mute" style="margin-top:10px;white-space:pre-line"></div></div>`;
+}
+async function micTestGo(){
+  const m=$('mic'),lg=$('mtlog'),t0=Date.now();lg.textContent='';
+  const dbg=x=>{lg.textContent+=((Date.now()-t0)/1000).toFixed(1)+' s · '+x+'\n'};
+  if(!canMic()){$('res').textContent=errMsg('unsupported');return}
+  m.classList.add('rec');$('res').textContent='…';
+  try{const a=await listen(dbg);$('res').innerHTML='✅ <b>Ça marche !</b> J’ai compris : « '+esc(a[0])+' »'}
+  catch(e){$('res').textContent=errMsg(e)}
+  m.classList.remove('rec');
+}
 render();
 </script>
 </body>
