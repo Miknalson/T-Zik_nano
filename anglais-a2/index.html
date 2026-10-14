@@ -5,6 +5,12 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#5b4bff">
 <meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Speak Up">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="icon" type="image/png" href="icon-192.png">
 <title>Speak Up A2</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@500;700;800;900&display=swap" rel="stylesheet">
@@ -92,6 +98,7 @@ a.back{cursor:pointer;color:var(--brand);font-weight:800;font-size:14px;display:
 <body>
 <header>
   <div class="logo">Speak<b>Up</b> A2</div>
+  <button class="pill" id="refbtn" onclick="forceUpdate()" title="Actualiser l’application" style="border:0;color:inherit;cursor:pointer">🔄</button>
   <span class="pill" id="streak"></span>
   <span class="pill" id="xp"></span>
 </header>
@@ -982,6 +989,9 @@ function vProg(){
    <div class="row" style="margin:0 0 12px"><button class="btn primary" onclick="vMicTest()">🎙️ Tester mon micro</button></div>
    <div class="row"><button class="btn" onclick="startPlacement()">Refaire le test de niveau</button><button class="btn" onclick="S.key='';save();go('chat')">🔑 Clé du tuteur IA</button></div>
    <div class="row"><button class="btn bad" id="rst" onclick="rstGo()">Réinitialiser</button></div>
+   <div style="font-weight:800;margin:14px 0 6px">Sauvegarde de ma progression</div><p class="mute" style="margin:0 0 8px">Utile pour passer de Safari à l’application de l’écran d’accueil, ou après une réinstallation (la clé du tuteur n’est pas incluse).</p>
+   <textarea id="bk" style="width:100%;min-height:70px;border-radius:14px;border:2px solid var(--line);background:var(--bg);color:var(--ink);font:inherit;font-size:12px;padding:8px" placeholder="Collez ici une sauvegarde pour la restaurer"></textarea>
+   <div class="row"><button class="btn" onclick="exportSave()">📋 Copier ma sauvegarde</button><button class="btn" onclick="importSave()">📥 Restaurer</button><button class="btn" onclick="forceUpdate()">🔄 Actualiser</button></div>
    <p class="mute" style="margin:10px 0 0">Version : ${BUILD===UNSTAMPED?'locale':BUILD}</p></div>`;
 }
 function rstGo(){const b=$('rst');if(b.dataset.ok){try{localStorage.removeItem(KEY)}catch(e){}location.reload()}else{b.dataset.ok=1;b.textContent='Confirmer : tout effacer'}}
@@ -1841,6 +1851,26 @@ async function checkUpdate(){
   }catch(e){}
 }
 checkUpdate();document.addEventListener('visibilitychange',()=>{if(!document.hidden)checkUpdate()});
+/* --- actualisation, service worker, sauvegarde --- */
+async function forceUpdate(){
+  toast('🔄 Actualisation…',2500);
+  try{if('caches' in window){const k=await caches.keys();await Promise.all(k.map(x=>caches.delete(x)))}}catch(e){}
+  try{if('serviceWorker' in navigator){const r=await navigator.serviceWorker.getRegistrations();await Promise.all(r.map(x=>x.update()))}}catch(e){}
+  location.href=location.pathname+'?v='+Date.now();
+}
+if('serviceWorker' in navigator&&/^https?:/.test(location.protocol)){navigator.serviceWorker.register('sw.js').catch(()=>{})}
+function saveJSON(){const o=Object.assign({},S);delete o.key;return JSON.stringify(o)}
+function exportSave(){
+  const t=saveJSON(),el=$('bk');el.value=t;
+  try{navigator.clipboard.writeText(t).then(()=>toast('Sauvegarde copiée ✅ Collez-la où vous voulez la restaurer.',3500),()=>{el.focus();el.select();toast('Sélectionné : faites Copier.',4000)})}
+  catch(e){el.focus();el.select();toast('Sélectionné : faites Copier.',4000)}
+}
+function importSave(){
+  const v=$('bk').value.trim();if(!v)return toast('Collez d’abord une sauvegarde.',3000);
+  try{const d=JSON.parse(v);if(typeof d!=='object'||d===null||typeof d.lvl!=='number')throw new Error('x');
+    const key=S.key;Object.assign(S,d);if(!d.key)S.key=key;save();toast('Progression restaurée ✅',2000);setTimeout(()=>location.reload(),600)}
+  catch(e){toast('Sauvegarde invalide : copiez-la en entier.',4000)}
+}
 render();
 </script>
 </body>
