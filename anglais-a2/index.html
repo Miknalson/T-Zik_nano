@@ -474,15 +474,26 @@ function speak(text,rate=.85){
   return new Promise(res=>{
     try{
       if(!('speechSynthesis' in window)){res();return}
-      speechSynthesis.cancel();
-      const u=new SpeechSynthesisUtterance(text);u.lang='en-US';u.rate=rate;
-      const v=voices.find(v=>v.lang==='en-US'&&/samantha|aaron|google|natural/i.test(v.name))||voices.find(v=>v.lang==='en-US')||voices[0];if(v)u.voice=v;
-      let ok=false;const done=()=>{if(!ok){ok=true;res()}};
-      u.onend=done;u.onerror=done;setTimeout(done,Math.max(4000,text.length*160/rate));   // garde-fou : ne jamais bloquer
-      speechSynthesis.speak(u);
+      const go=()=>{
+        try{
+          const u=new SpeechSynthesisUtterance(text);u.lang='en-US';u.rate=rate;
+          const v=voices.find(v=>v.lang==='en-US'&&/samantha|aaron|google|natural/i.test(v.name))||voices.find(v=>v.lang==='en-US')||voices[0];if(v)u.voice=v;
+          let fin=false,started=false;const done=()=>{if(!fin){fin=true;res()}};
+          u.onstart=()=>{started=true};u.onend=done;u.onerror=done;
+          setTimeout(done,Math.max(4000,text.length*160/rate));                 // garde-fou : ne jamais bloquer
+          setTimeout(()=>{if(!started&&!fin){try{speechSynthesis.cancel()}catch(e){}toast('🔇 Pas de son ? Désactivez le mode silencieux (interrupteur sur le côté de l’iPhone), montez le volume, puis touchez 🔊.',8000);done()}},2500);
+          try{speechSynthesis.resume()}catch(e){}
+          speechSynthesis.speak(u);
+        }catch(e){res()}
+      };
+      if(speechSynthesis.speaking||speechSynthesis.pending){speechSynthesis.cancel();setTimeout(go,120)}else go();
     }catch(e){res()}
   });
 }
+// Safari n'autorise la voix qu'après un premier toucher : on la « déverrouille » en silence.
+let ttsUnlocked=false;
+function unlockTTS(){if(ttsUnlocked)return;ttsUnlocked=true;try{const u=new SpeechSynthesisUtterance(' ');u.volume=0;speechSynthesis.speak(u)}catch(e){}}
+addEventListener('touchend',unlockTTS,{once:true,passive:true});addEventListener('click',unlockTTS,{once:true});
 const sp=(i,slow)=>{spk++;speak(_t[i],slow?.5:.8)};
 const ttsRate=()=>S.speed==='auto'?Math.max(.55,Math.min(1,.55+(S.lvl-20)/65*.45)):+S.speed;
 async function say(text,slow){
@@ -569,7 +580,7 @@ function nextPl(){
   const it=PL.cur=pickPl();PL.used.add(it);PL.ask[it.k]++;
   const o=sh(it.o.map((x,i)=>[x,i]));
   $('view').innerHTML=`<div class="card"><div class="mute">Question ${PL.n+1}/${PL_N} · ${SKN[it.k]}</div><div class="bar" style="margin:6px 0 12px"><i style="width:${PL.n/PL_N*100}%"></i></div>
-  ${it.k==='l'?`<div class="en" style="font-size:19px">Écoutez puis répondez.</div><div class="row"><button class="btn" onclick="sp(${T(it.txt)})">🔊 Écouter</button><button class="btn" onclick="sp(${T(it.txt)},1)">🐢 Lent</button></div><div class="mute" style="margin-top:8px">${esc(it.q)}</div>`
+  ${it.k==='l'?`<div class="en" style="font-size:19px">Écoutez puis répondez.</div><div class="row"><button class="btn" onclick="sp(${T(it.txt)})">🔊 Écouter</button><button class="btn" onclick="sp(${T(it.txt)},1)">🐢 Lent</button><button class="btn ghost" onclick="this.outerHTML='<div class=tip style=margin:0;width:100%>'+esc(_t[${T(it.txt)}])+'</div>'">Je n’entends pas : voir le texte</button></div><div class="mute" style="margin-top:8px">${esc(it.q)}</div>`
    :it.k==='r'?`<div class="tip" style="margin:0 0 10px;font-size:17px">${esc(it.txt)}</div><div style="font-weight:800">${esc(it.q)}</div>`
    :`<div class="en" style="font-size:22px">${esc(it.q).replace('___','<span class="blank">___</span>')}</div>`}
   ${o.map(([x,i])=>`<button class="opt" onclick="plPick(${i})">${esc(x)}</button>`).join('')}
@@ -1101,7 +1112,7 @@ function showComp(){
   if(CP.i>=CP.list.length){addXP(10,'atelier','comp');bump((CP.ok/CP.list.length-.6)*1.5);return aEnd('Compréhension terminée',CP.ok,CP.list.length,CP.ok/CP.list.length>=.8?'🏆':'🎉')}
   const it=CP.list[CP.i];CP.cur=it;CP.lock=false;const o=sh(it.o.map((x,i)=>[x,i]));
   $('view').innerHTML=`${atelierBack}<div class="card"><div class="mute">${SKN[it.k]} · ${CP.i+1}/${CP.list.length}</div><div class="bar" style="margin:6px 0 12px"><i style="width:${CP.i/CP.list.length*100}%"></i></div>
-  ${it.k==='l'?`<div class="row" style="margin:0 0 8px"><button class="btn" onclick="sp(${T(it.txt)})">🔊 Écouter</button><button class="btn" onclick="sp(${T(it.txt)},1)">🐢 Lent</button></div>`:`<div class="tip" style="margin:0 0 10px;font-size:17px">${esc(it.txt)}</div>`}
+  ${it.k==='l'?`<div class="row" style="margin:0 0 8px"><button class="btn" onclick="sp(${T(it.txt)})">🔊 Écouter</button><button class="btn" onclick="sp(${T(it.txt)},1)">🐢 Lent</button><button class="btn ghost" onclick="this.outerHTML='<div class=tip style=margin:0;width:100%>'+esc(_t[${T(it.txt)}])+'</div>'">Voir le texte</button></div>`:`<div class="tip" style="margin:0 0 10px;font-size:17px">${esc(it.txt)}</div>`}
   <div style="font-weight:800">${esc(it.q)}</div>${o.map(([x,i])=>`<button class="opt" id="c${i}" onclick="cpPick(${i})">${esc(x)}</button>`).join('')}<div id="fbk"></div></div>`;
   if(it.k==='l')setTimeout(()=>sp(T(it.txt),1),250);
 }
