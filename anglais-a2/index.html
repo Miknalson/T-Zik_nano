@@ -619,7 +619,7 @@ function finishPl(){
   const sc=PL.oral.length?Math.round(PL.oral.reduce((a,b)=>a+b,0)/PL.oral.length):null;
   if(sc!==null)lvl+=(sc-75)/100*8;
   lvl=Math.max(5,Math.min(90,lvl));
-  S.plSave=null;S.lvl=lvl;S.tested=true;S.placed=true;S.tests=(S.tests||[]).concat([{d:today(),l:Math.round(lvl)}]);save();
+  S.plSave=null;S.lvl=lvl;S.tested=true;S.placed=true;S.tests=(S.tests||[]).concat([{d:today(),l:Math.round(lvl)}]);save();addXP(20);
   $('nav').style.display='';drawNav();confetti();
   const lab=d=>d<0?'A1 −':CEFR[d];
   $('view').innerHTML=`<div class="hero"><div class="ring">${ring(S.lvl)}<b>${Math.round(S.lvl)}</b></div><div class="t"><small>Votre niveau mesuré</small><div class="big">${lvlName()}</div><small>sur ${PL.n} questions${sc!==null?' et un oral':''}</small></div></div>
@@ -630,8 +630,10 @@ function finishPl(){
    <button class="btn primary big" onclick="go('home')">Commencer mon parcours</button></div>`;
 }
 
+// Unité conseillée : la première non terminée qui n'est pas trop en dessous du niveau mesuré.
+const recIdx=()=>{let i=UNITS.findIndex((u,k)=>unlocked(k)&&pct(u)<100&&u.min>=S.lvl-30);if(i<0)i=UNITS.findIndex((u,k)=>unlocked(k)&&pct(u)<100);return i<0?UNITS.length-1:i};
 function vHome(){
-  const d=dayRec(),due=dueCards().length,ui=UNITS.findIndex((u,i)=>unlocked(i)&&pct(u)<100),u=UNITS[ui<0?UNITS.length-1:ui];
+  const d=dayRec(),due=dueCards().length,ui=recIdx(),u=UNITS[ui];
   const s1=d.rev||due===0,s2=d.learn,s3=d.turns>=3,n=[s1,s2,s3].filter(Boolean).length;
   const h=new Date().getHours();
   $('view').innerHTML=`<div class="hero"><div class="ring">${ring(S.lvl)}<b>${Math.round(S.lvl)}</b></div>
@@ -654,7 +656,7 @@ function vCourse(){
   <h2>Votre parcours</h2><div class="path">${UNITS.map((u,i)=>{
     const ok=unlocked(i),p=pct(u);
     return `<div class="card node ${ok?'':'lock'}" ${ok?`onclick="openUnit('${u.id}')"`:''}><div class="ic">${ring(p,62,5,'var(--ok)','var(--line)')}${ok?u.icon:'🔒'}</div>
-    <div style="flex:1;min-width:0"><h3>${u.title}</h3><div class="mute">${ok?u.sub+' · '+p+'%':'Se débloque au niveau '+u.min+' ou en finissant l’unité précédente'}</div></div></div>`}).join('')}</div>`;
+    <div style="flex:1;min-width:0"><h3>${u.title}</h3><div class="mute">${ok?u.sub+' · '+p+'%'+(i===recIdx()?' · ⭐ Conseillé pour vous':''):'Se débloque au niveau '+u.min+' ou en finissant l’unité précédente'}</div></div></div>`}).join('')}</div>`;
 }
 function openUnit(id){cur=unit(id);tab='course';drawNav();vUnit(cur)}
 function vUnit(u){
