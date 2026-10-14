@@ -413,6 +413,110 @@ const UNITS=[
   {w:'bot',en:'Thank you. Can you give a conclusion?',fr:'Merci. Pouvez-vous conclure ?'},
   {w:'you',en:'To sum up, the project is on track. Thank you for your attention.',fr:'Pour résumer, le projet est dans les temps. Merci de votre attention.'}],
  talk:[['Introduce a short presentation about your job.','Today I am going to talk about …'],['Explain the main result of a project.','As you can see, … To sum up, …'],['Ask the audience for questions and answer one.','Does anyone have any questions? That is a good question …']]}
+,{id:'cg_budget',job:1,icon:'💰',title:'Budget et prévisions',sub:'Budget and forecast',min:28,scn:'Management control: budget versus actuals, forecasts, cost and sales evolution',
+ g:{t:'Chiffrer une évolution',h:'<b>increase / rise / grow</b> = augmenter, <b>decrease / fall / drop</b> = baisser. <b>by</b> + écart (by 5 %), <b>to</b> + niveau final (to 1.2 million). <b>compared to</b> = par rapport à. <b>higher / lower than</b> = plus haut / plus bas que.',ex:['Sales increased by five percent.','Costs fell to 1.2 million euros.','Margin is lower than last year.']},
+ phrases:[
+  ['We need to prepare the budget for next year.','Nous devons préparer le budget de l’année prochaine.',''],
+  ['Sales increased by five percent compared to last year.','Les ventes ont augmenté de cinq pour cent par rapport à l’année dernière.','by = de combien ; compared to = par rapport à.'],
+  ['Costs are higher than expected.','Les coûts sont plus élevés que prévu.',''],
+  ['The forecast shows a slight decrease in margin.','La prévision montre une légère baisse de marge.',''],
+  ['We are ten thousand euros over budget.','Nous dépassons le budget de dix mille euros.','« over budget » = au-dessus du budget.'],
+  ['Can you send me the latest figures?','Pouvez-vous m’envoyer les derniers chiffres ?',''],
+  ['The budget has to be approved by Friday.','Le budget doit être validé d’ici vendredi.',''],
+  ['We should review the assumptions.','Nous devrions revoir les hypothèses.','']],
+ fill:[['Sales increased ___ five percent.',['by','to','at'],0,'« increase by » = augmenter DE (l’écart).'],['Costs are higher ___ expected.',['than','that','as'],0,'« higher than » = plus élevé que.'],['We are ten thousand euros ___ budget.',['over','on','above of'],0,'« over budget » = au-dessus du budget.']],
+ dialogue:[
+  {w:'bot',en:'How are we doing against the budget?',fr:'Où en sommes-nous par rapport au budget ?'},
+  {w:'you',en:'We are ten thousand euros over budget.',fr:'Nous dépassons le budget de dix mille euros.'},
+  {w:'bot',en:'What is the main reason?',fr:'Quelle en est la raison principale ?'},
+  {w:'you',en:'Costs are higher than expected.',fr:'Les coûts sont plus élevés que prévu.'},
+  {w:'bot',en:'What do you suggest?',fr:'Que proposez-vous ?'},
+  {w:'you',en:'We should review the assumptions.',fr:'Nous devrions revoir les hypothèses.'}],
+ talk:[['How is your department doing against budget?','We are … over / under budget because …'],['Explain a change in sales or costs.','… increased / decreased by … compared to …'],['What do you need before approving the forecast?','I need … Can you send me …']]},
+
+{id:'cg_variance',job:1,icon:'📊',title:'Analyse des écarts',sub:'Variance analysis',min:38,scn:'Management control: explaining variances between actuals and target, margin, one-off costs',
+ g:{t:'Expliquer une cause',h:'<b>due to / because of</b> + nom ; <b>because</b> + phrase. <b>mainly</b> = principalement, <b>partly</b> = en partie. <b>from … to …</b> = de … à …. <b>favourable / unfavourable variance</b> = écart favorable / défavorable.',ex:['The variance is mainly due to prices.','Revenue is low because of volumes.','Margin went from 40 to 38 percent.']},
+ phrases:[
+  ['The variance is mainly due to higher raw material prices.','L’écart est principalement dû à la hausse du prix des matières premières.',''],
+  ['This is a favourable variance of two percent.','C’est un écart favorable de deux pour cent.',''],
+  ['Revenue is below target because of lower volumes.','Le chiffre d’affaires est inférieur à l’objectif à cause de volumes plus faibles.',''],
+  ['Let me break down the costs by category.','Laissez-moi détailler les coûts par catégorie.','« break down » = décomposer.'],
+  ['Gross margin dropped from forty to thirty-eight percent.','La marge brute est passée de quarante à trente-huit pour cent.','from … to … = de … à …'],
+  ['This is a one-off cost, not a trend.','C’est un coût exceptionnel, pas une tendance.',''],
+  ['We need to find the root cause.','Nous devons trouver la cause racine.',''],
+  ['The impact on profit is limited.','L’impact sur le résultat est limité.','']],
+ fill:[['The variance is mainly ___ to higher prices.',['due','because','of'],0,'« due to » + nom.'],['Revenue is below target ___ of lower volumes.',['because','due','cause'],0,'« because of » + nom.'],['Margin dropped ___ forty to thirty-eight percent.',['from','of','since'],0,'« from … to … » = de … à …']],
+ dialogue:[
+  {w:'bot',en:'Why is revenue below target?',fr:'Pourquoi le chiffre d’affaires est-il sous l’objectif ?'},
+  {w:'you',en:'Revenue is below target because of lower volumes.',fr:'Le chiffre d’affaires est sous l’objectif à cause de volumes plus faibles.'},
+  {w:'bot',en:'And what about margin?',fr:'Et la marge ?'},
+  {w:'you',en:'Gross margin dropped from forty to thirty-eight percent.',fr:'La marge brute est passée de quarante à trente-huit pour cent.'},
+  {w:'bot',en:'Is it a trend?',fr:'Est-ce une tendance ?'},
+  {w:'you',en:'No, this is a one-off cost, not a trend.',fr:'Non, c’est un coût exceptionnel, pas une tendance.'}],
+ talk:[['Explain why a figure is different from the target.','The variance is mainly due to …'],['Describe a change using from … to …','Margin went from … to …'],['Is it a one-off or a trend? Explain.','This is a one-off / a trend because …']]},
+
+{id:'cg_report',job:1,icon:'📑',title:'Reporting et clôture',sub:'Reporting and month-end close',min:48,scn:'Management control: month-end close, reconciliation, reports, deadlines, data problems',
+ g:{t:'Résultats, délais et passif',h:'<b>Present perfect</b> pour un résultat actuel : « We have closed the accounts ». <b>Passif</b> : « The report will be sent on Monday » (will be + participe passé). <b>before + -ing</b> : « before sending ».',ex:['We have closed the accounts.','The report will be sent on Monday.','Check the figures before sending.']},
+ phrases:[
+  ['The month-end close starts on the first working day.','La clôture mensuelle commence le premier jour ouvré.',''],
+  ['We have closed the accounts for March.','Nous avons clôturé les comptes de mars.',''],
+  ['The report will be sent to management on Monday.','Le rapport sera envoyé à la direction lundi.','Passif : will be + participe passé.'],
+  ['Please check the figures before sending.','Merci de vérifier les chiffres avant l’envoi.',''],
+  ['There is a mismatch between the two systems.','Il y a un écart entre les deux systèmes.',''],
+  ['Could you reconcile these accounts?','Pourriez-vous rapprocher ces comptes ?','« reconcile » = rapprocher / justifier.'],
+  ['We missed the deadline by two days.','Nous avons dépassé l’échéance de deux jours.',''],
+  ['The dashboard is updated every week.','Le tableau de bord est mis à jour chaque semaine.','']],
+ fill:[['We ___ closed the accounts for March.',['have','are','did'],0,'Résultat actuel → present perfect : have closed.'],['The report will be ___ on Monday.',['sent','send','sending'],0,'will be + participe passé.'],['Please check the figures ___ sending.',['before','until','during'],0,'before + -ing.']],
+ dialogue:[
+  {w:'bot',en:'Is the month-end close finished?',fr:'La clôture mensuelle est-elle terminée ?'},
+  {w:'you',en:'We have closed the accounts for March.',fr:'Nous avons clôturé les comptes de mars.'},
+  {w:'bot',en:'Are the numbers correct?',fr:'Les chiffres sont-ils corrects ?'},
+  {w:'you',en:'There is a mismatch between the two systems.',fr:'Il y a un écart entre les deux systèmes.'},
+  {w:'bot',en:'Can you fix it today?',fr:'Pouvez-vous le corriger aujourd’hui ?'},
+  {w:'you',en:'I will reconcile these accounts and send the report on Monday.',fr:'Je rapproche ces comptes et j’envoie le rapport lundi.'}],
+ talk:[['Describe your month-end close process.','First we … Then we … Finally …'],['Explain a problem in the data.','There is a mismatch between … and …'],['When will you send the report?','The report will be sent on …']]},
+
+{id:'cg_present',job:1,icon:'🎯',title:'Présenter à la direction',sub:'Presenting to management',min:58,scn:'Management control: presenting results and recommendations to executives, risks and opportunities',
+ g:{t:'Présenter des chiffres',h:'<b>The key message is…</b>, <b>As you can see…</b>, <b>This means that…</b>, <b>I recommend that…</b>. Prudence : <b>we expect</b>, <b>there is a risk that</b>, <b>it seems</b>.',ex:['The key message is that we are on track.','I recommend that we reduce costs.']},
+ phrases:[
+  ['The key message is that we are on track.','Le message clé est que nous sommes dans les temps.',''],
+  ['As you can see in this chart, costs are stable.','Comme vous le voyez sur ce graphique, les coûts sont stables.',''],
+  ['This means that we can keep our targets.','Cela signifie que nous pouvons maintenir nos objectifs.',''],
+  ['I recommend that we reduce travel expenses.','Je recommande que nous réduisions les frais de déplacement.',''],
+  ['There is a risk that sales will be lower.','Il y a un risque que les ventes soient plus faibles.',''],
+  ['We expect a recovery in the second half.','Nous attendons une reprise au second semestre.',''],
+  ['The return on investment is around twelve percent.','Le retour sur investissement est d’environ douze pour cent.',''],
+  ['Do you have any questions about the numbers?','Avez-vous des questions sur les chiffres ?','']],
+ fill:[['I ___ that we reduce travel expenses.',['recommend','advice','propose to'],0,'« recommend that » + sujet + verbe.'],['There is a ___ that sales will be lower.',['risk','danger','chance'],0,'« a risk that… » = un risque que…'],['We ___ a recovery in the second half.',['expect','wait','hope to'],0,'« expect » = s’attendre à.']],
+ dialogue:[
+  {w:'bot',en:'Please summarize the situation for the board.',fr:'Résumez la situation pour le conseil, s’il vous plaît.'},
+  {w:'you',en:'The key message is that we are on track.',fr:'Le message clé est que nous sommes dans les temps.'},
+  {w:'bot',en:'What are the risks?',fr:'Quels sont les risques ?'},
+  {w:'you',en:'There is a risk that sales will be lower.',fr:'Il y a un risque que les ventes soient plus faibles.'},
+  {w:'bot',en:'What do you recommend?',fr:'Que recommandez-vous ?'},
+  {w:'you',en:'I recommend that we reduce travel expenses.',fr:'Je recommande que nous réduisions les frais de déplacement.'}],
+ talk:[['Summarize your latest results in two sentences.','The key message is … As you can see …'],['Name one risk and one opportunity.','There is a risk that … An opportunity is …'],['Give a recommendation to management.','I recommend that we …']]},
+
+{id:'cg_negotiate',job:1,icon:'🤝',title:'Négocier un budget',sub:'Negotiating budgets',min:66,scn:'Management control: negotiating budgets with managers, challenging expenses, proposing compromises',
+ g:{t:'Négocier poliment',h:'<b>Would it be possible to…?</b> pour demander. <b>I understand your point, however…</b> pour nuancer un refus. <b>If we …, we could …</b> pour proposer une alternative. <b>agree on</b> = convenir de.',ex:['Would it be possible to reduce it?','If we delay it, we could save money.']},
+ phrases:[
+  ['Would it be possible to reduce this budget by ten percent?','Serait-il possible de réduire ce budget de dix pour cent ?',''],
+  ['I understand your point, however we have to stay within our limits.','Je comprends votre point de vue, cependant nous devons rester dans nos limites.',''],
+  ['If we delay this project, we could save money.','Si nous retardons ce projet, nous pourrions économiser de l’argent.',''],
+  ['Can you justify this expense?','Pouvez-vous justifier cette dépense ?',''],
+  ['What is the business case for this investment?','Quel est l’argumentaire économique de cet investissement ?',''],
+  ['We have to prioritize our investments.','Nous devons prioriser nos investissements.',''],
+  ['Let us agree on a realistic target.','Convenons d’un objectif réaliste.',''],
+  ['I will update the forecast and come back to you.','Je mets à jour la prévision et je reviens vers vous.','']],
+ fill:[['Would it be ___ to reduce this budget?',['possible','able','can'],0,'« Would it be possible to… ? » = demande polie.'],['If we delay this project, we ___ save money.',['could','can to','will to'],0,'If + présent, … could / will + verbe.'],['Let us ___ on a realistic target.',['agree','accord','decide to'],0,'« agree on » = convenir de.']],
+ dialogue:[
+  {w:'bot',en:'We need ten percent more budget for this project.',fr:'Il nous faut dix pour cent de budget en plus pour ce projet.'},
+  {w:'you',en:'I understand your point, however we have to stay within our limits.',fr:'Je comprends, cependant nous devons rester dans nos limites.'},
+  {w:'bot',en:'It is a key project for growth.',fr:'C’est un projet clé pour la croissance.'},
+  {w:'you',en:'Can you justify this expense? What is the business case?',fr:'Pouvez-vous justifier cette dépense ? Quel est l’argumentaire ?'},
+  {w:'bot',en:'It should bring a twelve percent return.',fr:'Il devrait rapporter douze pour cent.'},
+  {w:'you',en:'If we delay it, we could save money. Let us agree on a realistic target.',fr:'Si nous le retardons, nous pourrions économiser. Convenons d’un objectif réaliste.'}],
+ talk:[['Ask a manager to reduce a budget, politely.','Would it be possible to …?'],['Refuse an expense and explain why.','I understand your point, however …'],['Propose an alternative.','If we …, we could …']]}
 ];
 const unit=id=>UNITS.find(u=>u.id===id);
 
@@ -440,7 +544,7 @@ const TIPS=['Parlez à voix haute, même seul : votre bouche doit s’habituer a
 /* ============================ ÉTAT ============================ */
 const KEY='speakup-a2-v1';
 let S;try{S=JSON.parse(localStorage.getItem(KEY))}catch(e){}
-S=Object.assign({xp:0,streak:0,last:'',done:{},cards:{},lvl:20,placed:false,tested:false,key:'',model:'claude-haiku-5-5',errs:{},extra:{},words:[],verbs:{},plSave:null,speed:'auto',fr:true,hist:{},day:{},ex:{ok:0,n:0},convos:0},S||{});
+S=Object.assign({xp:0,streak:0,last:'',done:{},cards:{},lvl:20,placed:false,tested:false,key:'',model:'claude-haiku-5-5',errs:{},extra:{},words:[],verbs:{},plSave:null,job:'contrôleur de gestion',speed:'auto',fr:true,hist:{},day:{},ex:{ok:0,n:0},convos:0},S||{});
 const save=()=>{try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){}};
 function dayRec(){if(S.day.d!==today())S.day={d:today(),rev:false,learn:false,turns:0};return S.day}
 const LV=[[18,'A1 – débutant'],[30,'A2 – début'],[50,'A2 solide'],[68,'A2+ (vers B1)'],[101,'B1']];
@@ -631,7 +735,7 @@ function finishPl(){
 }
 
 // Unité conseillée : la première non terminée qui n'est pas trop en dessous du niveau mesuré.
-const recIdx=()=>{let i=UNITS.findIndex((u,k)=>unlocked(k)&&pct(u)<100&&u.min>=S.lvl-30);if(i<0)i=UNITS.findIndex((u,k)=>unlocked(k)&&pct(u)<100);return i<0?UNITS.length-1:i};
+const recIdx=()=>{let i=UNITS.findIndex((u,k)=>u.job&&unlocked(k)&&pct(u)<100&&u.min>=S.lvl-30);if(i<0)i=UNITS.findIndex((u,k)=>unlocked(k)&&pct(u)<100&&u.min>=S.lvl-30);if(i<0)i=UNITS.findIndex((u,k)=>unlocked(k)&&pct(u)<100);return i<0?UNITS.length-1:i};
 function vHome(){
   const d=dayRec(),due=dueCards().length,ui=recIdx(),u=UNITS[ui];
   const s1=d.rev||due===0,s2=d.learn,s3=d.turns>=3,n=[s1,s2,s3].filter(Boolean).length;
@@ -649,14 +753,17 @@ function vHome(){
 /* ============================ COURS ============================ */
 function vCourse(){
   if(cur)return vUnit(cur);
+  const node=(u,i)=>{const ok=unlocked(i),p=pct(u);
+    return `<div class="card node ${ok?'':'lock'}" ${ok?`onclick="openUnit('${u.id}')"`:''}><div class="ic">${ring(p,62,5,'var(--ok)','var(--line)')}${ok?u.icon:'🔒'}</div>
+    <div style="flex:1;min-width:0"><h3>${u.title}</h3><div class="mute">${ok?u.sub+' · '+p+'%'+(i===recIdx()?' · ⭐ Conseillé pour vous':''):'Se débloque au niveau '+u.min+' ou en finissant l’unité précédente'}</div></div></div>`};
+  const gen=UNITS.map((u,i)=>[u,i]).filter(x=>!x[0].job),job=UNITS.map((u,i)=>[u,i]).filter(x=>x[0].job);
   $('view').innerHTML=`<h2>Ateliers gratuits</h2><div class="grid2" style="margin-bottom:14px">
    <div class="card node" style="flex-direction:column;text-align:center;margin:0" onclick="vPronList()"><div class="ic">🗣️</div><h3>Prononciation</h3><div class="mute">7 sons pièges</div></div>
-   <div class="card node" style="flex-direction:column;text-align:center;margin:0" onclick="vSceneList()"><div class="ic">💬</div><h3>Mini-conversations</h3><div class="mute">6 situations</div></div>
+   <div class="card node" style="flex-direction:column;text-align:center;margin:0" onclick="vSceneList()"><div class="ic">💬</div><h3>Mini-conversations</h3><div class="mute">${SCENES.length} situations</div></div>
    <div class="card node" style="flex-direction:column;text-align:center;margin:0;grid-column:span 2" onclick="startComp()"><div class="ic">🎧</div><h3>Compréhension</h3><div class="mute">Écoute et lecture adaptées à votre niveau</div></div></div>
-  <h2>Votre parcours</h2><div class="path">${UNITS.map((u,i)=>{
-    const ok=unlocked(i),p=pct(u);
-    return `<div class="card node ${ok?'':'lock'}" ${ok?`onclick="openUnit('${u.id}')"`:''}><div class="ic">${ring(p,62,5,'var(--ok)','var(--line)')}${ok?u.icon:'🔒'}</div>
-    <div style="flex:1;min-width:0"><h3>${u.title}</h3><div class="mute">${ok?u.sub+' · '+p+'%'+(i===recIdx()?' · ⭐ Conseillé pour vous':''):'Se débloque au niveau '+u.min+' ou en finissant l’unité précédente'}</div></div></div>`}).join('')}</div>`;
+  <h2>💼 Votre métier : ${esc(S.job||'finance')}</h2><div class="path" style="margin-bottom:14px">${job.map(x=>node(x[0],x[1])).join('')}
+   <div class="card node" onclick="dsub='fin';go('dico')"><div class="ic">📚</div><div style="flex:1"><h3>Glossaire finance</h3><div class="mute">${GLOS.length} termes de contrôle de gestion</div></div></div></div>
+  <h2>Votre parcours général</h2><div class="path">${gen.map(x=>node(x[0],x[1])).join('')}</div>`;
 }
 function openUnit(id){cur=unit(id);tab='course';drawNav();vUnit(cur)}
 function vUnit(u){
@@ -843,6 +950,7 @@ function vProg(){
   <div class="card"><h3>Cette semaine (points)</h3><div class="bars">${days.map(d=>`<div><i style="height:${Math.max(4,(S.hist[d[0]]||0)/mx*70)}px"></i>${d[1]}</div>`).join('')}</div></div>
   <div class="card"><h3>À travailler</h3>${errs.length?'<ul style="margin:8px 0 0;padding-left:20px">'+errs.map(e=>`<li>${esc(e[0])} <span class="mute">(×${e[1]})</span></li>`).join('')+'</ul>':'<p class="mute" style="margin:6px 0 0">Vos erreurs fréquentes, relevées par le tuteur, apparaîtront ici.</p>'}</div>
   <div class="card"><h3>Réglages</h3>
+   <div style="font-weight:800;margin-bottom:6px">Votre métier</div><div class="row" style="margin:0 0 12px"><input type="text" id="jobin" value="${esc(S.job||'')}" placeholder="ex. contrôleur de gestion" style="flex:1"><button class="btn primary" onclick="S.job=$('jobin').value.trim();save();toast('Métier enregistré ✅',2000)">OK</button></div>
    <div class="row"><button class="btn" onclick="startPlacement()">Refaire le test de niveau</button><button class="btn" onclick="S.key='';save();go('chat')">🔑 Clé du tuteur IA</button></div>
    <div class="row"><button class="btn bad" id="rst" onclick="rstGo()">Réinitialiser</button></div></div>`;
 }
@@ -864,9 +972,9 @@ function style(){const l=S.lvl;
   return 'Natural, like a normal conversation with a friendly colleague: 3-4 sentences, normal vocabulary, contractions, occasional idioms. Open, thought-provoking questions.';}
 function sysPrompt(){
   const errs=Object.entries(S.errs).sort((a,b)=>b[1]-a[1]).slice(0,4).map(e=>e[0]).join('; ')||'none yet';
-  const u=unit(scen),topic=u?u.scn:'Free conversation about daily life, work and projects',
+  const u=unit(scen),job=(S.job||'').trim(),topic=u?u.scn:(scen==='metier'&&job?'Everyday work situations of a '+job+': tasks, meetings, reports, colleagues, managers':'Free conversation about daily life, work and projects'),
         targets=u?u.phrases.slice(0,5).map(p=>p[0]).join(' | '):'';
-  return `You are a warm, patient and rigorous English teacher for a French-speaking adult who needs English at work. Learner level score: ${Math.round(S.lvl)}/100 (10=A1, 35=A2, 55=A2+, 70=B1, 90=B2). Topic: ${topic}.${targets?` Steer the conversation so the learner has a chance to use these phrases: ${targets}.`:''}
+  return `You are a warm, patient and rigorous English teacher for a French-speaking adult who needs English at work. Learner level score: ${Math.round(S.lvl)}/100 (10=A1, 35=A2, 55=A2+, 70=B1, 90=B2). ${job?` The learner works as: ${job}. Whenever natural, use realistic situations, examples and vocabulary from that job (for a management controller: budgets, forecasts, variance analysis, reporting, month-end close, KPIs, presentations to executives).`:''} Topic: ${topic}.${targets?` Steer the conversation so the learner has a chance to use these phrases: ${targets}.`:''}
 Style for this level: ${style()} Always end with ONE question so the learner keeps talking. Stay just slightly above the learner's level and never switch to French in "reply".
 Messages come from speech recognition: ignore capitalization and punctuation. A recognition confidence (0-1) may be appended: a low value suggests unclear pronunciation.
 Teach like a real teacher: correct only the 1-2 most important mistakes per turn, always give the correct form, explain briefly in French, and when the learner is right, say so.
@@ -892,7 +1000,7 @@ function vChat(){
     <ol><li>Copiez le texte ci-dessous.</li><li>Dans l’application Claude : <b>Projets → Nouveau projet</b> → collez-le dans les <b>instructions</b>.</li><li>Ouvrez une conversation dans ce projet et activez le micro 🎙️ (mode vocal).</li></ol>
     <textarea id="pp" readonly style="width:100%;min-height:120px;border-radius:14px;border:2px solid var(--line);background:var(--bg);color:var(--ink);font:inherit;font-size:13px;padding:10px">${esc(profPrompt())}</textarea>
     <button class="btn primary big" style="margin-top:10px" onclick="copyProf()">📋 Copier les instructions du professeur</button></div>`;return}
-  const opts=[['free','Conversation libre']].concat(UNITS.filter((u,i)=>unlocked(i)).map(u=>[u.id,u.icon+' '+u.title]));
+  const opts=[['free','Conversation libre']].concat((S.job||'').trim()?[['metier','💼 Mon métier']]:[]).concat(UNITS.filter((u,i)=>unlocked(i)).map(u=>[u.id,u.icon+' '+u.title]));
   $('view').innerHTML=`<h2>🤖 Votre tuteur</h2><div class="card">
    <div class="row" style="margin:0 0 10px"><select id="scen" onchange="scen=this.value;chat=[];logHTML='';fb=[];vChat()">${opts.map(([k,l])=>`<option value="${k}" ${k===scen?'selected':''}>${l}</option>`).join('')}</select>
     <select onchange="S.speed=this.value;save()">${[['auto','Voix : auto'],['.55','Très lente'],['.7','Lente'],['.85','Moyenne'],['1','Normale']].map(([v,l])=>`<option value="${v}" ${S.speed===v?'selected':''}>${l}</option>`).join('')}</select></div>
@@ -1020,7 +1128,19 @@ const SCENES=[
  {id:'coffee',icon:'☕',t:'Un collègue étranger',steps:[
   {bot:'Hi! I am new here. Where are you from?',fr:'Salut ! Je suis nouveau. D’où venez-vous ?',o:[['Hi! Nice to meet you. I am from France. And you?',1,''],['France.',0,'Trop court : relancez la conversation.'],['I am French from.',0,'Ordre des mots : « I am from France ».']]},
   {bot:'I am from Canada. What do you do here?',fr:'Je viens du Canada. Que faites-vous ici ?',o:[['I work in the sales team. I help customers every day.',1,''],['Work sales.',0,'Il manque le sujet : « I work in sales ».'],['Nothing special.',0,'Donnez une vraie réponse pour continuer.']]},
-  {bot:'Great! Do you want to have lunch together?',fr:'Super ! Voulez-vous déjeuner ensemble ?',o:[['Yes, with pleasure! What time?',1,''],['No thanks, I am busy always.',0,'On dit « I am always busy ».'],['Maybe never.',0,'Impoli.']]}]}];
+  {bot:'Great! Do you want to have lunch together?',fr:'Super ! Voulez-vous déjeuner ensemble ?',o:[['Yes, with pleasure! What time?',1,''],['No thanks, I am busy always.',0,'On dit « I am always busy ».'],['Maybe never.',0,'Impoli.']]}]},
+ {id:'cgvar',icon:'📉',t:'Expliquer un écart au directeur',steps:[
+  {bot:'Why are costs higher than the budget this month?',fr:'Pourquoi les coûts dépassent-ils le budget ce mois-ci ?',o:[['The variance is mainly due to higher raw material prices.',1,''],['Because costs go up.',0,'Trop vague : donnez une cause précise et chiffrée.'],['I do not know the reason.',0,'Un contrôleur de gestion doit expliquer ou proposer un plan pour trouver la cause.']]},
+  {bot:'Is it temporary?',fr:'Est-ce temporaire ?',o:[['Part of it is a one-off cost. I will confirm by Friday.',1,''],['Maybe yes, maybe no.',0,'Trop flou pour un dirigeant.'],['It is not my problem.',0,'Ton inadapté.']]},
+  {bot:'What do you recommend?',fr:'Que recommandez-vous ?',o:[['I recommend that we review our suppliers and update the forecast.',1,''],['Nothing.',0,'Proposez toujours une action.'],['You must reduce costs.',0,'Trop directif et sans analyse.']]}]},
+ {id:'cgbud',icon:'💶',t:'Négocier un budget',steps:[
+  {bot:'We need ten percent more budget for marketing.',fr:'Il nous faut dix pour cent de budget en plus pour le marketing.',o:[['I understand your point, however we have to stay within our limits. Can you justify this expense?',1,''],['No, impossible.',0,'Refus sec : expliquez et demandez un argumentaire.'],['Ok, fine.',0,'Ne cédez pas sans analyse.']]},
+  {bot:'It will bring more sales next year.',fr:'Cela rapportera plus de ventes l’an prochain.',o:[['What is the expected return on investment?',1,''],['I do not believe you.',0,'Trop agressif : demandez des chiffres.'],['Sales are good always.',0,'Hors sujet, et l’ordre est « Sales are always good ».']]},
+  {bot:'About twelve percent.',fr:'Environ douze pour cent.',o:[['Thank you. If we reduce another cost, we could approve part of it. Let us agree on a realistic target.',1,''],['Ok bye.',0,'Concluez par une proposition.'],['Twelve is small.',0,'Peu constructif.']]}]},
+ {id:'cgnum',icon:'🔢',t:'Demander des chiffres à un collègue',steps:[
+  {bot:'Hi, how can I help you?',fr:'Bonjour, comment puis-je vous aider ?',o:[['Hi! Could you send me the latest sales figures by Friday, please?',1,''],['Send me numbers now.',0,'Trop impératif : « Could you … please? »'],['I need number sales.',0,'On dit « I need the sales figures ».']]},
+  {bot:'Which period do you need?',fr:'Quelle période vous faut-il ?',o:[['The first quarter, compared to last year, please.',1,''],['All.',0,'Soyez précis : période et comparaison.'],['The quarter first.',0,'L’ordre est « the first quarter ».']]},
+  {bot:'I will send them tomorrow morning.',fr:'Je vous les envoie demain matin.',o:[['Perfect, thank you. Please check the figures before sending.',1,''],['Tomorrow is late.',0,'Un peu sec : proposez une alternative poliment.'],['Ok.',0,'Remerciez.']]}]}];
 
 const atelierBack='<a class="back" onclick="go(\'course\')">← Parcours</a>';
 function aEnd(title,ok,n,emoji){confetti();$('view').innerHTML=`${atelierBack}<div class="card" style="text-align:center"><div style="font-size:54px">${emoji}</div><h2>${title}</h2><p>${ok}/${n} réussis</p></div>`}
@@ -1075,8 +1195,9 @@ async function repTry(){
 /* --- Mini-conversations à choix --- */
 let SC=null;
 function vSceneList(){
+  const L=SCENES.slice().sort((a,b)=>(b.id.startsWith('cg')?1:0)-(a.id.startsWith('cg')?1:0));
   $('view').innerHTML=`${atelierBack}<h2>💬 Mini-conversations</h2><p class="mute">Une vraie situation de travail : à chaque réplique, choisissez la meilleure réponse puis dites-la à voix haute.</p>
-  ${SCENES.map(c=>`<div class="card node" onclick="startScene('${c.id}')"><div class="ic">${c.icon}</div><div style="flex:1"><h3>${c.t}</h3><div class="mute">${c.steps.length} répliques${S.scenes&&S.scenes[c.id]!=null?' · meilleur : '+S.scenes[c.id]+'/'+c.steps.length:''}</div></div></div>`).join('')}`;
+  ${L.map(c=>`<div class="card node" onclick="startScene('${c.id}')"><div class="ic">${c.icon}</div><div style="flex:1"><h3>${c.t}</h3><div class="mute">${c.steps.length} répliques${S.scenes&&S.scenes[c.id]!=null?' · meilleur : '+S.scenes[c.id]+'/'+c.steps.length:''}</div></div></div>`).join('')}`;
 }
 function startScene(id){SC={c:SCENES.find(x=>x.id===id),i:0,ok:0};showScene()}
 function showScene(){
@@ -1127,12 +1248,12 @@ function cpPick(i){
 }
 
 /* --- Prompt pour discuter avec Claude via l'abonnement --- */
-function profPrompt(){return `Tu es mon professeur d’anglais personnel. Je suis francophone, mon niveau est ${lvlName()} (environ ${Math.round(S.lvl)}/100 ; A2 ≈ 35, B1 ≈ 70) et je veux parler anglais couramment pour mon travail.
+function profPrompt(){return `Tu es mon professeur d’anglais personnel. Je suis francophone, mon niveau est ${lvlName()} (environ ${Math.round(S.lvl)}/100 ; A2 ≈ 35, B1 ≈ 70) et je veux parler anglais couramment pour mon travail${(S.job||'').trim()?` (je suis ${S.job.trim()} : budgets, prévisions, analyse des écarts, reporting, clôture, présentations à la direction, négociation budgétaire)`:''}.
 Règles :
 - Parle-moi uniquement en anglais simple, à mon niveau, avec des phrases courtes (8 à 12 mots) et des mots courants. Parle lentement et pose UNE seule question à la fois.
 - Après chacune de mes réponses : dis d’abord ce qui est bien, puis corrige mes 1 ou 2 erreurs les plus importantes avec la phrase correcte et une explication courte EN FRANÇAIS. Ne corrige pas tout en même temps.
 - Si je suis bloqué, donne-moi deux réponses possibles.
-- Fais-moi parler de situations professionnelles : me présenter, réunions, téléphone, e-mails, entretien, service client.
+- Fais-moi parler de situations professionnelles réalistes de mon métier (et parfois : me présenter, réunions, téléphone, e-mails).
 - Quand je dis « bilan », résume mes progrès, mes erreurs fréquentes et donne-moi un devoir pour demain.
 - Fais monter peu à peu la difficulté quand mon anglais s’améliore.
 Commence par me saluer et me poser une première question facile.`}
@@ -1411,10 +1532,10 @@ const MODES=[['aff','Affirmatif'],['neg','Négatif'],['q','Question']];
 
 /* ---- interface ---- */
 let dsub='search',cmode='aff',cverb='go',iq='';
-const DSUBS=[['search','🔎 Dictionnaire'],['irr','🔁 Irréguliers'],['conj','⏱️ Conjuguer'],['words','⭐ Mes mots']];
+const DSUBS=[['search','🔎 Dictionnaire'],['irr','🔁 Irréguliers'],['conj','⏱️ Conjuguer'],['fin','💼 Finance'],['words','⭐ Mes mots']];
 function vDico(){
   $('view').innerHTML=`<h2>📖 Dico</h2><div class="row" style="margin:0 0 12px">${DSUBS.map(([k,l])=>`<button class="btn ${dsub===k?'primary':''}" onclick="dsub='${k}';vDico()">${l}</button>`).join('')}</div><div id="dbody"></div>`;
-  ({search:dSearch,irr:dIrr,conj:dConj,words:dWords})[dsub]();
+  ({search:dSearch,irr:dIrr,conj:dConj,fin:dFin,words:dWords})[dsub]();
 }
 const clean=w=>w.trim().toLowerCase().replace(/^to\s+/,'').replace(/[^a-zàâçéèêëîïôùûüœ' -]/g,'');
 function localFind(q){
@@ -1436,8 +1557,10 @@ async function fetchJSON(u){const r=await fetch(u);if(!r.ok)throw new Error('htt
 async function doSearch(){
   const raw=$('dq').value,q=clean(raw),el=$('dres');if(!q)return;
   let html='';
+  if(ddir==='fr'){const gl=glosFind(q);if(gl.length)html+=`<div class="card"><h3>💼 Glossaire contrôle de gestion</h3>${gl.slice(0,6).map(g=>`<div class="tip" style="display:flex;gap:8px;align-items:center"><div style="flex:1"><b>${esc(g.en)}</b><div class="mute">${esc(g.fr)}</div></div><button class="btn" onclick="sp(${T(g.en)},1)">🔊</button></div>`).join('')}</div>`}
   if(ddir==='en'){
     localFind(q).forEach(v=>{const f=enForms(v);html+=`<div class="card"><b>${esc(v.b)}</b> <span class="mute">verbe · ${v.p?'irrégulier':'régulier'}</span><div>${esc(v.fr)}</div><div class="mute">${v.b} – ${f.past} – ${f.pp}</div><div class="row"><button class="btn" onclick="cverb='${v.b}';dsub='conj';vDico()">⏱️ Conjuguer</button></div></div>`});
+    const gl=glosFind(q);if(gl.length)html+=`<div class="card"><h3>💼 Glossaire contrôle de gestion</h3>${gl.slice(0,6).map(g=>`<div class="tip" style="display:flex;gap:8px;align-items:center"><div style="flex:1"><b>${esc(g.en)}</b><div class="mute">${esc(g.fr)}</div></div><button class="btn" onclick="sp(${T(g.en)},1)">🔊</button></div>`).join('')}</div>`;
     const ex=exampleFind(q);if(ex.length)html+=`<div class="card"><h3>Dans vos leçons</h3>${ex.map(p=>`<div class="tip"><b>${esc(p[0])}</b><div class="mute">${esc(p[1])}</div></div>`).join('')}</div>`;
   }
   el.innerHTML=html+'<div class="mute" style="padding:8px">🔎 Recherche dans le dictionnaire en ligne…</div>';
@@ -1452,7 +1575,7 @@ async function doSearch(){
     }
     let def=null;if(b.status==='fulfilled'&&Array.isArray(b.value))def=b.value[0];
     if(ddir==='fr'&&tr[0]&&!/\s/.test(tr[0])){try{const r=await fetchJSON('https://api.dictionaryapi.dev/api/v2/entries/en/'+encodeURIComponent(tr[0].toLowerCase()));if(Array.isArray(r))def=r[0]}catch(e){}}
-    if(a.status==='rejected'&&!html){throw new Error('offline')}
+    if(a.status==='rejected'){if(!html)throw new Error('offline');html+='<div class="card">⚠️ Le dictionnaire en ligne est indisponible (connexion ?). Voici les résultats de votre glossaire et de vos leçons.</div>'}
     const enWord=ddir==='en'?q:(tr[0]||'');
     if(tr.length){const best=tr.slice(0,5);const k=T(ddir==='en'?q:best[0]),fr=ddir==='en'?best[0]:q,en=ddir==='en'?q:best[0];
       html+=`<div class="card"><div class="row" style="margin:0"><div style="flex:1"><div class="en">${esc(ddir==='en'?q:best[0])}</div>${def&&def.phonetic?`<div class="mute">${esc(def.phonetic)}</div>`:''}</div><button class="btn" onclick="sp(${k})">🔊</button><button class="btn" onclick="sp(${k},1)">🐢</button></div>
@@ -1544,6 +1667,116 @@ async function renderConj(){
   const body=TENSES.map((t,ti)=>`<details class="card" style="padding:0" ${ti===0?'open':''}><summary style="padding:14px 16px;font-weight:900;cursor:pointer">${t.en} <span class="mute">· ${esc(t.fr)}</span></summary><div style="padding:0 16px 14px"><div class="mute">${esc(t.use)}</div><div class="mute">Mots-clés : <i>${esc(t.sig)}</i></div>
    ${[0,1,2,3,4,5].map(k=>{const en=enSentence(f,t.id,k,cmode),fr=fd?frSentence(fd,t.id,k,cmode):'';return `<div style="display:flex;gap:8px;align-items:center;margin-top:8px"><div style="flex:1;min-width:0"><b>${esc(en)}</b>${fr?`<div class="mute">${esc(fr)}</div>`:''}</div><button class="btn" onclick="sp(${T(en)},1)">🔊</button></div>`}).join('')}</div></details>`).join('');
   el.innerHTML=head+body;
+}
+
+/* ============================ GLOSSAIRE CONTRÔLE DE GESTION ============================ */
+const GLOS=`budget|budget
+forecast|prévision (atterrissage)
+actuals|réalisé
+variance|écart
+favourable variance|écart favorable
+unfavourable variance|écart défavorable
+revenue / turnover|chiffre d’affaires
+sales|ventes
+cost|coût
+fixed costs|coûts fixes
+variable costs|coûts variables
+overheads|frais généraux
+gross margin|marge brute
+net income / net profit|résultat net
+operating profit / EBIT|résultat d’exploitation
+EBITDA|excédent brut d’exploitation (EBE)
+cash flow|flux de trésorerie
+working capital|besoin en fonds de roulement
+balance sheet|bilan
+income statement / P&L|compte de résultat
+cost center|centre de coûts
+profit center|centre de profit
+headcount|effectifs
+capex (capital expenditure)|investissements
+opex (operating expenditure)|charges d’exploitation
+depreciation|amortissement
+provision|provision
+accrual|charge à payer / produit à recevoir
+to accrue|provisionner
+invoice|facture
+accounts payable|dettes fournisseurs
+accounts receivable|créances clients
+month-end close|clôture mensuelle
+year-end close|clôture annuelle
+fiscal year|exercice comptable
+quarter|trimestre
+audit|audit
+reconciliation|rapprochement
+to reconcile|rapprocher / justifier
+journal entry|écriture comptable
+general ledger|grand livre
+chart of accounts|plan comptable
+KPI (key performance indicator)|indicateur clé de performance
+dashboard|tableau de bord
+benchmark|référence / étalonnage
+target|objectif
+trend|tendance
+run rate|rythme annualisé
+break-even point|seuil de rentabilité
+return on investment (ROI)|retour sur investissement
+payback period|délai de récupération
+cost reduction|réduction des coûts
+cost savings|économies
+one-off|exceptionnel / ponctuel
+year-on-year (YoY)|par rapport à l’année précédente
+to allocate|affecter / répartir
+to forecast|prévoir
+to overrun|dépasser
+to roll forward|reconduire
+shortfall|manque / déficit
+surplus|excédent
+threshold|seuil
+assumption|hypothèse
+scenario|scénario
+sensitivity analysis|analyse de sensibilité
+stakeholder|partie prenante
+ERP system|progiciel de gestion intégré (ERP)
+spreadsheet|tableur
+pivot table|tableau croisé dynamique
+purchase order|bon de commande
+supplier|fournisseur
+lead time|délai
+margin|marge
+markup|majoration
+pricing|tarification
+discount|remise
+rebate|ristourne
+write-off|passage en perte
+bad debt|créance douteuse
+liquidity|liquidité
+debt|dette
+equity|capitaux propres
+shareholder|actionnaire
+board of directors|conseil d’administration
+business case|argumentaire économique
+cost driver|inducteur de coûts
+activity-based costing|méthode des coûts par activité (ABC)
+standard cost|coût standard
+unit cost|coût unitaire
+price-volume-mix effect|effet prix-volume-mix
+contribution margin|marge sur coûts variables
+cost allocation|répartition des coûts
+rolling forecast|prévision glissante
+zero-based budgeting|budget base zéro
+internal control|contrôle interne
+compliance|conformité
+materiality|seuil de signification
+exchange rate|taux de change
+hedging|couverture (de change)`.trim().split('\n').map(l=>{const [en,fr]=l.split('|');return {en,fr}});
+function glosFind(q){q=q.toLowerCase();return GLOS.filter(g=>g.en.toLowerCase().includes(q)||g.fr.toLowerCase().includes(q)).slice(0,30)}
+let fq='';
+function dFin(){
+  $('dbody').innerHTML=`<div class="card"><input type="text" id="fq" value="${esc(fq)}" placeholder="Filtrer : budget, écart, variance…" style="width:100%" oninput="fq=this.value;finList()" autocapitalize="off" autocorrect="off" spellcheck="false"><p class="mute">${GLOS.length} termes de contrôle de gestion et de finance. 🔊 pour écouter, ⭐ pour réviser.</p></div><div id="flist"></div>`;finList();
+}
+function finList(){
+  const q=fq.trim().toLowerCase(),L=q?GLOS.filter(g=>g.en.toLowerCase().includes(q)||g.fr.toLowerCase().includes(q)):GLOS;
+  $('flist').innerHTML=L.map(g=>`<div class="card" style="padding:12px 14px;display:flex;gap:8px;align-items:center"><div style="flex:1;min-width:0"><b>${esc(g.en)}</b><div class="mute">${esc(g.fr)}</div></div><button class="btn" onclick="sp(${T(g.en)},1)">🔊</button><button class="btn" onclick="addWord(${T(g.en)},${T(g.fr)})">⭐</button></div>`).join('')||'<div class="card">Aucun terme trouvé.</div>';
 }
 
 render();
