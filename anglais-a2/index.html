@@ -353,22 +353,31 @@ const UNITS=[
 ];
 const unit=id=>UNITS.find(u=>u.id===id);
 
-// Test de niveau : 12 questions du plus facile au plus difficile.
-const PLACEMENT=[
- ['I ___ a student.',['am','is','are'],0],['She ___ in London.',['live','lives','living'],1],['___ you speak English?',['Do','Does','Are'],0],
- ['Yesterday I ___ to the office.',['go','went','gone'],1],['I ___ finish the report tomorrow.',['will','did','am'],0],['How ___ people work in your team?',['much','many','long'],1],
- ['If it rains, we ___ the meeting inside.',['have','will have','had'],1],['I have worked here ___ 2019.',['for','since','during'],1],['Could you tell me where ___?',['is the station','the station is','does the station'],1],
- ['He asked me ___ I could help.',['if','that','what'],0],['I ___ finish the project by Friday if I had more people.',['would','will','did'],0],['She suggested ___ the deadline.',['to extend','extending','extend'],1]];
-const PL_LVL=[10,10,14,18,22,27,33,40,48,56,64,72,80];
+// Test de niveau adaptatif : [difficulté 0-5, compétence, ...]. g = grammaire, v = vocabulaire, l = écoute (say, question), r = lecture (texte, question).
+const CEFR=['A1','A1+','A2','A2+','B1','B1+'];
+const PLB=[
+ [0,'g','She ___ a teacher.',['is','are','am'],0],[0,'g','We ___ from Spain.',['are','is','am'],0],[0,'v','Une « chair » est…',['une chaise','une table','une porte'],0],[0,'g','I ___ coffee every morning.',['drink','drinks','drinking'],0],
+ [0,'l','My name is Anna and I am from Italy.','Where is Anna from?',['Italy','Spain','France'],0],[0,'r','Tom works in a shop. He starts at nine.','When does Tom start?',['At nine','At six','At ten'],0],
+ [1,'g','There ___ two books on the table.',['are','is','be'],0],[1,'g','___ do you live?',['Where','Who','When'],0],[1,'v','The opposite of “cheap” is…',['expensive','small','early'],0],[1,'g','He ___ to work by bus.',['goes','go','going'],0],
+ [1,'l','The meeting starts at half past three.','When does the meeting start?',['At 3:30','At 3:15','At 4:30'],0],[1,'r','Sara likes tea but she does not like coffee. In the morning she drinks tea.','What does Sara drink in the morning?',['Tea','Coffee','Water'],0],
+ [2,'g','Last week I ___ a new phone.',['bought','buy','buyed'],0],[2,'g','I am ___ than my brother.',['taller','tall','tallest'],0],[2,'v','“A deadline” is…',['the last day to finish a task','a long meeting','a type of computer'],0],[2,'g','What ___ you doing now?',['are','do','is'],0],
+ [2,'l','I am sorry, I can not come tomorrow. I have a doctor appointment.','Why can the speaker not come?',['A doctor appointment','A meeting','A holiday'],0],[2,'r','Dear Mr Brown, I would like to change my appointment from Monday to Wednesday. Please tell me if it is possible.','What does the writer want?',['To change an appointment','To cancel a job','To buy a ticket'],0],
+ [3,'g','If I ___ time, I will help you.',['have','had','will have'],0],[3,'g','You ___ park here. It is forbidden.',['must not','do not have to','can'],0],[3,'v','“To postpone a meeting” means…',['to move it to a later time','to cancel it forever','to start it early'],0],[3,'g','She asked me ___ I wanted tea.',['if','that','what'],0],
+ [3,'l','Could you send me the report before Friday? I need it for a presentation.','What does the speaker want?',['The report before Friday','A presentation tomorrow','A meeting on Friday'],0],[3,'r','The new office is bigger than the old one, but it is far from the station. Many employees now take the bus.','What is the problem with the new office?',['It is far from the station','It is too small','It is very expensive'],0],
+ [4,'g','I have lived here ___ 2018.',['since','for','during'],0],[4,'g','The report ___ by the team yesterday.',['was written','wrote','is writing'],0],[4,'v','“To meet a deadline” means…',['to finish on time','to meet a person','to miss work'],0],[4,'g','If I ___ more time, I would learn Spanish.',['had','have','would have'],0],
+ [4,'l','Unfortunately, the supplier has delayed the delivery, so we will have to postpone the launch.','What is the consequence?',['The launch will be later','The supplier is cheaper','The delivery is early'],0],[4,'r','Although remote work saves commuting time, many managers worry that it reduces team spirit and makes communication harder.','What worry do managers have?',['Remote work may weaken team spirit','People work too much','Offices are too expensive'],0],
+ [5,'g','By the time we arrived, the meeting ___.',['had already started','already started','has already started'],0],[5,'g','I wish I ___ more confident when speaking English.',['were','am','would be'],0],[5,'v','“Reluctant” means…',['unwilling','enthusiastic','tired'],0],[5,'g','He suggested ___ the project to next quarter.',['postponing','to postpone','postpone'],0],
+ [5,'l','Had we known about the budget cut earlier, we would have changed our strategy.','What does the speaker mean?',['They did not know about the cut in time','They knew and ignored it','They will change strategy tomorrow'],0],[5,'r','Despite a slow start, the company managed to double its revenue within two years, mainly by expanding into foreign markets.','How did the company grow?',['By entering foreign markets','By cutting prices','By hiring fewer people'],0]
+].map(x=>x[1]==='g'||x[1]==='v'?{d:x[0],k:x[1],q:x[2],o:x[3],a:x[4]}:{d:x[0],k:x[1],txt:x[2],q:x[3],o:x[4],a:x[5]});
+const ORAL=['My name is Anna and I live in Paris.','I work in a bank and I start at nine o’clock.','Could you send me the report before Friday, please?','Unfortunately, the supplier has delayed the delivery of our order.','Although the project started slowly, we managed to finish it on time.'];
+const PL_PTS=[8,20,35,52,68,82];
 
 const TIPS=['Parlez à voix haute, même seul : votre bouche doit s’habituer aux sons anglais.','Répétez chaque phrase 3 fois, en imitant le rythme, pas seulement les mots.','Une erreur n’est pas un échec : c’est exactement ce que le tuteur sait corriger.','Mieux vaut 15 minutes chaque jour que 2 heures le dimanche.','Quand un mot vous manque, expliquez-le avec des mots simples : c’est la clé de la fluidité.','Écoutez la version lente 🐢 puis la version normale : votre oreille progresse vite.'];
 
 /* ============================ ÉTAT ============================ */
 const KEY='speakup-a2-v1';
 let S;try{S=JSON.parse(localStorage.getItem(KEY))}catch(e){}
-S=Object.assign({xp:0,streak:0,last:'',done:{},cards:{},lvl:20,placed:false,key:'',model:'claude-haiku-5-5',errs:{},extra:{},speed:'auto',fr:true,hist:{},day:{},ex:{ok:0,n:0},convos:0},S||{});
-// Les utilisateurs qui avaient déjà une progression ne repassent pas le test de niveau.
-if(!S.placed&&(S.xp>0||S.key))S.placed=true;
+S=Object.assign({xp:0,streak:0,last:'',done:{},cards:{},lvl:20,placed:false,tested:false,key:'',model:'claude-haiku-5-5',errs:{},extra:{},speed:'auto',fr:true,hist:{},day:{},ex:{ok:0,n:0},convos:0},S||{});
 const save=()=>{try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){}};
 function dayRec(){if(S.day.d!==today())S.day={d:today(),rev:false,learn:false,turns:0};return S.day}
 const LV=[[18,'A1 – débutant'],[30,'A2 – début'],[50,'A2 solide'],[68,'A2+ (vers B1)'],[101,'B1']];
@@ -469,7 +478,7 @@ function drawNav(){$('nav').innerHTML=TABS.map(([k,i,l])=>`<button class="${tab=
 function go(t){tab=t;cur=null;spk++;try{speechSynthesis.cancel()}catch(e){}render()}
 function render(){
   head();drawNav();window.scrollTo(0,0);
-  if(!S.placed){return vWelcome()}
+  if(!S.tested){return vWelcome()}
   ({home:vHome,course:vCourse,chat:vChat,cards:vCards,prog:vProg})[tab]();
 }
 const ring=(p,size=92,w=9,col='#fff',bg='rgba(255,255,255,.25)')=>{const r=(size-w)/2,c=2*Math.PI*r;return `<svg width="${size}" height="${size}"><circle cx="${size/2}" cy="${size/2}" r="${r}" fill="none" stroke="${bg}" stroke-width="${w}"/><circle cx="${size/2}" cy="${size/2}" r="${r}" fill="none" stroke="${col}" stroke-width="${w}" stroke-linecap="round" stroke-dasharray="${c}" stroke-dashoffset="${c*(1-p/100)}"/></svg>`};
@@ -477,24 +486,73 @@ const ring=(p,size=92,w=9,col='#fff',bg='rgba(255,255,255,.25)')=>{const r=(size
 /* ============================ ACCUEIL & TEST DE NIVEAU ============================ */
 function vWelcome(){
   $('view').innerHTML=`<div class="hero" style="flex-direction:column;align-items:flex-start;gap:8px"><div class="big">Bienvenue 👋<br>Parlons anglais !</div><small>Votre professeur de poche : cours, exercices, conversation à la voix et corrections, à votre niveau.</small></div>
-  <div class="card"><h3>Commençons par un test de niveau</h3><p class="mute">12 questions, 3 minutes. Il règle la difficulté du cours et la vitesse du tuteur. Pas de stress : répondez au mieux, « je ne sais pas » est permis.</p>
+  <div class="card"><h3>Commençons par un test de niveau</h3><p class="mute">Environ 5 minutes : 16 questions qui s’adaptent à vos réponses (grammaire, vocabulaire, écoute, lecture) puis une courte épreuve orale. Il mesure votre vrai niveau et règle le cours et la vitesse du tuteur. Répondez sans tricher : « je ne sais pas » est permis.</p>
   <button class="btn primary big" onclick="startPlacement()">Faire le test de niveau</button>
-  <div class="row"><button class="btn ghost" onclick="S.lvl=12;S.placed=true;save();render()">Je débute : passer le test</button></div></div>`;
+  <div class="row"><button class="btn ghost" onclick="S.tested=true;S.placed=true;save();render()">Passer le test (je garde mon niveau actuel)</button></div></div>`;
 }
 let PL=null;
-function startPlacement(){PL={i:0,ok:0};showPl()}
-function showPl(){
-  if(PL.i>=PLACEMENT.length){
-    S.lvl=PL_LVL[PL.ok];S.placed=true;save();confetti();drawNav();
-    $('view').innerHTML=`<div class="hero"><div class="ring">${ring(S.lvl)}<b>${Math.round(S.lvl)}</b></div><div class="t"><small>Votre niveau de départ</small><div class="big">${lvlName()}</div><small>${PL.ok}/12 bonnes réponses</small></div></div>
-    <div class="card"><p>Le cours et le tuteur sont réglés pour vous. Votre niveau <b>évolue automatiquement</b> à chaque exercice et à chaque conversation.</p><button class="btn primary big" onclick="go('home')">C’est parti !</button></div>`;return}
-  const [q,o,a]=PLACEMENT[PL.i];
-  $('view').innerHTML=`<div class="card"><div class="mute">Question ${PL.i+1}/12</div><div class="bar" style="margin:6px 0 12px"><i style="width:${PL.i/12*100}%"></i></div>
-  <div class="en" style="font-size:22px">${esc(q).replace('___','<span class="blank">___</span>')}</div>
-  ${sh(o.map((x,i)=>[x,i])).map(([x,i])=>`<button class="opt" onclick="plPick(${i})">${esc(x)}</button>`).join('')}
-  <button class="btn ghost" style="margin-top:10px" onclick="plPick(-1)">Je ne sais pas</button></div>`;
+const SKN={g:'🔤 Grammaire',v:'📖 Vocabulaire',l:'🎧 Écoute',r:'📄 Lecture'},PL_N=16;
+function startPlacement(){PL={n:0,d:2,used:new Set(),ds:[],best:{g:-1,v:-1,c:-1},ask:{g:0,v:0,l:0,r:0},oral:[]};$('nav').style.display='none';nextPl()}
+function pickPl(){
+  for(const k of [0,1,-1,2,-2,3,-3,4,-4,5]){
+    const d=PL.d+k;if(d<0||d>5)continue;
+    const c=PLB.filter(x=>x.d===d&&!PL.used.has(x));
+    if(c.length){const m=Math.min(...c.map(x=>PL.ask[x.k]));return sh(c.filter(x=>PL.ask[x.k]===m))[0]}
+  }
+  return null;
 }
-function plPick(i){if(i===PLACEMENT[PL.i][2])PL.ok++;PL.i++;showPl()}
+function nextPl(){
+  if(PL.n>=PL_N||!pickPl())return startOral();
+  const it=PL.cur=pickPl();PL.used.add(it);PL.ask[it.k]++;
+  const o=sh(it.o.map((x,i)=>[x,i]));
+  $('view').innerHTML=`<div class="card"><div class="mute">Question ${PL.n+1}/${PL_N} · ${SKN[it.k]}</div><div class="bar" style="margin:6px 0 12px"><i style="width:${PL.n/PL_N*100}%"></i></div>
+  ${it.k==='l'?`<div class="en" style="font-size:19px">Écoutez puis répondez.</div><div class="row"><button class="btn" onclick="sp(${T(it.txt)})">🔊 Écouter</button><button class="btn" onclick="sp(${T(it.txt)},1)">🐢 Lent</button></div><div class="mute" style="margin-top:8px">${esc(it.q)}</div>`
+   :it.k==='r'?`<div class="tip" style="margin:0 0 10px;font-size:17px">${esc(it.txt)}</div><div style="font-weight:800">${esc(it.q)}</div>`
+   :`<div class="en" style="font-size:22px">${esc(it.q).replace('___','<span class="blank">___</span>')}</div>`}
+  ${o.map(([x,i])=>`<button class="opt" onclick="plPick(${i})">${esc(x)}</button>`).join('')}
+  <button class="btn ghost" style="margin-top:10px" onclick="plPick(-1)">Je ne sais pas</button></div>`;
+  if(it.k==='l')sp(T(it.txt),1);
+}
+function plPick(i){
+  const it=PL.cur,ok=i===it.a,k=it.k==='g'||it.k==='v'?it.k:'c';
+  PL.ds.push(PL.d);if(ok&&it.d>PL.best[k])PL.best[k]=it.d;
+  PL.d=ok?Math.min(5,PL.d+1):Math.max(0,PL.d-1);PL.n++;nextPl();
+}
+const plEst=()=>{const a=PL.ds.slice(-10).concat(PL.d),e=a.reduce((x,y)=>x+y,0)/a.length;return Math.max(0,Math.min(5,e))};
+const plLvl=e=>{const i=Math.min(4,Math.floor(e));return PL_PTS[i]+(PL_PTS[i+1]-PL_PTS[i])*(e-i)};
+function startOral(){PL.oi=0;const b=Math.max(0,Math.min(2,Math.round(plEst()/5*3)));PL.os=ORAL.slice(b,b+3);showOral()}
+function showOral(){
+  if(PL.oi>=PL.os.length)return finishPl();
+  const t=PL.os[PL.oi];
+  $('view').innerHTML=`<div class="card"><div class="mute">Épreuve orale · phrase ${PL.oi+1}/${PL.os.length}</div><div class="bar" style="margin:6px 0 12px"><i style="width:${PL.oi/PL.os.length*100}%"></i></div>
+   <div style="font-weight:800">Lisez cette phrase à voix haute :</div><div class="en" style="margin:8px 0">${esc(t)}</div>
+   <div class="row"><button class="btn" onclick="sp(${T(t)})">🔊 Écouter</button><button class="mic" id="mic" onclick="oralTry()">🎤</button></div>
+   <div class="score" id="res">${canMic()?'Appuyez sur 🎤 puis lisez la phrase.':esc(errMsg('unsupported'))}</div>
+   <div class="row"><button class="btn ghost" onclick="PL.os=[];showOral()">Passer l’épreuve orale</button></div></div>`;
+}
+async function oralTry(){
+  const t=PL.os[PL.oi],m=$('mic'),r=$('res');
+  if(!canMic()){r.textContent=errMsg('unsupported');return}
+  m.classList.add('rec');r.textContent='Je vous écoute… parlez !';
+  try{const c=await bestMatch(t);PL.oral.push(c.score);r.innerHTML=`<b>${c.score}%</b> ${c.html}`;m.classList.remove('rec');setTimeout(()=>{PL.oi++;showOral()},1400);return}
+  catch(e){r.textContent=errMsg(e)}
+  m.classList.remove('rec');
+}
+function finishPl(){
+  const e=plEst();let lvl=plLvl(e);
+  const sc=PL.oral.length?Math.round(PL.oral.reduce((a,b)=>a+b,0)/PL.oral.length):null;
+  if(sc!==null)lvl+=(sc-75)/100*8;
+  lvl=Math.max(5,Math.min(90,lvl));
+  S.lvl=lvl;S.tested=true;S.placed=true;S.tests=(S.tests||[]).concat([{d:today(),l:Math.round(lvl)}]);save();
+  $('nav').style.display='';drawNav();confetti();
+  const lab=d=>d<0?'A1 −':CEFR[d];
+  $('view').innerHTML=`<div class="hero"><div class="ring">${ring(S.lvl)}<b>${Math.round(S.lvl)}</b></div><div class="t"><small>Votre niveau mesuré</small><div class="big">${lvlName()}</div><small>sur ${PL.n} questions${sc!==null?' et un oral':''}</small></div></div>
+  <div class="card"><h3>Détail par compétence</h3>
+   <div class="grid2" style="margin-top:10px"><div class="stat"><b>${lab(PL.best.g)}</b>Grammaire</div><div class="stat"><b>${lab(PL.best.v)}</b>Vocabulaire</div>
+   <div class="stat"><b>${lab(PL.best.c)}</b>Compréhension</div><div class="stat"><b>${sc!==null?sc+'%':'—'}</b>Oral${sc===null?' (passé)':''}</div></div>
+   <p class="mute">Niveau le plus élevé réussi dans chaque compétence. Ce test est indicatif : le tuteur ajuste votre niveau à chaque conversation, et vous pouvez le refaire dans l’onglet Progrès.</p>
+   <button class="btn primary big" onclick="go('home')">Commencer mon parcours</button></div>`;
+}
 
 function vHome(){
   const d=dayRec(),due=dueCards().length,ui=UNITS.findIndex((u,i)=>unlocked(i)&&pct(u)<100),u=UNITS[ui<0?UNITS.length-1:ui];
