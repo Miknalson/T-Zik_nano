@@ -615,20 +615,30 @@ async function say(text,slow){
     if(t!==spk)return;await speak(sen,r);if(t!==spk)return;await new Promise(z=>setTimeout(z,gap));
   }
 }
-let REC=null,lastMic={err:'',stage:0},cancelListen=null;
-// Reconnaissance vocale : suit chaque étape (micro ouvert, son, voix, texte) pour pouvoir dire précisément ce qui manque.
+let REC=null,lastMic={err:'',stage:0},cancelListen=null,micPrev=Promise.resolve(),SID=0,micFails=0;
+// Reconnaissance vocale : suit chaque étape (micro ouvert, son, voix, texte) et enchaîne proprement les écoutes
+// (iOS ne rend pas le micro tout de suite : on attend la vraie fin de l'écoute précédente avant de redémarrer).
 function micLine(m){const e=$('res')||$('status');if(e&&!e.dataset.keep)e.textContent=m}
-function listen(dbg){
+function listen(dbg){return micPrev.then(()=>listenNow(dbg))}
+function listenNow(dbg){
   return new Promise((res,rej)=>{
     lastMic={err:'',stage:0};
     if(!SR||srDead){rej('unsupported');return}
     try{REC&&REC.abort()}catch(e){}
-    let done=false,tm,r,interim='',conf=null;
-    const log=m=>{if(dbg)dbg(m)};
-    const fin=f=>{if(done)return;done=true;clearTimeout(tm);try{r.abort()}catch(e){};f()};
-    const fail=c=>fin(()=>{lastMic.err=c;if(cancelListen===cancel)cancelListen=null;rej(c)});
+    const sid=++SID;
+    let done=false,tm,r,interim='';
+    const log=m=>{if(dbg&&sid===SID)dbg(m)};
+    let endRes;const ended=new Promise(x=>endRes=x);
+    micPrev=ended.then(()=>new Promise(x=>setTimeout(x,600)));       // la prochaine écoute attend la fin réelle + 0,6 s
+    const settle=(graceful)=>{                                         // libère le micro proprement
+      clearTimeout(tm);
+      try{graceful?r.stop():r.abort()}catch(e){}
+      setTimeout(()=>{try{r.abort()}catch(e){}endRes()},graceful?1800:400);
+    };
+    const fin=(f,graceful)=>{if(done)return;done=true;settle(graceful);f()};
+    const fail=c=>fin(()=>{lastMic.err=c;if(c!=='cancelled'){if(lastMic.stage<=1)micFails++}if(cancelListen===cancel)cancelListen=null;rej(c)},false);
     const cancel=()=>fail('cancelled');cancelListen=cancel;
-    try{r=new SR()}catch(e){rej('unsupported');return}
+    try{r=new SR()}catch(e){endRes();rej('unsupported');return}
     REC=r;r.lang='en-US';r.interimResults=true;r.maxAlternatives=3;r.continuous=false;
     tm=setTimeout(()=>fail('timeout'),14000);
     r.onaudiostart=()=>{lastMic.stage=Math.max(lastMic.stage,1);if(!done){micLine('🎙️ Micro ouvert : parlez maintenant…');log('audiostart (micro ouvert)')}};
@@ -638,17 +648,19 @@ function listen(dbg){
       try{
         const rs=e.results[e.results.length-1];
         if(rs.isFinal===false){interim=rs[0].transcript;lastMic.stage=3;if(!done){micLine('Je comprends : « '+interim+' »');log('texte provisoire : '+interim)}return}
-        const a=Array.from(rs).map(x=>x.transcript);a.conf=rs[0].confidence||null;log('résultat final : '+a[0]);fin(()=>res(a));
+        const a=Array.from(rs).map(x=>x.transcript);a.conf=rs[0].confidence||null;log('résultat final : '+a[0]);micFails=0;fin(()=>res(a),true);
       }catch(x){fail('nomatch')}
     };
-    r.onerror=e=>{log('erreur : '+((e&&e.error)||'?'));fail((e&&e.error)||'error')};
-    r.onnomatch=()=>{log('aucune correspondance');fail('nomatch')};
-    r.onend=()=>{log('fin de l’écoute');setTimeout(()=>{if(done)return;if(interim){const a=[interim];a.conf=null;fin(()=>res(a))}else fail('nomatch')},350)};
+    r.onerror=e=>{log('erreur : '+((e&&e.error)||'?'));if(!done)fail((e&&e.error)||'error');else endRes()};
+    r.onnomatch=()=>{log('aucune correspondance');if(!done)fail('nomatch')};
+    r.onend=()=>{log('fin de l’écoute');endRes();setTimeout(()=>{if(done)return;if(interim){const a=[interim];a.conf=null;micFails=0;fin(()=>res(a),false)}else fail('nomatch')},300)};
     const go=()=>{try{r.start();log('démarrage demandé')}catch(e){log('start() refusé : '+e.message);fail('start')}};
     let speaking=false;try{speaking=speechSynthesis.speaking||speechSynthesis.pending}catch(e){}
-    if(speaking){try{speechSynthesis.cancel()}catch(e){}setTimeout(go,300)}else go();   // démarrage immédiat = dans le geste de l'utilisateur (exigé par iOS)
+    if(speaking){try{speechSynthesis.cancel()}catch(e){}setTimeout(go,300)}else go();
   });
 }
+// on libère le micro dès que l'application passe en arrière-plan
+document.addEventListener('visibilitychange',()=>{if(document.hidden&&cancelListen)cancelListen()});
 const norm=s=>s.toLowerCase().replace(/[’']/g,"'").replace(/[^a-z0-9' ]/g,' ').split(/\s+/).filter(Boolean);
 function compare(target,heard){
   const t=norm(target),h=norm(heard);
@@ -676,6 +688,7 @@ function errMsg(e){
   const st=lastMic.stage;
   if(STANDALONE&&st<=1)return 'Le micro s’ouvre mais iOS ne lui envoie aucun son : c’est très souvent le cas dans une application ajoutée à l’écran d’accueil. Deux solutions : 1) ouvrez le site dans Safari (page « Test du micro » ci-dessous) ; 2) touchez ⌨️ puis le micro du clavier iPhone pour dicter votre réponse.'+code;
   if(st===0)return 'Le micro ne s’est pas ouvert. Vérifiez : Réglages → Safari → Micro → Autoriser ; aucune autre appli n’utilise le micro ; fermez puis rouvrez Safari.'+code;
+  if(st<=1&&micFails>=2)return 'Le micro iOS reste bloqué après une première écoute (limite connue de Safari). Touchez 🔄 en haut pour recharger la page puis réessayez, ou utilisez ⌨️ pour dicter avec le clavier.'+code;
   if(st===1)return 'Le micro est ouvert mais ne capte aucun son. Parlez plus près, vérifiez que rien ne couvre le micro (étui, doigt) et le volume des AirPods si connectés.'+code;
   return 'J’ai entendu du son mais rien de compréhensible. Parlez plus fort, lentement, en anglais, en commençant dès que le micro s’ouvre.'+code;
 }
@@ -1837,7 +1850,7 @@ function vMicTest(){
   $('view').innerHTML=`<a class="back" onclick="go('prog')">← Progrès</a><div class="card"><h2>🎙️ Test du micro</h2>
   ${STANDALONE?'<div class="tip" style="margin:0 0 10px">ℹ️ Vous êtes dans l’<b>application de l’écran d’accueil</b>. Sur iPhone, ce mode bloque souvent la reconnaissance vocale. Refaites ce test dans <b>Safari</b> en tapant cette adresse :<div style="margin-top:6px;word-break:break-all;font-weight:800">'+esc(location.origin+location.pathname+'#mictest')+'</div><div class="row"><button class="btn" onclick="copyMicUrl()">📋 Copier l’adresse</button></div></div>':''}
   <p>Appuyez sur 🎤, attendez que « Micro ouvert » s’affiche, puis dites en anglais : <b>“Hello, my name is Marc.”</b></p>
-  <div class="row"><button class="mic" id="mic" onclick="micTestGo()">🎤</button></div>
+  <div class="row"><button class="mic" id="mic" onclick="micTestGo()">🎤</button><button class="btn" onclick="forceUpdate()">🔄 Réinitialiser le micro</button></div>
   <div class="score" id="res">En attente…</div><div id="mtlog" class="mute" style="margin-top:10px;white-space:pre-line"></div></div>`;
 }
 function copyMicUrl(){const u=location.origin+location.pathname+'#mictest';try{navigator.clipboard.writeText(u).then(()=>toast('Adresse copiée ✅ Collez-la dans Safari.',3500),()=>toast(u,8000))}catch(e){toast(u,8000)}}
@@ -1871,7 +1884,7 @@ async function forceUpdate(){
   toast('🔄 Actualisation…',2500);
   try{if('caches' in window){const k=await caches.keys();await Promise.all(k.map(x=>caches.delete(x)))}}catch(e){}
   try{if('serviceWorker' in navigator){const r=await navigator.serviceWorker.getRegistrations();await Promise.all(r.map(x=>x.update()))}}catch(e){}
-  location.href=location.pathname+'?v='+Date.now();
+  location.href=location.pathname+'?v='+Date.now()+location.hash;
 }
 if('serviceWorker' in navigator&&/^https?:/.test(location.protocol)){navigator.serviceWorker.register('sw.js').catch(()=>{})}
 function saveJSON(){const o=Object.assign({},S);delete o.key;return JSON.stringify(o)}
