@@ -109,7 +109,9 @@ a.back{cursor:pointer;color:var(--brand);font-weight:800;font-size:14px;display:
 
 <script>
 /* ============================ OUTILS ============================ */
-const $=id=>document.getElementById(id);
+const DUMMY=document.createElement('div');
+const $=id=>document.getElementById(id)||DUMMY;   // jamais null : un écran quitté ne fait plus planter les callbacks tardifs
+const STANDALONE=navigator.standalone===true||(window.matchMedia&&matchMedia('(display-mode: standalone)').matches);
 const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 const sh=a=>a.map(x=>[Math.random(),x]).sort((p,q)=>p[0]-q[0]).map(x=>x[1]);
 const _t=[];const T=s=>(_t.push(s),_t.length-1);          // registre de textes pour les boutons 🔊
@@ -613,7 +615,7 @@ async function say(text,slow){
     if(t!==spk)return;await speak(sen,r);if(t!==spk)return;await new Promise(z=>setTimeout(z,gap));
   }
 }
-let REC=null,lastMic={err:'',stage:0};
+let REC=null,lastMic={err:'',stage:0},cancelListen=null;
 // Reconnaissance vocale : suit chaque étape (micro ouvert, son, voix, texte) pour pouvoir dire précisément ce qui manque.
 function micLine(m){const e=$('res')||$('status');if(e&&!e.dataset.keep)e.textContent=m}
 function listen(dbg){
@@ -624,7 +626,8 @@ function listen(dbg){
     let done=false,tm,r,interim='',conf=null;
     const log=m=>{if(dbg)dbg(m)};
     const fin=f=>{if(done)return;done=true;clearTimeout(tm);try{r.abort()}catch(e){};f()};
-    const fail=c=>fin(()=>{lastMic.err=c;rej(c)});
+    const fail=c=>fin(()=>{lastMic.err=c;if(cancelListen===cancel)cancelListen=null;rej(c)});
+    const cancel=()=>fail('cancelled');cancelListen=cancel;
     try{r=new SR()}catch(e){rej('unsupported');return}
     REC=r;r.lang='en-US';r.interimResults=true;r.maxAlternatives=3;r.continuous=false;
     tm=setTimeout(()=>fail('timeout'),14000);
@@ -661,6 +664,7 @@ async function bestMatch(target){
   return best;
 }
 function errMsg(e){
+  if(e==='cancelled')return '';
   const code=' (code : '+(e||lastMic.err||'?')+(lastMic.stage?', étape '+lastMic.stage+'/3':'')+')';
   if(e==='not-allowed'||e==='service-not-allowed'){srDead=true;return e==='service-not-allowed'
     ?'Le micro vocal est bloqué. Sur iPhone : Réglages → Général → Clavier → activez « Activer la dictée » (et Siri), puis rechargez. En attendant, utilisez l’écriture ou l’auto-évaluation.'
@@ -670,6 +674,7 @@ function errMsg(e){
   if(e==='network')return 'La reconnaissance vocale a besoin d’internet (Safari envoie votre voix à Apple). Vérifiez votre connexion.'+code;
   if(e==='start')return 'Safari a refusé d’ouvrir le micro. Fermez l’onglet, rouvrez-le et appuyez sur 🎤 directement.'+code;
   const st=lastMic.stage;
+  if(STANDALONE&&st<=1)return 'Le micro s’ouvre mais iOS ne lui envoie aucun son : c’est très souvent le cas dans une application ajoutée à l’écran d’accueil. Deux solutions : 1) ouvrez le site dans Safari (page « Test du micro » ci-dessous) ; 2) touchez ⌨️ puis le micro du clavier iPhone pour dicter votre réponse.'+code;
   if(st===0)return 'Le micro ne s’est pas ouvert. Vérifiez : Réglages → Safari → Micro → Autoriser ; aucune autre appli n’utilise le micro ; fermez puis rouvrez Safari.'+code;
   if(st===1)return 'Le micro est ouvert mais ne capte aucun son. Parlez plus près, vérifiez que rien ne couvre le micro (étui, doigt) et le volume des AirPods si connectés.'+code;
   return 'J’ai entendu du son mais rien de compréhensible. Parlez plus fort, lentement, en anglais, en commençant dès que le micro s’ouvre.'+code;
@@ -682,6 +687,7 @@ const TABS=[['home','🏠','Aujourd’hui'],['course','📚','Cours'],['chat','�
 function drawNav(){$('nav').innerHTML=TABS.map(([k,i,l])=>`<button class="${tab===k?'on':''}" onclick="go('${k}')"><span>${i}</span>${l}</button>`).join('')}
 function go(t){tab=t;cur=null;spk++;try{speechSynthesis.cancel()}catch(e){}render()}
 function render(){
+  if(cancelListen)cancelListen();
   head();drawNav();window.scrollTo(0,0);
   if(!S.tested){return vWelcome()}
   ({home:vHome,course:vCourse,chat:vChat,dico:vDico,cards:vCards,prog:vProg})[tab]();
@@ -814,7 +820,7 @@ function shPhrase(){
   $('view').innerHTML=`${back(u)}<div class="card"><div class="mute">Phrase ${pi+1}/${u.phrases.length}</div><div class="bar" style="margin:6px 0 12px"><i style="width:${pi/u.phrases.length*100}%"></i></div>
    <div class="en">${esc(en)}</div><div class="fr">${esc(fr)}</div>${tip?`<div class="tip">💡 ${esc(tip)}</div>`:''}
    <div class="row"><button class="btn" onclick="sp(${T(en)})">🔊 Écouter</button><button class="btn" onclick="sp(${T(en)},1)">🐢 Lent</button>
-    <button class="mic" id="mic" onclick="tryPhrase()">🎤</button></div>
+    <button class="mic" id="mic" onclick="tryPhrase()">🎤</button><button class="btn" onclick="openType('phrase')" title="Écrire ou dicter au clavier">⌨️</button></div>
    <div class="score" id="res">1) Écoutez 2) appuyez sur 🎤 et dites la phrase.</div>
    <div class="row"><button class="btn" ${pi?'':'disabled'} onclick="pi--;shPhrase()">←</button>
    <button class="btn primary" style="flex:1" onclick="nextPhrase()">${pi<u.phrases.length-1?'Suivant →':'Terminer ✔'}</button></div></div>`;
@@ -831,13 +837,18 @@ async function tryPhrase(){
   catch(e){r.innerHTML=esc(errMsg(e))+'<div class="row"><button class="btn" onclick="typeTry()">⌨️ Écrire la phrase à la place</button></div>'}
   m.classList.remove('rec');
 }
-function typeTry(){
-  $('res').innerHTML='<div class="row" style="margin:0"><input type="text" id="tt" placeholder="Tapez la phrase en anglais" style="flex:1" autocapitalize="off" autocorrect="off" spellcheck="false"><button class="btn primary" onclick="typeCheck()">Vérifier</button></div><div id="ttr"></div>';
+function openType(kind){
+  $('res').innerHTML='<div class="row" style="margin:0"><input type="text" id="tt" placeholder="Écrivez ou dictez avec le micro du clavier 🎤" style="flex:1;min-width:0" autocapitalize="off" autocorrect="off" spellcheck="false"><button class="btn primary" onclick="typeSubmit(\''+kind+'\')">OK</button></div><div id="ttr"></div><div class="mute" style="margin-top:6px">Astuce iPhone : touchez le champ puis le micro du clavier. Il faut le clavier anglais (Réglages → Général → Clavier → Claviers).</div>';
+  setTimeout(()=>{try{$('tt').focus()}catch(e){}},50);
 }
-function typeCheck(){
-  const en=cur.phrases[pi][0],c=compare(en,$('tt').value);
+function typeTry(){openType('phrase')}
+function typeSubmit(kind){
+  const v=$('tt').value.trim();if(!v)return;
+  if(kind==='talk'){const n=norm(v).length;$('ttr').innerHTML=`<div class="score">Vous avez écrit : <b>« ${esc(v)} »</b><div class="mute">${n} mots. ${n<6?'Ajoutez « because … » pour allonger.':'Très bien : phrase complète !'}</div></div>`;addXP(5);bump(.1);return}
+  const en=kind==='turn'?cur.dialogue[di].en:cur.phrases[pi][0],c=compare(en,v);
   $('ttr').innerHTML=`<div class="score"><b>${c.score}%</b> ${verdict(c.score)}<br>${c.html}</div>`;
-  if(c.score>=85){addXP(2);rate(en,true)}else rate(en,false);
+  if(kind==='turn'){if(c.score>=65){addXP(3);setTimeout(()=>{di++;shDialogue()},1500)}}
+  else{if(c.score>=85){addXP(2);bump(.1);rate(en,true)}else rate(en,false)}
 }
 function selfEval(ok){rate(cur.phrases[pi][0],ok);if(ok)addXP(2);$('res').textContent=ok?'👍 Bien !':'Réessayez avec le modèle lent 🐢.'}
 
@@ -916,11 +927,12 @@ function shDialogue(){
   for(let i=0;i<di;i++)bubble(u.dialogue[i]);step();
 }
 async function step(){
-  const u=cur,t=u.dialogue[di],ctl=$('ctl'),r=$('res');if(!ctl)return;
+  if(!document.getElementById('ctl'))return;
+  const u=cur,t=u.dialogue[di],ctl=$('ctl'),r=$('res');
   if(!t){addXP(30,u.id,'dialogue');bump(.6);confetti();r.innerHTML='🎉 Dialogue terminé ! +30 points';ctl.innerHTML=`<button class="btn" onclick="startDialogue()">Rejouer</button><button class="btn primary" onclick="openUnit('${u.id}')">Retour</button>`;return}
   if(t.w==='bot'){bubble(t);ctl.innerHTML='';await speak(t.en,ttsRate());di++;step();return}
   bubble(t,hideText);r.textContent='À vous ! Dites votre réplique.';
-  ctl.innerHTML=`<button class="btn" onclick="sp(${T(t.en)})">🔊 Modèle</button><button class="mic" id="mic" onclick="tryTurn()">🎤</button><button class="btn ghost" onclick="di++;shDialogue()">Passer →</button>`;
+  ctl.innerHTML=`<button class="btn" onclick="sp(${T(t.en)})">🔊 Modèle</button><button class="mic" id="mic" onclick="tryTurn()">🎤</button><button class="btn" onclick="openType('turn')" title="Écrire ou dicter au clavier">⌨️</button><button class="btn ghost" onclick="di++;shDialogue()">Passer →</button>`;
 }
 async function tryTurn(){
   const t=cur.dialogue[di],m=$('mic'),r=$('res');
@@ -938,7 +950,7 @@ function startTalk(){ti=0;shTalk()}
 function shTalk(){
   const u=cur,[q,starter]=u.talk[ti];
   $('view').innerHTML=`${back(u)}<div class="card"><div class="mute">Question ${ti+1}/${u.talk.length}</div><div class="en">${esc(q)}</div><div class="tip">🧩 Commencez par : <b>${esc(starter)}</b></div>
-  <div class="row"><button class="btn" onclick="sp(${T(q)})">🔊 Question</button><button class="mic" id="mic" onclick="tryTalk()">🎤</button></div>
+  <div class="row"><button class="btn" onclick="sp(${T(q)})">🔊 Question</button><button class="mic" id="mic" onclick="tryTalk()">🎤</button><button class="btn" onclick="openType('talk')" title="Écrire ou dicter au clavier">⌨️</button></div>
   <div class="score" id="res">Répondez en 1 à 3 phrases. Ne cherchez pas la perfection : parlez !</div>
   <div class="row"><button class="btn primary" style="flex:1" onclick="nextTalk()">${ti<u.talk.length-1?'Question suivante →':'Terminer ✔'}</button></div></div>`;
   sp(T(q));
@@ -1052,6 +1064,7 @@ function vChat(){
    <div class="row">${chat.length?'':'<button class="btn primary" onclick="send(\'[start]\',null,true)">Commencer</button>'}
     <button class="mic" id="mic" onclick="talk()">🎤</button>
     <input type="text" id="txt" placeholder="…ou écrivez en anglais" style="flex:1;min-width:120px" onkeydown="if(event.key==='Enter')sendTxt()"><button class="btn" onclick="sendTxt()">➤</button></div>
+   ${STANDALONE?'<div class="mute" style="margin-top:8px">🎤 Si le micro de l’app ne répond pas : touchez le champ ci-dessus puis le micro du clavier iPhone pour dicter en anglais.</div>':''}
    ${chat.length?`<div class="row"><button class="btn" onclick="hint()">💡 Aide : que répondre ?</button><button class="btn" onclick="bilan()">📝 Terminer et faire le bilan</button></div>`:''}<div id="extra"></div></div>`;
   const l=$('log');l.scrollTop=l.scrollHeight;
 }
@@ -1822,17 +1835,19 @@ function finList(){
 /* --- test du micro --- */
 function vMicTest(){
   $('view').innerHTML=`<a class="back" onclick="go('prog')">← Progrès</a><div class="card"><h2>🎙️ Test du micro</h2>
+  ${STANDALONE?'<div class="tip" style="margin:0 0 10px">ℹ️ Vous êtes dans l’<b>application de l’écran d’accueil</b>. Sur iPhone, ce mode bloque souvent la reconnaissance vocale. Refaites ce test dans <b>Safari</b> en tapant cette adresse :<div style="margin-top:6px;word-break:break-all;font-weight:800">'+esc(location.origin+location.pathname+'#mictest')+'</div><div class="row"><button class="btn" onclick="copyMicUrl()">📋 Copier l’adresse</button></div></div>':''}
   <p>Appuyez sur 🎤, attendez que « Micro ouvert » s’affiche, puis dites en anglais : <b>“Hello, my name is Marc.”</b></p>
   <div class="row"><button class="mic" id="mic" onclick="micTestGo()">🎤</button></div>
   <div class="score" id="res">En attente…</div><div id="mtlog" class="mute" style="margin-top:10px;white-space:pre-line"></div></div>`;
 }
+function copyMicUrl(){const u=location.origin+location.pathname+'#mictest';try{navigator.clipboard.writeText(u).then(()=>toast('Adresse copiée ✅ Collez-la dans Safari.',3500),()=>toast(u,8000))}catch(e){toast(u,8000)}}
 async function micTestGo(){
   const m=$('mic'),lg=$('mtlog'),t0=Date.now();lg.textContent='';
   const dbg=x=>{lg.textContent+=((Date.now()-t0)/1000).toFixed(1)+' s · '+x+'\n'};
   if(!canMic()){$('res').textContent=errMsg('unsupported');return}
   m.classList.add('rec');$('res').textContent='…';
   try{const a=await listen(dbg);$('res').innerHTML='✅ <b>Ça marche !</b> J’ai compris : « '+esc(a[0])+' »'}
-  catch(e){$('res').textContent=errMsg(e)}
+  catch(e){if(e!=='cancelled')$('res').textContent=errMsg(e)}
   m.classList.remove('rec');
 }
 /* --- mise à jour automatique : le déploiement estampille le numéro de version dans la constante BUILD --- */
@@ -1871,7 +1886,7 @@ function importSave(){
     const key=S.key;Object.assign(S,d);if(!d.key)S.key=key;save();toast('Progression restaurée ✅',2000);setTimeout(()=>location.reload(),600)}
   catch(e){toast('Sauvegarde invalide : copiez-la en entier.',4000)}
 }
-render();
+if(location.hash==='#mictest'){head();drawNav();vMicTest()}else render();
 </script>
 </body>
 </html>
