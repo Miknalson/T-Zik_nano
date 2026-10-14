@@ -48,6 +48,7 @@ select{padding:8px;border-radius:8px;border:1px solid var(--line);background:var
 <header>
   <h1>🗣️ Speak Up A2</h1>
   <span class="pill" id="streak"></span>
+  <span class="pill" id="lvl"></span>
   <span class="pill" id="xp"></span>
 </header>
 <main>
@@ -218,7 +219,7 @@ const UNITS = [
 const KEY='speakup-a2-v1';
 let S;
 try{S=JSON.parse(localStorage.getItem(KEY))}catch(e){}
-S=Object.assign({xp:0,streak:0,last:'',done:{},cards:{},minutes:0},S||{});
+S=Object.assign({xp:0,streak:0,last:'',done:{},cards:{},minutes:0,lvl:20,key:'',model:'claude-haiku-5-5',errs:{},extra:{},chats:0},S||{});
 const save=()=>{try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){}};
 const today=()=>new Date().toISOString().slice(0,10);
 function addXP(n,unit,kind){
@@ -234,6 +235,7 @@ function addXP(n,unit,kind){
 function head(){
   document.getElementById('streak').textContent='🔥 '+S.streak+' jour'+(S.streak>1?'s':'');
   document.getElementById('xp').textContent='⭐ '+S.xp+' points';
+  document.getElementById('lvl').textContent='🎓 '+lvlName()+' ('+Math.round(S.lvl)+'/100)';
 }
 
 /* ============================ VOIX ============================ */
@@ -255,7 +257,7 @@ function listen(){
   return new Promise((res,rej)=>{
     if(!SR){rej('unsupported');return}
     const r=new SR();r.lang='en-US';r.interimResults=false;r.maxAlternatives=3;
-    r.onresult=e=>res(Array.from(e.results[0]).map(a=>a.transcript));
+    r.onresult=e=>{const a=Array.from(e.results[0]).map(x=>x.transcript);a.conf=e.results[0][0].confidence||null;res(a)};
     r.onerror=e=>rej(e.error);
     r.onnomatch=()=>rej('nomatch');
     r.start();
@@ -285,15 +287,136 @@ const verdict=s=>s>=85?'🎉 Excellent !':s>=60?'👍 Bien, encore une fois pour
 
 /* ============================ VUES ============================ */
 const $v=document.getElementById('view');
-let tab='learn',cur=null;
-const TABS=[['learn','📚 Leçons'],['cards','🃏 Révision'],['free','💬 Parler librement'],['plan','🗓️ Mon plan']];
+let tab='chat',cur=null;
+const TABS=[['chat','🤖 Tuteur IA'],['learn','📚 Leçons'],['cards','🃏 Révision'],['free','💬 Parler librement'],['plan','🗓️ Mon plan']];
 function nav(){
   document.getElementById('nav').innerHTML=TABS.map(([k,l])=>`<button class="${tab===k?'on':''}" onclick="go('${k}')">${l}</button>`).join('');
 }
 function go(t){tab=t;cur=null;speechSynthesis&&speechSynthesis.cancel();render()}
-function render(){nav();head();({learn:vLearn,cards:vCards,free:vFree,plan:vPlan})[tab]()}
+function render(){nav();head();({chat:vChat,learn:vLearn,cards:vCards,free:vFree,plan:vPlan})[tab]()}
 
 function pct(u){const d=S.done[u.id]||{};return Math.round(100*(['phrases','dialogue','talk'].filter(k=>d[k]).length)/3)}
+
+
+/* ============================ TUTEUR IA ============================ */
+const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const LV=[[30,'A2 – début'],[50,'A2 solide'],[68,'A2+ (vers B1)'],[101,'B1']];
+function lvlName(){return LV.find(l=>S.lvl<l[0])[1]}
+function bump(n){S.lvl=Math.max(0,Math.min(100,S.lvl+n));save()}
+const SCEN={free:['Conversation libre','Free conversation about daily life, work and projects'],
+ interview:['Entretien d’embauche','Job interview. You are the interviewer'],
+ phone:['Appel téléphonique','Phone call at a company. You are the receptionist or a client'],
+ meeting:['Réunion','Work meeting. You are a colleague'],
+ small:['Conversation légère','Small talk with a colleague at work']};
+let chat=[],logHTML='',fb=[],scen='free',hands=false,busy=false;
+
+async function api(system,messages,max=800){
+  const r=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',
+    headers:{'content-type':'application/json','x-api-key':S.key,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},
+    body:JSON.stringify({model:S.model,max_tokens:max,system,messages})});
+  const j=await r.json();
+  if(!r.ok)throw new Error(j.error&&j.error.message||('Erreur '+r.status));
+  return j.content.map(c=>c.text||'').join('');
+}
+function sysPrompt(){
+  const errs=Object.entries(S.errs).sort((a,b)=>b[1]-a[1]).slice(0,4).map(e=>e[0]).join('; ')||'none yet';
+  return `You are a warm, patient English tutor for a French-speaking adult who wants to speak English at work. Learner level score: ${Math.round(S.lvl)}/100 (10=A1, 35=A2, 55=A2+, 70=B1, 90=B2). Scenario: ${SCEN[scen][1]}.
+Rules: use simple English slightly above the learner's level (short sentences, common words, no idioms). Reply in 1-3 short sentences and end with ONE easy question so the learner keeps talking. If the learner gets stronger, gradually use richer language; if they struggle, simplify.
+The learner's messages come from speech recognition, so ignore capitalization and punctuation. A speech recognition confidence (0-1) may be appended: a low value suggests unclear pronunciation.
+Return ONLY a JSON object, no other text:
+{"reply": English text,
+ "corrections": [{"said": learner's wrong phrase, "better": corrected phrase, "fr": French translation of the corrected phrase, "why": short explanation in French}] (max 2, the most important mistakes only, [] if none),
+ "pronunciation": one short tip in French about a sound hard for French speakers that matters here (th, h, -ed endings, final s, short/long vowels...), or "" if not relevant,
+ "praise": a short encouraging remark in French,
+ "new_words": [{"en": useful word or phrase from your reply, "fr": translation}] (max 2),
+ "score": integer 0-100, CEFR level shown by the learner's last message}
+Learner's recurring mistakes: ${errs}. If the message is "[start]", greet the learner and ask a first easy question for the scenario; corrections must be [] and score ${Math.round(S.lvl)}.`;
+}
+function parseAI(raw){
+  try{const m=raw.match(/\{[\s\S]*\}/);const d=JSON.parse(m[0]);if(typeof d.reply==='string')return d}catch(e){}
+  return {reply:raw,corrections:[],pronunciation:'',praise:'',new_words:[]};
+}
+function vChat(){
+  if(!S.key){
+    $v.innerHTML=`<div class="card"><h2>🤖 Tuteur IA</h2>
+    <p>Le tuteur discute avec vous à la voix, vous corrige, travaille votre prononciation et fait évoluer votre niveau. Il utilise l’IA <b>Claude</b>, qui demande une <b>clé API</b> :</p>
+    <ol><li>Créez un compte sur <b>console.anthropic.com</b></li><li>Ajoutez un petit crédit (Billing)</li><li>Menu <b>API Keys</b> → créez une clé et collez-la ci-dessous</li></ol>
+    <input id="key" type="password" placeholder="sk-ant-…" style="width:100%;padding:10px;border:1px solid var(--line);border-radius:10px;background:var(--card);color:var(--ink);font:inherit">
+    <div class="row"><button class="btn primary" onclick="saveKey()">Enregistrer</button></div>
+    <p class="mute">La clé reste dans votre navigateur et n’est envoyée qu’à Anthropic. N’utilisez pas cette app sur un ordinateur partagé.</p></div>`;return}
+  $v.innerHTML=`<div class="card">
+   <div class="row" style="margin:0 0 10px">
+    <select id="scen" onchange="scen=this.value;chat=[];logHTML='';fb=[];vChat()">${Object.entries(SCEN).map(([k,v])=>`<option value="${k}" ${k===scen?'selected':''}>${v[0]}</option>`).join('')}</select>
+    <label class="mute"><input type="checkbox" ${hands?'checked':''} onchange="hands=this.checked"> Mains libres</label>
+    <button class="btn" onclick="chat=[];logHTML='';fb=[];vChat()">↺ Nouvelle</button>
+    <button class="btn" onclick="S.key='';save();vChat()">🔑</button></div>
+   <div id="log">${logHTML||'<div class="mute">Appuyez sur « Commencer » : le tuteur parle en premier. Répondez avec le micro 🎤 (ou tapez). Il vous corrigera à chaque réponse.</div>'}</div>
+   <div class="score" id="status"></div>
+   <div class="row">${chat.length?'':'<button class="btn primary" onclick="send(\'[start]\',null,true)">Commencer</button>'}
+    <button class="btn primary mic" id="mic" onclick="talk()">🎤</button>
+    <input id="txt" placeholder="…ou écrivez en anglais" style="flex:1;min-width:140px;padding:10px;border:1px solid var(--line);border-radius:10px;background:var(--card);color:var(--ink);font:inherit" onkeydown="if(event.key==='Enter')sendTxt()">
+    <button class="btn" onclick="sendTxt()">Envoyer</button></div></div>`;
+  const l=document.getElementById('log');l.scrollTop=l.scrollHeight;
+}
+function saveKey(){const k=document.getElementById('key').value.trim();if(!k)return;S.key=k;save();vChat()}
+function sendTxt(){const t=document.getElementById('txt');const v=t.value.trim();if(v){t.value='';send(v,null)}}
+function setStatus(h){const e=document.getElementById('status');if(e)e.innerHTML=h}
+function addLog(h){logHTML+=h;const l=document.getElementById('log');if(l){l.innerHTML=logHTML;l.scrollTop=l.scrollHeight}}
+async function talk(){
+  if(busy)return;
+  if(!SR){setStatus(errMsg('unsupported'));return}
+  const m=document.getElementById('mic');if(m)m.classList.add('rec');setStatus('Je vous écoute…');
+  try{const a=await listen();setStatus('');if(m)m.classList.remove('rec');await send(a[0],a.conf)}
+  catch(e){setStatus(errMsg(e));if(m)m.classList.remove('rec')}
+}
+async function send(text,conf,hidden){
+  if(busy)return;busy=true;
+  if(!hidden)addLog(`<div class="bubble you">${esc(text)}${conf!=null?`<div class="mute" style="color:inherit;opacity:.8">Clarté de prononciation estimée : ${Math.round(conf*100)}%</div>`:''}</div>`);
+  chat.push({role:'user',content:text+(conf!=null?`\n[speech recognition confidence: ${conf.toFixed(2)}]`:'')});
+  setStatus('🤔 Le tuteur réfléchit…');
+  let d,raw;
+  try{const n=chat.length;raw=await api(sysPrompt(),chat.slice(n>15?n-15:0));d=parseAI(raw)}
+  catch(e){chat.pop();busy=false;setStatus(`⚠️ ${esc(e.message)}${/auth|key|401/i.test(e.message)?' — vérifiez votre clé (bouton 🔑).':''}`);return}
+  chat.push({role:'assistant',content:raw});setStatus('');
+  const i0=fb.length;
+  let h=`<div class="bubble bot">${esc(d.reply)}<div class="row" style="margin:6px 0 0"><button class="btn" onclick="speak(${esc(JSON.stringify(d.reply)).replace(/'/g,'&#39;')},.85)">🔊</button> <button class="btn" onclick="tr(this,${chat.length-1})">🇫🇷 Traduire</button></div></div>`;
+  const cs=(d.corrections||[]).filter(c=>c&&c.better);
+  if(!hidden&&(cs.length||d.pronunciation||d.praise)){
+    h+='<div class="tip">';
+    if(d.praise)h+=`👏 ${esc(d.praise)}<br>`;
+    cs.forEach(c=>{
+      fb.push(c.better);const i=fb.length-1;
+      h+=`<div style="margin-top:8px">❌ <s>${esc(c.said||'')}</s><br>✅ <b>${esc(c.better)}</b> <span class="mute">${esc(c.fr||'')}</span><br><span>${esc(c.why||'')}</span>
+      <div class="row" style="margin:6px 0 0"><button class="btn" onclick="speak(fb[${i}],.8)">🔊</button> <button class="btn" onclick="drill(${i})">🎤 Répéter</button> <span id="fb${i}"></span></div></div>`;
+      const k=(c.why||'').toLowerCase().slice(0,70);if(k)S.errs[k]=(S.errs[k]||0)+1;
+      S.cards[c.better]=S.cards[c.better]||{box:0,due:0};
+      if(c.fr)S.extra[c.better]=c.fr;
+    });
+    if(d.pronunciation)h+=`<div style="margin-top:8px">🗣️ <b>Prononciation :</b> ${esc(d.pronunciation)}</div>`;
+    h+='</div>';
+  }
+  (d.new_words||[]).slice(0,2).forEach(w=>{if(w&&w.en){S.cards[w.en]=S.cards[w.en]||{box:0,due:0};S.extra[w.en]=w.fr||''}});
+  if((d.new_words||[]).length)h+=`<div class="mute">📝 Ajouté à la révision : ${d.new_words.map(w=>esc(w.en)+' = '+esc(w.fr||'')).join(' · ')}</div>`;
+  addLog(h);
+  if(!hidden&&typeof d.score==='number'){bump((d.score-S.lvl)*.1);addXP(4)}else save();
+  head();busy=false;
+  await speak(d.reply,.85);
+  if(hands&&tab==='chat')talk();
+}
+async function tr(btn,idx){
+  btn.disabled=true;btn.textContent='…';
+  try{const t=JSON.parse((chat[idx].content.match(/\{[\s\S]*\}/)||['{}'])[0]).reply||chat[idx].content;
+    const f=await api('Translate the following English text into French. Output only the translation.',[{role:'user',content:t}],300);
+    btn.parentNode.insertAdjacentHTML('afterend',`<div class="mute" style="color:inherit;opacity:.8">${esc(f)}</div>`);btn.remove()}
+  catch(e){btn.textContent='Erreur'}
+}
+async function drill(i){
+  const el=document.getElementById('fb'+i);
+  if(!SR){el.textContent=errMsg('unsupported');return}
+  el.textContent='Je vous écoute…';
+  try{const c=await bestMatch(fb[i]);el.innerHTML=`<b>${c.score}%</b> ${c.html}`;if(c.score>=70){addXP(2);bump(.2);rate(fb[i],true)}}
+  catch(e){el.textContent=errMsg(e)}
+}
 
 /* --- Leçons --- */
 function vLearn(){
@@ -340,7 +463,7 @@ async function tryPhrase(){
   try{
     const c=await bestMatch(en);
     r.innerHTML=`<b>${c.score}%</b> — ${verdict(c.score)}<br>${c.html}<div class="mute">J’ai entendu : « ${c.heard} »</div>`;
-    if(c.score>=70){addXP(2);rate(en,true)}else rate(en,false);
+    if(c.score>=70){addXP(2);bump(.15);rate(en,true)}else rate(en,false);
   }catch(e){r.textContent=errMsg(e)}
   m.classList.remove('rec');
 }
@@ -423,7 +546,7 @@ function nextTalk(){
 /* --- Révision --- */
 let deck=[],ci=0;
 function vCards(){
-  const all=UNITS.flatMap(u=>u.phrases.map(p=>({en:p[0],fr:p[1]})));
+  const all=UNITS.flatMap(u=>u.phrases.map(p=>({en:p[0],fr:p[1]}))).concat(Object.keys(S.extra).map(k=>({en:k,fr:S.extra[k]||'(à retenir)'})));
   const seen=all.filter(p=>S.cards[p.en]);
   deck=seen.filter(p=>S.cards[p.en].due<=Date.now()).sort(()=>Math.random()-.5);
   ci=0;
@@ -464,8 +587,12 @@ async function freeTalk(){
 /* --- Plan --- */
 function vPlan(){
   const done=UNITS.reduce((n,u)=>n+pct(u),0)/UNITS.length|0;
-  $v.innerHTML=`<div class="card"><h2>🗓️ Plan de 15 min par jour</h2>
-  <ol><li><b>3 min</b> – Révision (onglet 🃏)</li><li><b>5 min</b> – Une leçon : écoute & répète</li><li><b>4 min</b> – Dialogue à voix haute</li><li><b>3 min</b> – Parler librement</li></ol>
+  const errs=Object.entries(S.errs).sort((a,b)=>b[1]-a[1]).slice(0,5);
+  $v.innerHTML=`<div class="card"><h2>🎓 Votre niveau : ${lvlName()}</h2><div class="bar"><i style="width:${S.lvl}%"></i></div>
+  <p class="mute">Estimation sur 100 (A2 ≈ 35, A2+ ≈ 55, B1 ≈ 70). Elle évolue à chaque conversation avec le tuteur et à chaque phrase bien dite.</p>
+  ${errs.length?'<b>Vos erreurs les plus fréquentes</b><ul>'+errs.map(e=>`<li>${esc(e[0])} <span class="mute">(×${e[1]})</span></li>`).join('')+'</ul>':'<p class="mute">Les erreurs relevées par le tuteur apparaîtront ici.</p>'}</div>
+  <div class="card"><h2>🗓️ Plan de 15 min par jour</h2>
+  <ol><li><b>3 min</b> – Révision (onglet 🃏, inclut vos corrections)</li><li><b>4 min</b> – Une leçon : écoute & répète</li><li><b>8 min</b> – Conversation avec le tuteur IA 🤖</li></ol>
   <p>Progression globale : <b>${done}%</b>. Avec 15 min/jour, un thème se maîtrise en 3 jours : les 7 thèmes en ~3 semaines. Ensuite, passez le dialogue en <i>mode difficile</i> (réplique masquée).</p>
   <div class="tip">💡 Conseils : parlez toujours <b>à voix haute</b>, répétez la même phrase 3 fois, écoutez la version lente 🐢, et n’ayez pas peur des erreurs.</div></div>
   <div class="card"><b>Votre profil</b><p class="mute">Niveau visé : A2 → B1. Vos données restent sur votre appareil.</p>
