@@ -44,6 +44,9 @@ jobs:
           python signaux/signaux.py --capital 1000 --sortie site/index.html ${{ inputs.test_notification && '--notif-test' || '' }}
           cp signaux/icone.png site/
 
+      - name: Ajouter l'application d'anglais au site
+        run: cp -r anglais-a2 site/anglais
+
       - name: Enregistrer le journal
         run: |
           git config user.name "github-actions[bot]"
