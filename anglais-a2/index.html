@@ -183,6 +183,27 @@ const UNITS=[
   {w:'you',en:'Ah, I understand. Thank you. Is that correct?',fr:'Ah, je comprends. Merci. Est-ce correct ?'}],
  talk:[['Someone speaks too fast. What do you say?','Sorry, could you …'],['You do not know a word. What do you say?','How do you say … in English?'],['Ask for an example.','Can you give me …']]},
 
+{id:'numbers',icon:'🔢',title:'Chiffres, heures, dates',sub:'Numbers, time and dates',min:10,scn:'Giving and understanding numbers, prices, times and dates at work',
+ g:{t:'L’heure, la date, les prix',h:'<b>at</b> + heure (at nine), <b>on</b> + jour (on Monday), <b>in</b> + mois (in June). Heures : <b>half past three</b> = 3 h 30, <b>a quarter to five</b> = 4 h 45. Attention : <b>fifteen</b> (accent à la fin) ≠ <b>fifty</b> (accent au début).',ex:['The meeting is at half past two.','See you on Tuesday.','It costs fifteen euros.']},
+ phrases:[
+  ['It is nine o’clock.','Il est neuf heures.',''],
+  ['The meeting is at half past two.','La réunion est à deux heures et demie.',''],
+  ['It costs fifteen euros.','Ça coûte quinze euros.','fifteen : accent sur la fin. fifty : accent sur le début.'],
+  ['Can we meet on Tuesday?','Peut-on se voir mardi ?',''],
+  ['My birthday is on the fifth of May.','Mon anniversaire est le cinq mai.',''],
+  ['The office opens at eight thirty.','Le bureau ouvre à huit heures trente.',''],
+  ['I will call you in ten minutes.','Je vous rappelle dans dix minutes.',''],
+  ['What time does it start?','À quelle heure ça commence ?','']],
+ fill:[['The meeting is ___ Monday.',['on','at','in'],0,'on + jour de la semaine.'],['I start work ___ nine o’clock.',['at','on','in'],0,'at + heure.'],['My holiday is ___ August.',['in','on','at'],0,'in + mois.']],
+ dialogue:[
+  {w:'bot',en:'What time is the meeting?',fr:'À quelle heure est la réunion ?'},
+  {w:'you',en:'The meeting is at half past two.',fr:'La réunion est à deux heures et demie.'},
+  {w:'bot',en:'Which day?',fr:'Quel jour ?'},
+  {w:'you',en:'Can we meet on Tuesday?',fr:'Peut-on se voir mardi ?'},
+  {w:'bot',en:'How much is the ticket?',fr:'Combien coûte le billet ?'},
+  {w:'you',en:'It costs fifteen euros.',fr:'Ça coûte quinze euros.'}],
+ talk:[['What time do you start and finish work?','I start at … and I finish at …'],['What is your date of birth?','My birthday is on the … of …'],['How much is your lunch or your phone?','It costs … euros.']]},
+
 {id:'phone',icon:'📞',title:'Téléphone et e-mails',sub:'Phone and emails',min:22,scn:'A phone call with a company: ask for someone, explain why you call, leave a message',
  g:{t:'Promettre avec « will »',h:'<b>I will + verbe de base</b> pour promettre ou décider : « I will send you an email ». <b>Can I…?</b> pour demander l’autorisation : « Can I speak to Mr Smith? »',ex:['I will call you tomorrow.','Can I speak to Mr Smith?']},
  phrases:[
@@ -225,6 +246,27 @@ const UNITS=[
   {w:'you',en:'I like to watch films and cook. Have a good day!',fr:'J’aime regarder des films et cuisiner. Bonne journée !'}],
  talk:[['Talk about your last weekend.','Last weekend I … It was …'],['What do you like to do in your free time?','I like to … I also like …'],['Describe your morning today.','Today I woke up at … Then I …']]},
 
+{id:'email',icon:'✉️',title:'Écrire un e-mail',sub:'Writing emails',min:30,scn:'Discussing short professional emails: requests, thanks, apologies, follow-ups',
+ g:{t:'Les formules d’e-mail',h:'<b>I am writing to</b> + verbe (je vous écris pour…). <b>Could you</b> + verbe (pourriez-vous…). <b>I look forward to</b> + <b>-ing</b> (j’attends avec impatience de…). <b>Please let me know</b> = faites-moi savoir.',ex:['I am writing to ask about your price list.','I look forward to hearing from you.']},
+ phrases:[
+  ['I am writing to ask about your price list.','Je vous écris pour me renseigner sur votre liste de prix.',''],
+  ['Thank you for your quick reply.','Merci pour votre réponse rapide.',''],
+  ['Could you send me more information?','Pourriez-vous m’envoyer plus d’informations ?',''],
+  ['I am sorry for the delay.','Je suis désolé pour le retard.',''],
+  ['I look forward to hearing from you.','J’attends votre réponse avec impatience.','Formule de fin très courante.'],
+  ['Please let me know if you have any questions.','N’hésitez pas à me dire si vous avez des questions.',''],
+  ['I would like to confirm our meeting.','Je voudrais confirmer notre réunion.',''],
+  ['Best regards, Marc.','Cordialement, Marc.','']],
+ fill:[['I am writing ___ ask about your offer.',['to','for','at'],0,'I am writing to + verbe.'],['I look forward ___ hearing from you.',['to','for','at'],0,'look forward to + -ing.'],['Please ___ me know if you have questions.',['let','make','say'],0,'« let me know » = faites-moi savoir.']],
+ dialogue:[
+  {w:'bot',en:'Did you read my email about the price list?',fr:'Avez-vous lu mon e-mail sur la liste de prix ?'},
+  {w:'you',en:'Yes, thank you for your quick reply.',fr:'Oui, merci pour votre réponse rapide.'},
+  {w:'bot',en:'Do you need more information?',fr:'Avez-vous besoin de plus d’informations ?'},
+  {w:'you',en:'Could you send me more information, please?',fr:'Pourriez-vous m’envoyer plus d’informations ?'},
+  {w:'bot',en:'Of course. When do you need it?',fr:'Bien sûr. Pour quand en avez-vous besoin ?'},
+  {w:'you',en:'By Friday, please. I look forward to hearing from you.',fr:'Pour vendredi, s’il vous plaît. J’attends votre réponse.'}],
+ talk:[['Write the first sentence of an email to ask for a price.','I am writing to …'],['Apologize for a late answer.','I am sorry for …'],['End an email politely.','I look forward to … Best regards']]},
+
 {id:'meeting',icon:'📊',title:'Réunions',sub:'Meetings',min:32,scn:'A work meeting about a new project: give opinions, agree, disagree, explain',
  g:{t:'Donner son avis',h:'<b>I think</b> + phrase. <b>I agree with you</b> / <b>I don’t agree</b>. Donnez la raison avec <b>because</b>. « Sorry » adoucit un désaccord.',ex:['I think we need more time.','I agree with you.','I don’t agree because it is expensive.']},
  phrases:[
@@ -245,6 +287,27 @@ const UNITS=[
   {w:'bot',en:'I understand. Can you finish by Friday?',fr:'Je comprends. Pouvez-vous terminer d’ici vendredi ?'},
   {w:'you',en:'Yes, we will finish this by Friday.',fr:'Oui, nous terminerons d’ici vendredi.'}],
  talk:[['Give your opinion about a project. Use “I think…”.','I think we need … because …'],['Say you disagree politely.','I am sorry, but I do not agree because …'],['Say what your team will do this week.','This week we will …']]},
+
+{id:'service',icon:'🛎️',title:'Service client',sub:'Customer service',min:40,scn:'Handling a customer: help, problem, apology, solution',
+ g:{t:'Aider et s’excuser',h:'<b>How can I help you?</b> pour proposer son aide. <b>I am sorry for</b> + nom (the delay, the problem). <b>Let me</b> + verbe (let me check). <b>Would you like…?</b> pour proposer poliment. <b>I will</b> + verbe pour s’engager.',ex:['Let me check that for you.','Would you like a refund?','I will solve this today.']},
+ phrases:[
+  ['How can I help you today?','Comment puis-je vous aider aujourd’hui ?',''],
+  ['I am sorry for the problem.','Je suis désolé pour le problème.',''],
+  ['Let me check that for you.','Laissez-moi vérifier cela pour vous.',''],
+  ['Would you like a refund or a new product?','Souhaitez-vous un remboursement ou un nouveau produit ?',''],
+  ['I will solve this today.','Je règle cela aujourd’hui.',''],
+  ['Could you give me your order number?','Pouvez-vous me donner votre numéro de commande ?',''],
+  ['Thank you for your patience.','Merci de votre patience.',''],
+  ['Is there anything else I can do?','Puis-je faire autre chose pour vous ?','']],
+ fill:[['Would you ___ a refund?',['like','want','to'],0,'« Would you like… ? » est poli.'],['Let me ___ that for you.',['check','checking','checks'],0,'Let me + verbe de base.'],['Thank you for your ___.',['patience','patient','waiting'],0,'« patience » est le nom.']],
+ dialogue:[
+  {w:'bot',en:'Hello, my order is late. I am not happy.',fr:'Bonjour, ma commande est en retard. Je ne suis pas content.'},
+  {w:'you',en:'I am sorry for the problem. Could you give me your order number?',fr:'Je suis désolé pour le problème. Pouvez-vous me donner votre numéro de commande ?'},
+  {w:'bot',en:'It is number four five eight two.',fr:'C’est le numéro 4582.'},
+  {w:'you',en:'Let me check that for you. Thank you for your patience.',fr:'Laissez-moi vérifier. Merci de votre patience.'},
+  {w:'bot',en:'Thank you. What can you do?',fr:'Merci. Que pouvez-vous faire ?'},
+  {w:'you',en:'Would you like a refund or a new product? I will solve this today.',fr:'Souhaitez-vous un remboursement ou un nouveau produit ? Je règle cela aujourd’hui.'}],
+ talk:[['A customer is angry. What do you say first?','I am sorry for … How can I …'],['Offer two solutions to a customer.','Would you like … or …?'],['Close the call politely.','Is there anything else …? Have a nice day.']]},
 
 {id:'interview',icon:'🎯',title:'Entretien d’embauche',sub:'Job interview',min:40,scn:'A job interview: you are the interviewer; ask about experience, strengths and motivation',
  g:{t:'Parler de son expérience',h:'<b>I have + durée</b> : « I have three years of experience ». <b>I can + verbe</b> : ce que vous savez faire. <b>interested in</b> + nom : « I am interested in this job ».',ex:['I have five years of experience.','I can work in a team.','I am interested in this position.']},
@@ -571,7 +634,11 @@ function vHome(){
 /* ============================ COURS ============================ */
 function vCourse(){
   if(cur)return vUnit(cur);
-  $('view').innerHTML=`<h2>Votre parcours</h2><div class="path">${UNITS.map((u,i)=>{
+  $('view').innerHTML=`<h2>Ateliers gratuits</h2><div class="grid2" style="margin-bottom:14px">
+   <div class="card node" style="flex-direction:column;text-align:center;margin:0" onclick="vPronList()"><div class="ic">🗣️</div><h3>Prononciation</h3><div class="mute">7 sons pièges</div></div>
+   <div class="card node" style="flex-direction:column;text-align:center;margin:0" onclick="vSceneList()"><div class="ic">💬</div><h3>Mini-conversations</h3><div class="mute">6 situations</div></div>
+   <div class="card node" style="flex-direction:column;text-align:center;margin:0;grid-column:span 2" onclick="startComp()"><div class="ic">🎧</div><h3>Compréhension</h3><div class="mute">Écoute et lecture adaptées à votre niveau</div></div></div>
+  <h2>Votre parcours</h2><div class="path">${UNITS.map((u,i)=>{
     const ok=unlocked(i),p=pct(u);
     return `<div class="card node ${ok?'':'lock'}" ${ok?`onclick="openUnit('${u.id}')"`:''}><div class="ic">${ring(p,62,5,'var(--ok)','var(--line)')}${ok?u.icon:'🔒'}</div>
     <div style="flex:1;min-width:0"><h3>${u.title}</h3><div class="mute">${ok?u.sub+' · '+p+'%':'Se débloque au niveau '+u.min+' ou en finissant l’unité précédente'}</div></div></div>`}).join('')}</div>`;
@@ -805,7 +872,11 @@ function vChat(){
     $('view').innerHTML=`<h2>🤖 Votre tuteur</h2><div class="card"><p>Le tuteur discute avec vous à la voix, vous corrige comme un professeur, travaille votre prononciation et fait évoluer votre niveau. Il utilise l’IA <b>Claude</b> et demande une <b>clé API</b> :</p>
     <ol><li>Créez un compte sur <b>console.anthropic.com</b></li><li>Ajoutez un petit crédit (Billing)</li><li>Menu <b>API Keys</b> → créez une clé et collez-la ci-dessous</li></ol>
     <input type="password" id="key" placeholder="sk-ant-…" style="width:100%"><button class="btn primary big" style="margin-top:10px" onclick="saveKey()">Enregistrer</button>
-    <p class="mute">La clé reste dans votre navigateur et n’est envoyée qu’à Anthropic. Sans clé, le reste du cours fonctionne normalement.</p></div>`;return}
+    <p class="mute">La clé reste dans votre navigateur et n’est envoyée qu’à Anthropic. Sans clé, le reste du cours fonctionne normalement.</p></div>
+    <div class="card"><h3>💬 Gratuit avec votre abonnement Claude</h3><p>Votre abonnement à l’application Claude ne peut pas alimenter ce tuteur (l’API est facturée à part). Mais vous pouvez parler à Claude directement dans son application, <b>en mode vocal</b>, avec un professeur réglé sur votre niveau :</p>
+    <ol><li>Copiez le texte ci-dessous.</li><li>Dans l’application Claude : <b>Projets → Nouveau projet</b> → collez-le dans les <b>instructions</b>.</li><li>Ouvrez une conversation dans ce projet et activez le micro 🎙️ (mode vocal).</li></ol>
+    <textarea id="pp" readonly style="width:100%;min-height:120px;border-radius:14px;border:2px solid var(--line);background:var(--bg);color:var(--ink);font:inherit;font-size:13px;padding:10px">${esc(profPrompt())}</textarea>
+    <button class="btn primary big" style="margin-top:10px" onclick="copyProf()">📋 Copier les instructions du professeur</button></div>`;return}
   const opts=[['free','Conversation libre']].concat(UNITS.filter((u,i)=>unlocked(i)).map(u=>[u.id,u.icon+' '+u.title]));
   $('view').innerHTML=`<h2>🤖 Votre tuteur</h2><div class="card">
    <div class="row" style="margin:0 0 10px"><select id="scen" onchange="scen=this.value;chat=[];logHTML='';fb=[];vChat()">${opts.map(([k,l])=>`<option value="${k}" ${k===scen?'selected':''}>${l}</option>`).join('')}</select>
@@ -899,6 +970,161 @@ async function bilan(){
     ${d.homework?`<p><b>Devoir pour demain :</b> ${esc(d.homework)}</p>`:''}
     <p class="mute">Niveau estimé : <b>${lvlName()}</b> (${Math.round(S.lvl)}/100) · +15 points</p><button class="btn primary" onclick="chat=[];logHTML='';fb=[];vChat()">Nouvelle conversation</button></div>`;
   }catch(e){el.innerHTML=`<div class="mute">⚠️ ${esc(e.message)}</div>`}
+}
+
+/* ============================ ATELIERS GRATUITS ============================ */
+const PRON=[
+ {id:'th',t:'Le « th »',tip:'Langue entre les dents, on souffle : /θ/ dans think, three. Ce n’est ni un « s » ni un « f ».',pairs:[['think','sink'],['three','tree'],['thank','tank'],['thing','sing'],['both','boat'],['mouth','mouse']]},
+ {id:'h',t:'Le « h » aspiré',tip:'En français le h est muet. En anglais, expirez : « hair » ≠ « air », « heart » ≠ « art ».',pairs:[['hair','air'],['heart','art'],['hat','at'],['high','eye'],['hold','old'],['his','is']]},
+ {id:'ee',t:'i court / i long',tip:'« ship » : /i/ court et détendu. « sheep » : /iː/ long, lèvres étirées.',pairs:[['ship','sheep'],['live','leave'],['sit','seat'],['bit','beat'],['fill','feel'],['hit','heat']]},
+ {id:'ae',t:'a / e',tip:'« bad » : bouche bien ouverte (/æ/). « bed » : plus fermé (/e/).',pairs:[['bad','bed'],['man','men'],['pan','pen'],['sat','set'],['bag','beg'],['had','head']]},
+ {id:'wv',t:'w / v',tip:'« w » : lèvres arrondies, sans toucher les dents. « v » : dents sur la lèvre du bas.',pairs:[['west','vest'],['wine','vine'],['wet','vet'],['worse','verse'],['went','vent'],['wary','very']]},
+ {id:'oo',t:'u court / ou long',tip:'« full » : /ʊ/ court. « fool » : /uː/ long, lèvres bien arrondies.',pairs:[['full','fool'],['pull','pool'],['look','Luke'],['foot','food'],['wood','who’d'],['could','cooed']]},
+ {id:'rl',t:'r / l',tip:'« r » : langue recourbée, sans toucher le palais. « l » : pointe de la langue contre les dents du haut.',pairs:[['right','light'],['road','load'],['rock','lock'],['red','led'],['grass','glass'],['rice','lice']]}];
+const SCENES=[
+ {id:'visit',icon:'🏢',t:'Accueillir un visiteur',steps:[
+  {bot:'Hello, I have a meeting with Mr Smith at ten.',fr:'Bonjour, j’ai rendez-vous avec M. Smith à dix heures.',o:[['Good morning. Please take a seat. I will tell him you are here.',1,''],['You wait. He come soon.',0,'Trop sec, et « he comes » prend un -s.'],['What?',0,'Trop abrupt : dites « Sorry, could you repeat that? »']]},
+  {bot:'Thank you. Could I have a glass of water?',fr:'Merci. Puis-je avoir un verre d’eau ?',o:[['Of course. Would you like still or sparkling?',1,''],['Yes, water is there.',0,'Pas poli : proposez de le servir.'],['No water here.',0,'Refus trop direct.']]},
+  {bot:'How long will I wait?',fr:'Combien de temps vais-je attendre ?',o:[['Mr Smith will be with you in five minutes. I am sorry for the wait.',1,''],['I not know.',0,'Il manque « do » : I do not know. Et soyez plus utile.'],['Maybe long, maybe short.',0,'Trop vague pour un accueil professionnel.']]}]},
+ {id:'postpone',icon:'📅',t:'Reporter un rendez-vous',steps:[
+  {bot:'Hello, this is Anna from Beta Company. How can I help?',fr:'Bonjour, ici Anna de la société Beta. Comment puis-je vous aider ?',o:[['Hello Anna. I am calling to postpone our meeting. I am sorry for the short notice.',1,''],['I no can come meeting.',0,'On dit « I can’t come to the meeting ».'],['Meeting is cancel.',0,'Il faut « The meeting is cancelled ». Et soyez plus poli.']]},
+  {bot:'No problem. When would you like to meet?',fr:'Pas de souci. Quand voulez-vous vous voir ?',o:[['Could we meet on Thursday at ten?',1,''],['Thursday ten.',0,'Trop court : faites une phrase complète et polie.'],['I want Thursday.',0,'Peu poli : utilisez « Could we… ? »']]},
+  {bot:'Thursday at ten is fine. See you then.',fr:'Jeudi à dix heures, très bien. À ce moment-là.',o:[['Thank you for your understanding. See you on Thursday.',1,''],['Ok bye.',0,'Un peu sec : remerciez.'],['Thanks you.',0,'On dit « Thank you » ou « Thanks », pas « thanks you ».']]}]},
+ {id:'angry',icon:'😠',t:'Un client mécontent',steps:[
+  {bot:'My order is late and nobody answers my emails!',fr:'Ma commande est en retard et personne ne répond à mes e-mails !',o:[['I am very sorry about this. Let me check your order.',1,''],['It is not my problem.',0,'Jamais en service client : trop agressif.'],['You must wait.',0,'C’est un ordre sec ; proposez votre aide.']]},
+  {bot:'It is order number 4582.',fr:'C’est la commande 4582.',o:[['Thank you. I can see the problem. Your order will arrive tomorrow.',1,''],['Ok. I do not know.',0,'Rassurez le client avec une solution.'],['Tomorrow maybe.',0,'« Maybe » rend la promesse floue.']]},
+  {bot:'Tomorrow is too late. What else can you do?',fr:'Demain, c’est trop tard. Que pouvez-vous faire d’autre ?',o:[['I understand. Would you like a refund or free delivery next time?',1,''],['Nothing.',0,'Proposez toujours une alternative.'],['You are wrong.',0,'Ne contredisez pas : « I understand… »']]}]},
+ {id:'no',icon:'🙅',t:'Dire non poliment',steps:[
+  {bot:'Can you finish this report by tomorrow?',fr:'Pouvez-vous terminer ce rapport pour demain ?',o:[['I am sorry, I can not finish it by tomorrow, but I can do it by Friday.',1,''],['No.',0,'Trop sec : expliquez et proposez une alternative.'],['It is impossible, you ask too much.',0,'Reproche inutile.']]},
+  {bot:'Friday is late. Why do you need more time?',fr:'Vendredi, c’est tard. Pourquoi avez-vous besoin de plus de temps ?',o:[['I have two other urgent projects. Could we talk about priorities?',1,''],['Because.',0,'Donnez une raison claire.'],['I am busy, ok?',0,'Ton défensif.']]},
+  {bot:'Fine, Friday is OK. Thank you.',fr:'D’accord, vendredi me va. Merci.',o:[['Thank you for your understanding. I will send it on Friday morning.',1,''],['Good.',0,'Remerciez et confirmez.'],['Yes yes, bye.',0,'Peu professionnel.']]}]},
+ {id:'weak',icon:'🎯',t:'Entretien : un point faible',steps:[
+  {bot:'What is your biggest weakness?',fr:'Quel est votre plus grand point faible ?',o:[['Sometimes I am too perfectionist, but I am learning to manage my time.',1,''],['I have no weakness.',0,'Peu crédible.'],['I am lazy.',0,'Ne vous dévalorisez pas ainsi.']]},
+  {bot:'How is your English?',fr:'Comment est votre anglais ?',o:[['I am improving every day. I practice speaking and I take lessons.',1,''],['My English is bad.',0,'Trop négatif : montrez l’effort.'],['I speak perfect.',0,'Pas crédible, et il faut « perfectly ».']]},
+  {bot:'Why should we hire you?',fr:'Pourquoi devrions-nous vous embaucher ?',o:[['I am motivated, I learn quickly and I work well in a team.',1,''],['Because I need money.',0,'Motivation peu convaincante.'],['I do not know.',0,'Préparez toujours cette réponse.']]}]},
+ {id:'coffee',icon:'☕',t:'Un collègue étranger',steps:[
+  {bot:'Hi! I am new here. Where are you from?',fr:'Salut ! Je suis nouveau. D’où venez-vous ?',o:[['Hi! Nice to meet you. I am from France. And you?',1,''],['France.',0,'Trop court : relancez la conversation.'],['I am French from.',0,'Ordre des mots : « I am from France ».']]},
+  {bot:'I am from Canada. What do you do here?',fr:'Je viens du Canada. Que faites-vous ici ?',o:[['I work in the sales team. I help customers every day.',1,''],['Work sales.',0,'Il manque le sujet : « I work in sales ».'],['Nothing special.',0,'Donnez une vraie réponse pour continuer.']]},
+  {bot:'Great! Do you want to have lunch together?',fr:'Super ! Voulez-vous déjeuner ensemble ?',o:[['Yes, with pleasure! What time?',1,''],['No thanks, I am busy always.',0,'On dit « I am always busy ».'],['Maybe never.',0,'Impoli.']]}]}];
+
+const atelierBack='<a class="back" onclick="go(\'course\')">← Parcours</a>';
+function aEnd(title,ok,n,emoji){confetti();$('view').innerHTML=`${atelierBack}<div class="card" style="text-align:center"><div style="font-size:54px">${emoji}</div><h2>${title}</h2><p>${ok}/${n} réussis</p></div>`}
+
+/* --- Prononciation --- */
+function vPronList(){
+  $('view').innerHTML=`${atelierBack}<h2>🗣️ Prononciation</h2><p class="mute">Les sons qui piègent les francophones. Écoutez, distinguez, puis répétez.</p>
+  ${PRON.map(l=>`<div class="card node" onclick="startPron('${l.id}')"><div class="ic">🔊</div><div style="flex:1"><h3>${l.t}</h3><div class="mute">${l.pairs.slice(0,3).map(p=>p.join(' / ')).join(' · ')}${S.pron&&S.pron[l.id]!=null?' · meilleur : '+S.pron[l.id]+'%':''}</div></div></div>`).join('')}`;
+}
+let PR=null;
+function startPron(id){const l=PRON.find(x=>x.id===id);PR={l,i:0,ok:0,list:sh(l.pairs.concat(sh(l.pairs).slice(0,2))).map(p=>{const k=Math.random()<.5?0:1;return {p,k}})};
+  $('view').innerHTML=`<a class="back" onclick="vPronList()">← Prononciation</a><div class="card"><h2>${l.t}</h2><p>${esc(l.tip)}</p>
+  ${l.pairs.slice(0,3).map(p=>`<div class="tip" style="display:flex;gap:8px;align-items:center"><b style="flex:1">${p[0]} · ${p[1]}</b><button class="btn" onclick="sp(${T(p[0])},1)">${p[0]}</button><button class="btn" onclick="sp(${T(p[1])},1)">${p[1]}</button></div>`).join('')}
+  <button class="btn primary big" style="margin-top:14px" onclick="showPron()">S’entraîner (8 écoutes)</button></div>`}
+function showPron(){
+  if(PR.i>=PR.list.length)return endPron();
+  const r=PR.list[PR.i],w=r.p[r.k];
+  $('view').innerHTML=`<a class="back" onclick="vPronList()">← Prononciation</a><div class="card"><div class="mute">Écoute ${PR.i+1}/${PR.list.length}</div><div class="bar" style="margin:6px 0 12px"><i style="width:${PR.i/PR.list.length*100}%"></i></div>
+  <div style="font-size:19px;font-weight:800">Quel mot entendez-vous ?</div><div class="row"><button class="btn" onclick="sp(${T(w)},1)">🔊 Écouter</button></div>
+  <button class="opt" id="p0" onclick="pronPick(0)">${r.p[0]}</button><button class="opt" id="p1" onclick="pronPick(1)">${r.p[1]}</button><div id="fbk"></div></div>`;
+  setTimeout(()=>sp(T(w),1),300);
+}
+function pronPick(i){
+  if(PR.lock)return;PR.lock=true;const r=PR.list[PR.i],ok=i===r.k;
+  $('p'+r.k).classList.add('right');if(!ok)$('p'+i).classList.add('wrong');
+  if(ok){PR.ok++;addXP(1)}
+  $('fbk').innerHTML=`<div class="fbk ${ok?'ok':'no'}"><b>${ok?'✅ Bien entendu !':'❌ C’était « '+r.p[r.k]+' ».'}</b><div class="row"><button class="btn" onclick="sp(${T(r.p[0])},1)">${r.p[0]}</button><button class="btn" onclick="sp(${T(r.p[1])},1)">${r.p[1]}</button></div><button class="btn primary big" style="margin-top:10px" onclick="PR.lock=false;PR.i++;showPron()">Continuer</button></div>`;
+}
+function endPron(){
+  const a=Math.round(100*PR.ok/PR.list.length);S.pron=S.pron||{};S.pron[PR.l.id]=Math.max(S.pron[PR.l.id]||0,a);
+  addXP(10,'atelier','pron');bump(.3);if(a>=80)confetti();
+  $('view').innerHTML=`<a class="back" onclick="vPronList()">← Prononciation</a><div class="card" style="text-align:center"><div style="font-size:54px">${a>=80?'🏆':'💪'}</div><h2>${a}% bien entendus</h2><p class="mute">Maintenant, répétez : le micro vérifie ce qu’il comprend.</p>
+  <button class="btn primary" onclick="repPron()">🎤 Répéter 4 mots</button> <button class="btn" onclick="startPron('${PR.l.id}')">Refaire</button></div>`;
+}
+let RP=null;
+function repPron(){RP={i:0,words:sh(PR.l.pairs.flat()).slice(0,4)};showRep()}
+function showRep(){
+  if(RP.i>=RP.words.length){$('view').innerHTML=`<a class="back" onclick="vPronList()">← Prononciation</a><div class="card" style="text-align:center"><div style="font-size:54px">🎉</div><h2>Bravo !</h2></div>`;return}
+  const w=RP.words[RP.i];
+  $('view').innerHTML=`<a class="back" onclick="vPronList()">← Prononciation</a><div class="card"><div class="mute">Mot ${RP.i+1}/4</div><div class="en">${w}</div>
+  <div class="row"><button class="btn" onclick="sp(${T(w)},1)">🔊 Modèle</button><button class="mic" id="mic" onclick="repTry()">🎤</button></div><div class="score" id="res">${canMic()?'Appuyez sur 🎤 et dites le mot.':esc(errMsg('unsupported'))}</div>
+  <div class="row"><button class="btn primary" style="flex:1" onclick="RP.i++;showRep()">Suivant →</button></div></div>`;sp(T(w),1);
+}
+async function repTry(){
+  const w=RP.words[RP.i],m=$('mic'),r=$('res');if(!canMic()){r.textContent=errMsg('unsupported');return}
+  m.classList.add('rec');r.textContent='Je vous écoute…';
+  try{const c=await bestMatch(w);r.innerHTML=`<b>${c.score}%</b> ${c.score>=100?'🎉 Bien prononcé !':'J’ai compris « '+esc(c.heard)+' ». Réessayez, en insistant sur le son.'}`;if(c.score>=100)addXP(2)}
+  catch(e){r.textContent=errMsg(e)}
+  m.classList.remove('rec');
+}
+
+/* --- Mini-conversations à choix --- */
+let SC=null;
+function vSceneList(){
+  $('view').innerHTML=`${atelierBack}<h2>💬 Mini-conversations</h2><p class="mute">Une vraie situation de travail : à chaque réplique, choisissez la meilleure réponse puis dites-la à voix haute.</p>
+  ${SCENES.map(c=>`<div class="card node" onclick="startScene('${c.id}')"><div class="ic">${c.icon}</div><div style="flex:1"><h3>${c.t}</h3><div class="mute">${c.steps.length} répliques${S.scenes&&S.scenes[c.id]!=null?' · meilleur : '+S.scenes[c.id]+'/'+c.steps.length:''}</div></div></div>`).join('')}`;
+}
+function startScene(id){SC={c:SCENES.find(x=>x.id===id),i:0,ok:0};showScene()}
+function showScene(){
+  if(SC.i>=SC.c.steps.length){
+    S.scenes=S.scenes||{};S.scenes[SC.c.id]=Math.max(S.scenes[SC.c.id]||0,SC.ok);addXP(10+SC.ok*3,'atelier','scene');bump(.3);
+    return aEnd('Conversation terminée',SC.ok,SC.c.steps.length,SC.ok===SC.c.steps.length?'🏆':'🎉')}
+  const st=SC.c.steps[SC.i];SC.opts=sh(st.o.map(x=>x.slice()));SC.lock=false;
+  $('view').innerHTML=`<a class="back" onclick="vSceneList()">← Mini-conversations</a><div class="card"><div class="mute">${SC.c.icon} ${SC.c.t} · ${SC.i+1}/${SC.c.steps.length}</div>
+  <div class="bubble bot">${esc(st.bot)}<div class="sub">${esc(st.fr)}</div><div class="row" style="margin:6px 0 0"><button class="btn" onclick="sp(${T(st.bot)})">🔊</button><button class="btn" onclick="sp(${T(st.bot)},1)">🐢</button></div></div>
+  <div style="font-weight:800;margin-top:10px">Que répondez-vous ?</div>
+  ${SC.opts.map((o,i)=>`<button class="opt" id="s${i}" onclick="scPick(${i})">${esc(o[0])}</button>`).join('')}<div id="fbk"></div></div>`;
+  setTimeout(()=>sp(T(st.bot)),250);
+}
+function scPick(i){
+  if(SC.lock)return;SC.lock=true;const o=SC.opts[i],good=SC.opts.findIndex(x=>x[1]===1);
+  $('s'+good).classList.add('right');if(!o[1])$('s'+i).classList.add('wrong');
+  if(o[1]){SC.ok++;addXP(2)}else if(o[2])S.errs[o[2].slice(0,70).toLowerCase()]=(S.errs[o[2].slice(0,70).toLowerCase()]||0)+1;
+  const g=SC.opts[good][0];
+  $('fbk').innerHTML=`<div class="fbk ${o[1]?'ok':'no'}"><b>${o[1]?'✅ Excellente réponse !':'❌ Pas idéal.'}</b>${o[1]?'':`<div>${esc(o[2])}</div><div style="margin-top:6px">La meilleure : <b>${esc(g)}</b></div>`}
+  <div class="row"><button class="btn" onclick="sp(${T(g)})">🔊</button><button class="btn" onclick="scSay(${T(g)})">🎤 Dire la bonne réponse</button><span id="scr"></span></div>
+  <button class="btn primary big" style="margin-top:10px" onclick="SC.i++;showScene()">Suite →</button></div>`;
+}
+async function scSay(i){
+  const el=$('scr');if(!canMic()){el.textContent=errMsg('unsupported');return}
+  el.textContent='🎤…';
+  try{const c=await bestMatch(_t[i]);el.innerHTML=`<b>${c.score}%</b> ${c.html}`;if(c.score>=70){addXP(2);bump(.1)}}catch(e){el.textContent=errMsg(e)}
+}
+
+/* --- Compréhension (écoute et lecture) --- */
+let CP=null;
+const estLevel=()=>{let i=0;while(i<4&&S.lvl>=PL_PTS[i+1])i++;return i+(S.lvl-PL_PTS[i])/(PL_PTS[i+1]-PL_PTS[i])};
+function startComp(){
+  const e=estLevel(),pool=PLB.filter(x=>x.k==='l'||x.k==='r').sort((a,b)=>Math.abs(a.d-e)-Math.abs(b.d-e)).slice(0,10);
+  CP={list:sh(pool).slice(0,8),i:0,ok:0};showComp();
+}
+function showComp(){
+  if(CP.i>=CP.list.length){addXP(10,'atelier','comp');bump((CP.ok/CP.list.length-.6)*1.5);return aEnd('Compréhension terminée',CP.ok,CP.list.length,CP.ok/CP.list.length>=.8?'🏆':'🎉')}
+  const it=CP.list[CP.i];CP.cur=it;CP.lock=false;const o=sh(it.o.map((x,i)=>[x,i]));
+  $('view').innerHTML=`${atelierBack}<div class="card"><div class="mute">${SKN[it.k]} · ${CP.i+1}/${CP.list.length}</div><div class="bar" style="margin:6px 0 12px"><i style="width:${CP.i/CP.list.length*100}%"></i></div>
+  ${it.k==='l'?`<div class="row" style="margin:0 0 8px"><button class="btn" onclick="sp(${T(it.txt)})">🔊 Écouter</button><button class="btn" onclick="sp(${T(it.txt)},1)">🐢 Lent</button></div>`:`<div class="tip" style="margin:0 0 10px;font-size:17px">${esc(it.txt)}</div>`}
+  <div style="font-weight:800">${esc(it.q)}</div>${o.map(([x,i])=>`<button class="opt" id="c${i}" onclick="cpPick(${i})">${esc(x)}</button>`).join('')}<div id="fbk"></div></div>`;
+  if(it.k==='l')setTimeout(()=>sp(T(it.txt),1),250);
+}
+function cpPick(i){
+  if(CP.lock)return;CP.lock=true;const it=CP.cur,ok=i===it.a;$('c'+it.a).classList.add('right');if(!ok)$('c'+i).classList.add('wrong');
+  if(ok){CP.ok++;addXP(2)}
+  $('fbk').innerHTML=`<div class="fbk ${ok?'ok':'no'}"><b>${ok?'✅ Bravo !':'❌ Pas tout à fait.'}</b>${it.k==='l'?`<div class="mute">Le texte : « ${esc(it.txt)} »</div>`:''}<button class="btn primary big" style="margin-top:10px" onclick="CP.i++;showComp()">Continuer</button></div>`;
+}
+
+/* --- Prompt pour discuter avec Claude via l'abonnement --- */
+function profPrompt(){return `Tu es mon professeur d’anglais personnel. Je suis francophone, mon niveau est ${lvlName()} (environ ${Math.round(S.lvl)}/100 ; A2 ≈ 35, B1 ≈ 70) et je veux parler anglais couramment pour mon travail.
+Règles :
+- Parle-moi uniquement en anglais simple, à mon niveau, avec des phrases courtes (8 à 12 mots) et des mots courants. Parle lentement et pose UNE seule question à la fois.
+- Après chacune de mes réponses : dis d’abord ce qui est bien, puis corrige mes 1 ou 2 erreurs les plus importantes avec la phrase correcte et une explication courte EN FRANÇAIS. Ne corrige pas tout en même temps.
+- Si je suis bloqué, donne-moi deux réponses possibles.
+- Fais-moi parler de situations professionnelles : me présenter, réunions, téléphone, e-mails, entretien, service client.
+- Quand je dis « bilan », résume mes progrès, mes erreurs fréquentes et donne-moi un devoir pour demain.
+- Fais monter peu à peu la difficulté quand mon anglais s’améliore.
+Commence par me saluer et me poser une première question facile.`}
+function copyProf(){
+  const t=profPrompt(),el=$('pp');
+  try{navigator.clipboard.writeText(t).then(()=>toast('Texte copié ✅ Collez-le dans Claude.',3000),()=>{el.focus();el.select();toast('Sélectionné : faites Copier.',4000)})}
+  catch(e){el.focus();el.select();toast('Sélectionné : faites Copier.',4000)}
 }
 
 render();
