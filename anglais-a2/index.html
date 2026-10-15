@@ -553,7 +553,7 @@ const TIPS=['Parlez à voix haute, même seul : votre bouche doit s’habituer a
 /* ============================ ÉTAT ============================ */
 const KEY='speakup-a2-v1';
 let S;try{S=JSON.parse(localStorage.getItem(KEY))}catch(e){}
-S=Object.assign({xp:0,streak:0,last:'',done:{},cards:{},lvl:20,placed:false,tested:false,key:'',model:'claude-haiku-5-5',errs:{},extra:{},words:[],verbs:{},plSave:null,job:'contrôleur de gestion',speed:'auto',fr:true,hist:{},day:{},ex:{ok:0,n:0},convos:0},S||{});
+S=Object.assign({xp:0,streak:0,last:'',done:{},cards:{},lvl:20,placed:false,tested:false,key:'',model:'claude-haiku-5-5',errs:{},extra:{},words:[],verbs:{},plSave:null,voiceMode:null,job:'contrôleur de gestion',speed:'auto',fr:true,hist:{},day:{},ex:{ok:0,n:0},convos:0},S||{});
 const save=()=>{try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){}};
 function dayRec(){if(S.day.d!==today())S.day={d:today(),rev:false,learn:false,turns:0};return S.day}
 const LV=[[18,'A1 – débutant'],[30,'A2 – début'],[50,'A2 solide'],[68,'A2+ (vers B1)'],[101,'B1']];
@@ -615,6 +615,9 @@ async function say(text,slow){
     if(t!==spk)return;await speak(sen,r);if(t!==spk)return;await new Promise(z=>setTimeout(z,gap));
   }
 }
+// Mode vocal : « auto » = micro intégré puis clavier après 2 échecs ; « keyboard » = dictée du clavier iPhone ; « mic » = micro intégré seul.
+const vMode=()=>S.voiceMode||(STANDALONE?'keyboard':'auto');
+const kbMode=()=>{const m=vMode();return m==='keyboard'||(m==='auto'&&(micFails>=2||srDead||!SR))};
 let REC=null,lastMic={err:'',stage:0},cancelListen=null,micPrev=Promise.resolve(),SID=0,micFails=0;
 // Reconnaissance vocale : suit chaque étape (micro ouvert, son, voix, texte) et enchaîne proprement les écoutes
 // (iOS ne rend pas le micro tout de suite : on attend la vraie fin de l'écoute précédente avant de redémarrer).
@@ -640,9 +643,10 @@ function listenNow(dbg){
     const cancel=()=>fail('cancelled');cancelListen=cancel;
     try{r=new SR()}catch(e){endRes();rej('unsupported');return}
     REC=r;r.lang='en-US';r.interimResults=true;r.maxAlternatives=3;r.continuous=false;
-    tm=setTimeout(()=>fail('timeout'),14000);
+    tm=setTimeout(()=>fail('timeout'),lastMic.stage>=2?14000:9000);
+    setTimeout(()=>{if(!done&&lastMic.stage<2)micLine('⏳ Je n’entends rien… parlez plus près, ou touchez ⌨️ pour dicter au clavier.')},5000);
     r.onaudiostart=()=>{lastMic.stage=Math.max(lastMic.stage,1);if(!done){micLine('🎙️ Micro ouvert : parlez maintenant…');log('audiostart (micro ouvert)')}};
-    r.onsoundstart=()=>{lastMic.stage=Math.max(lastMic.stage,2);if(!done){micLine('👂 Je capte du son…');log('soundstart (son capté)')}};
+    r.onsoundstart=()=>{lastMic.stage=Math.max(lastMic.stage,2);try{clearTimeout(tm);tm=setTimeout(()=>fail('timeout'),14000)}catch(e){}if(!done){micLine('👂 Je capte du son…');log('soundstart (son capté)')}};
     r.onspeechstart=()=>{lastMic.stage=Math.max(lastMic.stage,3);if(!done){micLine('🗣️ Je vous entends…');log('speechstart (voix détectée)')}};
     r.onresult=e=>{
       try{
@@ -842,17 +846,18 @@ function shPhrase(){
 function nextPhrase(){if(pi<cur.phrases.length-1){pi++;shPhrase()}else{addXP(20,cur.id,'learn');bump(.5);confetti();toast('Bravo ! +20 points 🎉',2500);openUnit(cur.id)}}
 async function tryPhrase(){
   const en=cur.phrases[pi][0],m=$('mic'),r=$('res');
+  if(kbMode()){openType('phrase');return}
   if(!canMic()){r.innerHTML=`${srDead?esc(errMsg('service-not-allowed'))+'<br>':''}Dites la phrase à voix haute puis évaluez-vous : <div class="row"><button class="btn ok" onclick="selfEval(true)">Bien dit</button><button class="btn bad" onclick="selfEval(false)">À refaire</button></div>`;return}
   m.classList.add('rec');r.textContent='Je vous écoute… parlez !';
   try{const c=await bestMatch(en);
     r.innerHTML=`<b style="font-size:22px">${c.score}%</b> ${verdict(c.score)}<br>${c.html}<div class="mute">J’ai entendu : « ${esc(c.heard)} »</div>`;
     if(c.score>=70){addXP(2);bump(.15);rate(en,true)}else rate(en,false)}
-  catch(e){r.innerHTML=esc(errMsg(e))+'<div class="row"><button class="btn" onclick="typeTry()">⌨️ Écrire la phrase à la place</button></div>'}
+  catch(e){if(e!=='cancelled')openType('phrase','<div>'+esc(errMsg(e))+'</div>')}
   m.classList.remove('rec');
 }
-function openType(kind){
-  $('res').innerHTML='<div class="row" style="margin:0"><input type="text" id="tt" placeholder="Écrivez ou dictez avec le micro du clavier 🎤" style="flex:1;min-width:0" autocapitalize="off" autocorrect="off" spellcheck="false"><button class="btn primary" onclick="typeSubmit(\''+kind+'\')">OK</button></div><div id="ttr"></div><div class="mute" style="margin-top:6px">Astuce iPhone : touchez le champ puis le micro du clavier. Il faut le clavier anglais (Réglages → Général → Clavier → Claviers).</div>';
-  setTimeout(()=>{try{$('tt').focus()}catch(e){}},50);
+function openType(kind,prefix){
+  $('res').innerHTML=(prefix?prefix+'<div style="height:8px"></div>':'')+'<div class="row" style="margin:0"><input type="text" id="tt" placeholder="Dictez avec le micro du clavier 🎤 ou écrivez" style="flex:1;min-width:0" autocapitalize="off" autocorrect="off" spellcheck="false" onkeydown="if(event.key===\'Enter\')typeSubmit(\''+kind+'\')"><button class="btn primary" onclick="typeSubmit(\''+kind+'\')">OK</button></div><div id="ttr"></div><div class="mute" style="margin-top:6px">⌨️ Touchez le champ puis le <b>micro du clavier</b> iPhone, parlez en anglais, puis OK. (Clavier anglais : Réglages → Général → Clavier → Claviers → Ajouter.)</div>';
+  try{$('tt').focus()}catch(e){}
 }
 function typeTry(){openType('phrase')}
 function typeSubmit(kind){
@@ -949,11 +954,12 @@ async function step(){
 }
 async function tryTurn(){
   const t=cur.dialogue[di],m=$('mic'),r=$('res');
+  if(kbMode()){openType('turn');return}
   if(!canMic()){r.innerHTML=`${srDead?esc(errMsg('service-not-allowed'))+'<br>':''}Dites-la à voix haute puis : <button class="btn ok" onclick="di++;shDialogue()">Bien dit, suite →</button>`;return}
   m.classList.add('rec');r.textContent='Je vous écoute…';
   try{const c=await bestMatch(t.en);r.innerHTML=`<b>${c.score}%</b> ${verdict(c.score)}<br>${c.html}`;
     if(c.score>=65){addXP(3);m.classList.remove('rec');setTimeout(()=>{di++;shDialogue()},1500);return}}
-  catch(e){r.textContent=errMsg(e)}
+  catch(e){if(e!=='cancelled')openType('turn','<div>'+esc(errMsg(e))+'</div>')}
   m.classList.remove('rec');
 }
 
@@ -970,11 +976,12 @@ function shTalk(){
 }
 async function tryTalk(){
   const m=$('mic'),r=$('res');
+  if(kbMode()){openType('talk');return}
   if(!canMic()){r.textContent='Répondez à voix haute (le micro n’est pas disponible ici), puis passez à la suite.';addXP(3);return}
   m.classList.add('rec');r.textContent='Je vous écoute…';
   try{const a=await listen(),said=a[0],n=norm(said).length;
     r.innerHTML=`Vous avez dit : <b>« ${esc(said)} »</b><div class="mute">${n} mots. ${n<6?'Ajoutez « because … » (parce que) pour allonger.':'Très bien : phrase complète !'}</div>`;addXP(5);bump(.1)}
-  catch(e){r.textContent=errMsg(e)}
+  catch(e){if(e!=='cancelled')openType('talk','<div>'+esc(errMsg(e))+'</div>')}
   m.classList.remove('rec');
 }
 function nextTalk(){if(ti<cur.talk.length-1){ti++;shTalk()}else{addXP(20,cur.id,'talk');confetti();toast('Bravo ! +20 points 🎉',2500);openUnit(cur.id)}}
@@ -1010,6 +1017,7 @@ function vProg(){
   <div class="card"><h3>Cette semaine (points)</h3><div class="bars">${days.map(d=>`<div><i style="height:${Math.max(4,(S.hist[d[0]]||0)/mx*70)}px"></i>${d[1]}</div>`).join('')}</div></div>
   <div class="card"><h3>À travailler</h3>${errs.length?'<ul style="margin:8px 0 0;padding-left:20px">'+errs.map(e=>`<li>${esc(e[0])} <span class="mute">(×${e[1]})</span></li>`).join('')+'</ul>':'<p class="mute" style="margin:6px 0 0">Vos erreurs fréquentes, relevées par le tuteur, apparaîtront ici.</p>'}</div>
   <div class="card"><h3>Réglages</h3>
+   <div style="font-weight:800;margin-bottom:6px">Saisie vocale</div><select id="vm" style="width:100%;margin-bottom:12px" onchange="S.voiceMode=this.value||null;save();toast('Enregistré ✅',1800)"><option value="" ${!S.voiceMode?'selected':''}>Automatique (conseillé)</option><option value="keyboard" ${S.voiceMode==='keyboard'?'selected':''}>Dictée du clavier iPhone (le plus fiable)</option><option value="mic" ${S.voiceMode==='mic'?'selected':''}>Micro intégré uniquement</option></select>
    <div style="font-weight:800;margin-bottom:6px">Votre métier</div><div class="row" style="margin:0 0 12px"><input type="text" id="jobin" value="${esc(S.job||'')}" placeholder="ex. contrôleur de gestion" style="flex:1"><button class="btn primary" onclick="S.job=$('jobin').value.trim();save();toast('Métier enregistré ✅',2000)">OK</button></div>
    <div class="row" style="margin:0 0 12px"><button class="btn primary" onclick="vMicTest()">🎙️ Tester mon micro</button></div>
    <div class="row"><button class="btn" onclick="startPlacement()">Refaire le test de niveau</button><button class="btn" onclick="S.key='';save();go('chat')">🔑 Clé du tuteur IA</button></div>
@@ -1087,6 +1095,7 @@ const setStatus=h=>{const e=$('status');if(e)e.innerHTML=h};
 function addLog(h){logHTML+=h;const l=$('log');if(l){l.innerHTML=logHTML;l.scrollTop=l.scrollHeight}}
 async function talk(){
   if(busy)return;
+  if(kbMode()){setStatus('⌨️ Touchez le champ, puis le micro du clavier iPhone pour dicter en anglais, puis ➤.');try{$('txt').focus()}catch(e){}return}
   if(!canMic()){setStatus(esc(errMsg(srDead?'service-not-allowed':'unsupported'))+' Vous pouvez écrire votre réponse ci-dessous.');return}
   spk++;const m=$('mic');if(m)m.classList.add('rec');setStatus('🎤 Je vous écoute… parlez maintenant.');
   try{const a=await listen();setStatus('');if(m)m.classList.remove('rec');await send(a[0],a.conf)}
@@ -1851,7 +1860,25 @@ function vMicTest(){
   ${STANDALONE?'<div class="tip" style="margin:0 0 10px">ℹ️ Vous êtes dans l’<b>application de l’écran d’accueil</b>. Sur iPhone, ce mode bloque souvent la reconnaissance vocale. Refaites ce test dans <b>Safari</b> en tapant cette adresse :<div style="margin-top:6px;word-break:break-all;font-weight:800">'+esc(location.origin+location.pathname+'#mictest')+'</div><div class="row"><button class="btn" onclick="copyMicUrl()">📋 Copier l’adresse</button></div></div>':''}
   <p>Appuyez sur 🎤, attendez que « Micro ouvert » s’affiche, puis dites en anglais : <b>“Hello, my name is Marc.”</b></p>
   <div class="row"><button class="mic" id="mic" onclick="micTestGo()">🎤</button><button class="btn" onclick="forceUpdate()">🔄 Réinitialiser le micro</button></div>
+  <div class="row"><button class="btn" onclick="levelTest()">📶 Test du niveau sonore (5 s)</button></div><div id="lvl" style="margin-top:8px"></div>
   <div class="score" id="res">En attente…</div><div id="mtlog" class="mute" style="margin-top:10px;white-space:pre-line"></div></div>`;
+}
+async function levelTest(){
+  const el=$('lvl');el.textContent='Autorisez le micro si demandé…';
+  try{
+    const st=await navigator.mediaDevices.getUserMedia({audio:true}),AC=window.AudioContext||window.webkitAudioContext,ac=new AC();
+    try{await ac.resume()}catch(e){}
+    const an=ac.createAnalyser();an.fftSize=512;ac.createMediaStreamSource(st).connect(an);
+    const buf=new Uint8Array(an.fftSize),t0=Date.now();let max=0;
+    const tick=()=>{
+      an.getByteTimeDomainData(buf);let m=0;for(const v of buf)m=Math.max(m,Math.abs(v-128));max=Math.max(max,m);
+      const left=Math.ceil((5000-(Date.now()-t0))/1000);
+      if(Date.now()-t0<5000){el.innerHTML=`<div class="bar" style="height:16px"><i style="width:${Math.min(100,Math.round(m/50*100))}%"></i></div><div class="mute">Parlez en anglais… ${left} s</div>`;requestAnimationFrame(tick)}
+      else{st.getTracks().forEach(t=>t.stop());try{ac.close()}catch(e){}
+        el.innerHTML=max>6?`✅ <b>Le micro de l’iPhone capte bien le son</b> (niveau maximum ${Math.round(Math.min(100,max/50*100))} %). Si la reconnaissance vocale échoue malgré tout, le problème vient de Safari : utilisez ⌨️ (dictée du clavier).`
+        :'❌ <b>Le micro ne capte presque aucun son.</b> Vérifiez Réglages → Safari → Micro, qu’aucun étui ne couvre le micro, qu’aucune autre appli (appel, enregistrement) ne l’utilise, puis réessayez.'}
+    };tick();
+  }catch(e){el.textContent='Accès au micro impossible : '+(e&&e.name||e)+'. Autorisez-le dans Réglages → Safari → Micro.'}
 }
 function copyMicUrl(){const u=location.origin+location.pathname+'#mictest';try{navigator.clipboard.writeText(u).then(()=>toast('Adresse copiée ✅ Collez-la dans Safari.',3500),()=>toast(u,8000))}catch(e){toast(u,8000)}}
 async function micTestGo(){
