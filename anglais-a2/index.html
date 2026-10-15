@@ -1156,7 +1156,13 @@ Return ONLY a JSON object, no other text:
 Learner's recurring mistakes: ${errs}. If the message is "[start]", greet the learner warmly, introduce the topic in one simple sentence and ask a first easy question; corrections must be [] and score ${Math.round(tutLvl())}.`;
 }
 const jsonOf=raw=>{try{return JSON.parse(raw.match(/\{[\s\S]*\}/)[0])}catch(e){return null}};
-function parseAI(raw){const d=jsonOf(raw);return d&&typeof d.reply==='string'?d:{reply:raw,corrections:[],pronunciation:'',praise:'',new_words:[]}}
+function salvageAI(raw){   // réponse JSON coupée ou abîmée : on récupère ce qui est lisible, jamais de JSON brut à l’écran
+  const str=k=>{const m=raw.match(new RegExp('"'+k+'"\\s*:\\s*"((?:[^"\\\\]|\\\\.)*)"'));if(!m)return '';try{return JSON.parse('"'+m[1]+'"')}catch(e){return m[1]}};
+  const script=[];(raw.match(/\{[^{}]*"say"[^{}]*\}/g)||[]).forEach(x=>{try{script.push(JSON.parse(x))}catch(e){}});
+  const reply=str('reply')||script.map(x=>x.say).join(' ')||raw.replace(/[{}\[\]"]/g,' ').replace(/\s+/g,' ').trim();
+  return {reply,reply_fr:str('reply_fr'),script,corrections:[],pronunciation:str('pronunciation'),praise:str('praise'),new_words:[]};
+}
+function parseAI(raw){const d=jsonOf(raw);return d&&typeof d.reply==='string'?d:salvageAI(raw)}
 function vChat(){
   if(!S.key){
     $('view').innerHTML=`<h2>🤖 Votre tuteur</h2><div class="card"><p>Le tuteur discute avec vous à la voix, vous corrige comme un professeur, travaille votre prononciation et fait évoluer votre niveau. Il utilise l’IA <b>Claude</b> et demande une <b>clé API</b> :</p>
@@ -1203,7 +1209,7 @@ async function send(text,conf,hidden){
   chat.push({role:'user',content:text+(conf!=null?`\n[speech recognition confidence: ${conf.toFixed(2)}]`:'')});
   setStatus('🤔 Le tuteur réfléchit…');
   let d,raw;
-  try{const n=chat.length;raw=await api(sysPrompt(),chat.slice(n>15?n-15:0));d=parseAI(raw)}
+  try{const n=chat.length;raw=await api(sysPrompt(),chat.slice(n>15?n-15:0),2000);d=parseAI(raw)}
   catch(e){chat.pop();if(!hidden)dayRec().turns--;busy=false;setStatus(`⚠️ ${esc(e.message)}${/auth|key|401|x-api-key/i.test(e.message)?' — vérifiez votre clé (Progrès → 🔑).':''}`);return}
   chat.push({role:'assistant',content:raw});setStatus('');
   const ri=T(d.reply);
