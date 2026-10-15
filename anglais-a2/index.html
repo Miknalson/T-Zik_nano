@@ -561,7 +561,7 @@ const TIPS=['Parlez à voix haute, même seul : votre bouche doit s’habituer a
 /* ============================ ÉTAT ============================ */
 const KEY='speakup-a2-v1';
 let S;try{S=JSON.parse(localStorage.getItem(KEY))}catch(e){}
-S=Object.assign({xp:0,streak:0,last:'',done:{},cards:{},lvl:20,placed:false,tested:false,key:'',model:'claude-haiku-5-5',errs:{},extra:{},words:[],verbs:{},plSave:null,voiceMode:null,tutorLvl:15,basics:{},basicsDone:{},blur:false,job:'contrôleur de gestion',speed:'auto',fr:true,hist:{},day:{},ex:{ok:0,n:0},convos:0},S||{});
+S=Object.assign({xp:0,streak:0,last:'',done:{},cards:{},lvl:20,placed:false,tested:false,key:'',model:'claude-haiku-5-5',errs:{},extra:{},words:[],verbs:{},plSave:null,voiceMode:null,sttKey:'',sttModel:'whisper-1',tutorLvl:15,basics:{},basicsDone:{},blur:false,job:'contrôleur de gestion',speed:'auto',fr:true,hist:{},day:{},ex:{ok:0,n:0},convos:0},S||{});
 const save=()=>{try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){}};
 function dayRec(){if(S.day.d!==today())S.day={d:today(),rev:false,learn:false,turns:0};return S.day}
 const LV=[[18,'A1 – débutant'],[30,'A2 – début'],[50,'A2 solide'],[68,'A2+ (vers B1)'],[101,'B1']];
@@ -586,7 +586,8 @@ const dueCards=()=>Object.keys(S.cards).filter(k=>S.cards[k].due<=Date.now());
 /* ============================ VOIX ============================ */
 const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
 let srDead=false;                                   // micro inutilisable (refus, Siri/dictée désactivés…)
-const canMic=()=>!!SR&&!srDead;
+const cloudOK=()=>!!(S.sttKey&&navigator.mediaDevices&&navigator.mediaDevices.getUserMedia&&window.MediaRecorder);
+const canMic=()=>cloudOK()||(!!SR&&!srDead);
 let voices=[];
 function loadVoices(){try{voices=speechSynthesis.getVoices().filter(v=>v.lang.startsWith('en'))}catch(e){}}
 if('speechSynthesis' in window){loadVoices();speechSynthesis.onvoiceschanged=loadVoices}
@@ -625,13 +626,13 @@ async function say(text,slow){
   }
 }
 // Mode vocal : « auto » = micro intégré puis clavier après 2 échecs ; « keyboard » = dictée du clavier iPhone ; « mic » = micro intégré seul.
-const vMode=()=>S.voiceMode||(STANDALONE?'keyboard':'auto');
-const kbMode=()=>{const m=vMode();return m==='keyboard'||(m==='auto'&&(micFails>=2||srDead||!SR))};
+const vMode=()=>S.voiceMode||(cloudOK()?'cloud':(STANDALONE?'keyboard':'auto'));
+const kbMode=()=>{const m=vMode();if(m==='cloud'&&cloudOK())return false;return m==='keyboard'||((m==='auto'||m==='cloud')&&(micFails>=2||srDead||!SR))};
 let REC=null,lastMic={err:'',stage:0},cancelListen=null,micPrev=Promise.resolve(),SID=0,micFails=0;
 // Reconnaissance vocale : suit chaque étape (micro ouvert, son, voix, texte) et enchaîne proprement les écoutes
 // (iOS ne rend pas le micro tout de suite : on attend la vraie fin de l'écoute précédente avant de redémarrer).
 function micLine(m){const e=$('res')||$('status');if(e&&!e.dataset.keep)e.textContent=m}
-function listen(dbg){return micPrev.then(()=>listenNow(dbg))}
+function listen(dbg){return micPrev.then(()=>vMode()==='cloud'&&cloudOK()?listenCloud(dbg):listenNow(dbg))}
 function listenNow(dbg){
   return new Promise((res,rej)=>{
     lastMic={err:'',stage:0};
@@ -674,7 +675,8 @@ function listenNow(dbg){
 }
 // on libère le micro dès que l'application passe en arrière-plan
 document.addEventListener('visibilitychange',()=>{if(document.hidden&&cancelListen)cancelListen()});
-const norm=s=>s.toLowerCase().replace(/[’']/g,"'").replace(/[^a-z0-9' ]/g,' ').split(/\s+/).filter(Boolean);
+const NUMW=['zero','one','two','three','four','five','six','seven','eight','nine','ten','eleven','twelve','thirteen','fourteen','fifteen','sixteen','seventeen','eighteen','nineteen','twenty'];
+const norm=s=>s.toLowerCase().replace(/[’']/g,"'").replace(/(\d),(\d)/g,'$1$2').replace(/[^a-z0-9' ]/g,' ').split(/\s+/).filter(Boolean).map(w=>/^\d+$/.test(w)&&+w<=20?NUMW[+w]:w);
 function compare(target,heard){
   const t=norm(target),h=norm(heard);
   const dp=Array.from({length:t.length+1},()=>Array(h.length+1).fill(0));
@@ -690,6 +692,12 @@ async function bestMatch(target){
 }
 function errMsg(e){
   if(e==='cancelled')return '';
+  if(e==='stt-auth')return 'Clé OpenAI refusée. Vérifiez-la (Progrès → Reconnaissance vocale OpenAI) : elle doit commencer par « sk- » et avoir le droit « Audio ».';
+  if(e==='stt-quota')return 'Crédit OpenAI épuisé (ou limite de budget atteinte) : la transcription s’arrête, c’est voulu. Ajoutez des fonds sur platform.openai.com, ou utilisez ⌨️.';
+  if(e==='stt-net')return 'Impossible de joindre OpenAI (connexion ?). Réessayez, ou utilisez ⌨️.';
+  if(e==='stt-rate')return 'OpenAI demande de patienter quelques secondes. Réessayez.';
+  if(e==='stt-nospeech')return 'Je n’ai pas entendu de voix. Appuyez sur 🎤 puis parlez dès que « Parlez » s’affiche, plus près du micro.';
+  if(typeof e==='string'&&e.startsWith('stt-'))return 'Erreur de transcription ('+e+'). Réessayez, ou utilisez ⌨️.';
   const code=' (code : '+(e||lastMic.err||'?')+(lastMic.stage?', étape '+lastMic.stage+'/3':'')+')';
   if(e==='not-allowed'||e==='service-not-allowed'){srDead=true;return e==='service-not-allowed'
     ?'Le micro vocal est bloqué. Sur iPhone : Réglages → Général → Clavier → activez « Activer la dictée » (et Siri), puis rechargez. En attendant, utilisez l’écriture ou l’auto-évaluation.'
@@ -1031,7 +1039,18 @@ function vProg(){
   <div class="card"><h3>Cette semaine (points)</h3><div class="bars">${days.map(d=>`<div><i style="height:${Math.max(4,(S.hist[d[0]]||0)/mx*70)}px"></i>${d[1]}</div>`).join('')}</div></div>
   <div class="card"><h3>À travailler</h3>${errs.length?'<ul style="margin:8px 0 0;padding-left:20px">'+errs.map(e=>`<li>${esc(e[0])} <span class="mute">(×${e[1]})</span></li>`).join('')+'</ul>':'<p class="mute" style="margin:6px 0 0">Vos erreurs fréquentes, relevées par le tuteur, apparaîtront ici.</p>'}</div>
   <div class="card"><h3>Réglages</h3>
-   <div style="font-weight:800;margin-bottom:6px">Saisie vocale</div><select id="vm" style="width:100%;margin-bottom:12px" onchange="S.voiceMode=this.value||null;save();toast('Enregistré ✅',1800)"><option value="" ${!S.voiceMode?'selected':''}>Automatique (conseillé)</option><option value="keyboard" ${S.voiceMode==='keyboard'?'selected':''}>Dictée du clavier iPhone (le plus fiable)</option><option value="mic" ${S.voiceMode==='mic'?'selected':''}>Micro intégré uniquement</option></select>
+   <div style="font-weight:800;margin-bottom:6px">🎙️ Reconnaissance vocale en ligne (OpenAI)</div>
+   <p class="mute" style="margin:0 0 8px">Enregistre votre voix et la fait transcrire par OpenAI : bien plus fiable que Safari, avec un vrai score de prononciation. Coût indicatif : environ 0,006 $ par minute d’audio, soit quelques centimes par mois (à vérifier sur la page tarifs d’OpenAI).</p>
+   ${S.sttKey?`<div class="tip" style="margin:0 0 8px">✅ Clé enregistrée (••••${esc(S.sttKey.slice(-4))}) · transcription en ligne <b>active</b>.</div><div class="row" style="margin:0 0 8px"><button class="btn" onclick="vMicTest()">🎙️ Tester ma voix</button><button class="btn ghost" onclick="S.sttKey='';save();vProg()">Supprimer la clé</button></div>`
+   :`<div class="row" style="margin:0 0 8px"><input type="password" id="sttk" placeholder="sk-…" style="flex:1;min-width:0" autocapitalize="off" autocorrect="off" spellcheck="false"><button class="btn primary" onclick="saveStt()">Enregistrer</button></div>`}
+   <details style="margin:0 0 12px"><summary style="cursor:pointer;font-weight:800;color:var(--brand)">Comment obtenir la clé (5 minutes)</summary>
+    <ol style="margin:8px 0 0;padding-left:20px;font-size:14px">
+     <li>Créez un compte sur <b>platform.openai.com</b>.</li>
+     <li><b>Billing</b> : ajoutez un petit crédit (5 $) et <b>désactivez la recharge automatique</b>.</li>
+     <li><b>Limits</b> : fixez un budget mensuel d’environ 5 $.</li>
+     <li><b>API keys</b> : créez une clé <b>restreinte</b> avec uniquement le droit <b>Audio / Transcription</b>. Copiez-la tout de suite (affichée une seule fois).</li>
+     <li>Collez-la ci-dessus. Elle reste sur votre iPhone, envoyée uniquement à OpenAI.</li></ol></details>
+   <div style="font-weight:800;margin-bottom:6px">Saisie vocale</div><select id="vm" style="width:100%;margin-bottom:12px" onchange="S.voiceMode=this.value||null;save();toast('Enregistré ✅',1800)"><option value="" ${!S.voiceMode?'selected':''}>Automatique (conseillé)</option><option value="cloud" ${S.voiceMode==='cloud'?'selected':''}>Transcription en ligne (OpenAI)</option><option value="keyboard" ${S.voiceMode==='keyboard'?'selected':''}>Dictée du clavier iPhone (le plus fiable)</option><option value="mic" ${S.voiceMode==='mic'?'selected':''}>Micro intégré uniquement</option></select>
    <div style="font-weight:800;margin-bottom:6px">Votre métier</div><div class="row" style="margin:0 0 12px"><input type="text" id="jobin" value="${esc(S.job||'')}" placeholder="ex. contrôleur de gestion" style="flex:1"><button class="btn primary" onclick="S.job=$('jobin').value.trim();save();toast('Métier enregistré ✅',2000)">OK</button></div>
    <div class="row" style="margin:0 0 12px"><button class="btn primary" onclick="vMicTest()">🎙️ Tester mon micro</button></div>
    <div class="row"><button class="btn" onclick="startPlacement()">Refaire le test de niveau</button><button class="btn" onclick="S.key='';save();go('chat')">🔑 Clé du tuteur IA</button></div>
@@ -1041,6 +1060,7 @@ function vProg(){
    <div class="row"><button class="btn" onclick="exportSave()">📋 Copier ma sauvegarde</button><button class="btn" onclick="importSave()">📥 Restaurer</button><button class="btn" onclick="forceUpdate()">🔄 Actualiser</button></div>
    <p class="mute" style="margin:10px 0 0">Version : ${BUILD===UNSTAMPED?'locale':BUILD}</p></div>`;
 }
+function saveStt(){const k=($('sttk').value||'').trim();if(!/^sk-/.test(k)){toast('Une clé OpenAI commence par « sk- ».',3500);return}S.sttKey=k;S.voiceMode=null;save();toast('Clé enregistrée ✅ Essayez « Tester ma voix ».',3500);vProg()}
 function rstGo(){const b=$('rst');if(b.dataset.ok){try{localStorage.removeItem(KEY)}catch(e){}location.reload()}else{b.dataset.ok=1;b.textContent='Confirmer : tout effacer'}}
 
 /* ============================ TUTEUR IA ============================ */
@@ -1885,6 +1905,7 @@ function finList(){
 function vMicTest(){
   $('view').innerHTML=`<a class="back" onclick="go('prog')">← Progrès</a><div class="card"><h2>🎙️ Test du micro</h2>
   ${STANDALONE?'<div class="tip" style="margin:0 0 10px">ℹ️ Vous êtes dans l’<b>application de l’écran d’accueil</b>. Sur iPhone, ce mode bloque souvent la reconnaissance vocale. Refaites ce test dans <b>Safari</b> en tapant cette adresse :<div style="margin-top:6px;word-break:break-all;font-weight:800">'+esc(location.origin+location.pathname+'#mictest')+'</div><div class="row"><button class="btn" onclick="copyMicUrl()">📋 Copier l’adresse</button></div></div>':''}
+  <p class="mute" style="margin:0 0 6px">Moteur : <b>${vMode()==='cloud'&&cloudOK()?'transcription en ligne (OpenAI)':'reconnaissance de Safari'}</b></p>
   <p>Appuyez sur 🎤, attendez que « Micro ouvert » s’affiche, puis dites en anglais : <b>“Hello, my name is Marc.”</b></p>
   <div class="row"><button class="mic" id="mic" onclick="micTestGo()">🎤</button><button class="btn" onclick="forceUpdate()">🔄 Réinitialiser le micro</button></div>
   <div class="row"><button class="btn" onclick="levelTest()">📶 Test du niveau sonore (5 s)</button></div><div id="lvl" style="margin-top:8px"></div>
@@ -1933,6 +1954,71 @@ async function checkUpdate(){
   }catch(e){}
 }
 checkUpdate();document.addEventListener('visibilitychange',()=>{if(!document.hidden)checkUpdate()});
+
+/* ============================ VOIX : enregistrement + transcription OpenAI ============================ */
+// On enregistre avec le micro de Safari (getUserMedia, fiable) puis on envoie l'audio à OpenAI (Whisper) : plus de dépendance à la reconnaissance vocale intégrée de Safari.
+async function listenCloud(dbg){
+  lastMic={err:'',stage:0};
+  const log=m=>{if(dbg)dbg(m)};
+  try{speechSynthesis.cancel()}catch(e){}
+  let stream,ac,rec,stopped=false,cancelled=false;
+  const cancel=()=>{cancelled=true;stopped=true;try{rec&&rec.state==='recording'&&rec.stop()}catch(e){}};
+  cancelListen=cancel;
+  try{
+    stream=await navigator.mediaDevices.getUserMedia({audio:{echoCancellation:true,noiseSuppression:true}});
+  }catch(e){cancelListen=null;lastMic.err=(e&&e.name)||'denied';log('micro refusé : '+lastMic.err);throw (e&&e.name==='NotAllowedError'?'not-allowed':'audio-capture')}
+  lastMic.stage=1;micLine('🎙️ Micro ouvert : parlez maintenant…');log('micro ouvert');
+  const mt=MediaRecorder.isTypeSupported('audio/mp4')?'audio/mp4':(MediaRecorder.isTypeSupported('audio/webm;codecs=opus')?'audio/webm;codecs=opus':(MediaRecorder.isTypeSupported('audio/webm')?'audio/webm':''));
+  rec=mt?new MediaRecorder(stream,{mimeType:mt}):new MediaRecorder(stream);
+  const chunks=[];rec.ondataavailable=e=>{if(e.data&&e.data.size)chunks.push(e.data)};
+  const done=new Promise(res=>rec.onstop=res);
+  // détection de la voix (niveau sonore) pour s'arrêter après la phrase
+  let speechMs=0,heard=false,lastVoice=0,t0=performance.now(),base=0.012,an=null,buf=null;
+  try{const AC=window.AudioContext||window.webkitAudioContext;ac=new AC();try{await ac.resume()}catch(e){}an=ac.createAnalyser();an.fftSize=1024;ac.createMediaStreamSource(stream).connect(an);buf=new Uint8Array(an.fftSize)}catch(e){an=null}
+  rec.start();
+  await new Promise(res=>{
+    const tick=()=>{
+      if(stopped){res();return}
+      const now=performance.now(),el=now-t0;
+      if(an){an.getByteTimeDomainData(buf);let m=0;for(const v of buf)m=Math.max(m,Math.abs(v-128)/128);
+        if(el<350)base=Math.max(base,m*1.3);
+        const voice=m>Math.max(.045,base*2.2);
+        if(voice){if(!heard){heard=true;lastMic.stage=3;micLine('🗣️ Je vous entends…');log('voix détectée à '+Math.round(el)+' ms')}speechMs+=40;lastVoice=now}
+      }
+      if(heard&&now-lastVoice>1000&&speechMs>250){stopped=true;res();return}
+      if(!heard&&el>6500){stopped=true;res();return}
+      if(el>9500){stopped=true;res();return}
+      setTimeout(tick,40);
+    };
+    tick();
+  });
+  try{rec.state==='recording'&&rec.stop()}catch(e){}
+  await Promise.race([done,wait(1200)]);
+  try{stream.getTracks().forEach(t=>t.stop())}catch(e){}try{ac&&ac.close()}catch(e){}
+  if(cancelListen===cancel)cancelListen=null;
+  micPrev=wait(300);
+  if(cancelled){throw 'cancelled'}
+  if(an&&(!heard||speechMs<=250)){lastMic.err='stt-nospeech';micFails++;log('aucune voix');throw 'stt-nospeech'}
+  micLine('⏳ Transcription en cours…');log('envoi à OpenAI ('+Math.round(speechMs)+' ms de voix)');
+  const blob=new Blob(chunks,{type:rec.mimeType||mt||'audio/mp4'});
+  const ext=/webm/.test(blob.type)?'webm':'mp4';
+  const fd=new FormData();fd.append('file',blob,'speech.'+ext);fd.append('model',S.sttModel||'whisper-1');fd.append('language','en');fd.append('response_format','json');fd.append('temperature','0');
+  let r;
+  try{r=await fetch('https://api.openai.com/v1/audio/transcriptions',{method:'POST',headers:{Authorization:'Bearer '+S.sttKey},body:fd})}
+  catch(e){lastMic.err='stt-net';throw 'stt-net'}
+  if(!r.ok){
+    let j={};try{j=await r.json()}catch(e){}
+    const msg=((j.error&&(j.error.code||j.error.message))||'')+'';
+    log('OpenAI '+r.status+' '+msg.slice(0,80));
+    const c=r.status===401?'stt-auth':(r.status===429?(/quota|billing|credit|budget/i.test(msg)?'stt-quota':'stt-rate'):(/quota|billing|credit|budget/i.test(msg)?'stt-quota':'stt-'+r.status));
+    lastMic.err=c;throw c;
+  }
+  const j=await r.json();const text=((j&&j.text)||'').trim();
+  log('texte : '+text);
+  if(!text){lastMic.err='stt-nospeech';throw 'stt-nospeech'}
+  micFails=0;lastMic.stage=3;
+  const a=[text];a.conf=null;return a;
+}
 
 /* ============================ EMMA : tutrice animée ============================ */
 const SKIN='#f1c7a3',HAIR='#3b2923',SHIRT='#5b4bff';
@@ -2332,7 +2418,7 @@ async function forceUpdate(){
   location.href=location.pathname+'?v='+Date.now()+location.hash;
 }
 if('serviceWorker' in navigator&&/^https?:/.test(location.protocol)){navigator.serviceWorker.register('sw.js').catch(()=>{})}
-function saveJSON(){const o=Object.assign({},S);delete o.key;return JSON.stringify(o)}
+function saveJSON(){const o=Object.assign({},S);delete o.key;delete o.sttKey;return JSON.stringify(o)}
 function exportSave(){
   const t=saveJSON(),el=$('bk');el.value=t;
   try{navigator.clipboard.writeText(t).then(()=>toast('Sauvegarde copiée ✅ Collez-la où vous voulez la restaurer.',3500),()=>{el.focus();el.select();toast('Sélectionné : faites Copier.',4000)})}
