@@ -48,6 +48,8 @@ jobs:
         run: |
           cp -r anglais-a2 site/anglais
           sed -i "s/__BUILD__/${GITHUB_SHA::7}/" site/anglais/index.html
+          mkdir -p site/anglais/mots
+          (cd site/anglais/mots && ls | grep -iE '\.(mp4|webm|mov)$' | jq -R . | jq -s . > index.json || echo '[]' > index.json)
 
       - name: Enregistrer le journal
         run: |

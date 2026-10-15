@@ -100,6 +100,8 @@ canvas#fx{position:fixed;inset:0;pointer-events:none;z-index:40}
 .emma-pic{position:absolute;right:8px;top:6px;min-width:96px;max-width:46%;text-align:center;background:var(--card);border-radius:22px;padding:8px 12px;box-shadow:var(--shadow);opacity:0;transform:scale(.6);pointer-events:none}
 .emma-pic.show{opacity:1;transform:scale(1);transition:.25s}
 .emma-pic .pe{display:block;font-size:56px;line-height:1.1}.emma-pic .pk{display:block;font-weight:900;font-size:15px;color:var(--brand);overflow-wrap:anywhere}
+.emma-vid{position:absolute;inset:0;width:100%;height:100%;object-fit:contain;border-radius:12px;background:var(--soft)}
+#stage{position:relative}
 .blurtxt .bubble.bot .bt{filter:blur(7px);cursor:pointer}.blurtxt .bubble.bot.open .bt{filter:none}
 a.back{cursor:pointer;color:var(--brand);font-weight:800;font-size:14px;display:inline-block;margin-bottom:4px}
 
@@ -2222,7 +2224,37 @@ function autoPic(text){
   for(const w of ws){const v=VIS.get(w);if(v)return {e:v.e,k:w}}
   return null;
 }
+/* Vidéos de présentatrice (facultatif) : si mots/<phrase>.mp4 existe, on la lit à la place d’Emma dessinée */
+const VID={map:null,loading:null};
+const vslug=t=>String(t).toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-+|-+$/g,'');
+function vidLoad(){
+  if(VID.loading)return VID.loading;
+  VID.map=new Map();
+  return VID.loading=fetch('mots/index.json',{cache:'no-store'}).then(r=>r.ok?r.json():[]).then(a=>{(Array.isArray(a)?a:[]).forEach(f=>{const m=/^(.+)\.(mp4|webm|mov)$/i.exec(String(f));if(m)VID.map.set(m[1].toLowerCase(),f)})}).catch(()=>{});
+}
+async function vidPlay(text,tok){
+  await vidLoad();
+  const f=VID.map&&VID.map.get(vslug(text));if(!f)return false;
+  const host=document.getElementById('stage');if(!host)return false;
+  const svg=document.getElementById('emma'),pic=document.getElementById('epic');
+  const v=document.createElement('video');v.className='emma-vid';v.setAttribute('playsinline','');v.playsInline=true;v.preload='auto';v.src='mots/'+f;
+  host.appendChild(v);if(svg)svg.style.visibility='hidden';if(pic)pic.style.display='none';
+  const done=new Promise(res=>{
+    let fin=false;const end=ok=>{if(!fin){fin=true;res(ok)}};
+    v.onended=()=>end(true);v.onerror=()=>end(false);
+    const iv=setInterval(()=>{if(!v.isConnected||(tok!==undefined&&tok!==spk)){clearInterval(iv);end(true)}else if(fin)clearInterval(iv)},150);
+    setTimeout(()=>end(false),25000);
+    v.play().catch(()=>end(false));
+  });
+  const ok=await done;
+  try{v.pause()}catch(e){}v.remove();if(svg)svg.style.visibility='';if(pic)pic.style.display='';
+  return ok;
+}
 async function emmaSay(seg,tok){
+  if(!seg.novid&&await vidPlay(seg.say,tok)){
+    if(tok!==undefined&&tok!==spk)return;
+    await wait(seg.hold||400);return;
+  }
   const text=seg.say,g=GEST[seg.g]?seg.g:guessGesture(text),pic=seg.nopic?null:seg.v?{e:seg.v,k:seg.k||''}:autoPic(text);
   emmaGesture(g);emmaPic(pic&&pic.e,pic&&pic.k);emmaTalk(true);
   await speak(text,seg.rate||ttsRate());
