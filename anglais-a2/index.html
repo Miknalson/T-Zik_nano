@@ -1035,7 +1035,13 @@ async function api(system,messages,max=900){
   const r=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',
     headers:{'content-type':'application/json','x-api-key':S.key,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},
     body:JSON.stringify({model:S.model,max_tokens:max,system,messages})});
-  const j=await r.json();if(!r.ok)throw new Error(j.error&&j.error.message||('Erreur '+r.status));
+  const j=await r.json();
+  if(!r.ok){
+    const m=(j.error&&j.error.message)||('Erreur '+r.status);
+    if(/credit balance|too low|billing|purchase credits/i.test(m))throw new Error('Votre crédit Anthropic est épuisé : le tuteur s’arrête, c’est voulu (aucun dépassement). Ajoutez des fonds dans la console, rubrique Facturation, puis réessayez.');
+    if(r.status===429)throw new Error('Trop de demandes en peu de temps : attendez quelques secondes puis réessayez.');
+    throw new Error(m);
+  }
   return j.content.map(c=>c.text||'').join('');
 }
 function style(){const l=S.lvl;
