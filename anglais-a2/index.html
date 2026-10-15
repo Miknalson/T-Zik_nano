@@ -2077,30 +2077,46 @@ async function listenCloud(dbg){
 }
 
 /* ============================ EMMA : tutrice animée ============================ */
-const SKIN='#f1c7a3',HAIR='#3b2923',SHIRT='#10a37f';
+const SKIN='#f3c9a5',SKIN2='#dca67f',HAIR='#4a2e22',HAIR2='#6b4432',SHIRT='#10a37f';
 function emmaSVG(){
-  const finger=(i)=>`<rect class="fg" data-i="${i}" x="-2.9" y="4" width="5.8" height="23" rx="2.9" fill="${SKIN}" visibility="hidden"/>`;
-  const hand=(id)=>`<g id="h${id}"><g id="f${id}">${[0,1,2,3,4].map(finger).join('')}</g><circle r="10.5" fill="${SKIN}"/></g>`;
-  const arm=(id,x,flip)=>`<g transform="translate(${x} 168) scale(${flip?-1:1} 1)"><g id="a${id}1"><line x1="0" y1="0" x2="0" y2="60" stroke="${SHIRT}" stroke-width="23" stroke-linecap="round"/><g transform="translate(0 60)"><g id="a${id}2"><line x1="0" y1="0" x2="0" y2="54" stroke="${SKIN}" stroke-width="15" stroke-linecap="round"/><g transform="translate(0 54)">${hand(id)}</g></g></g></g></g>`;
+  const FL=[25,27,25,22,18];
+  const finger=(i)=>`<rect class="fg" data-i="${i}" x="-3" y="4" width="6" height="${FL[i]}" rx="3" fill="${SKIN}" stroke="${SKIN2}" stroke-width=".8" visibility="hidden"/>`;
+  const hand=(id)=>`<g id="h${id}"><g id="f${id}">${[0,1,2,3,4].map(finger).join('')}</g>
+    <g id="k${id}"><path d="M-8.5 8 Q-10 24 -4.5 27.5 Q0 29.5 4.5 27.5 Q10 24 8.5 8Z" fill="${SKIN}" stroke="${SKIN2}" stroke-width=".9"/><path d="M-4.2 16 L-4.2 27M0 14 L0 28.5M4.2 16 L4.2 27" stroke="${SKIN2}" stroke-width=".9" stroke-linecap="round" fill="none"/></g>
+    <path d="M-7.6 -2 Q-10 6 -9.4 16 Q-8.8 22 0 22 Q8.8 22 9.4 16 Q10 6 7.6 -2Z" fill="${SKIN}" stroke="${SKIN2}" stroke-width=".9"/>
+    <path d="M7.5 5 Q16 9 14 19.5 Q12 24 7.5 19Z" fill="${SKIN}" stroke="${SKIN2}" stroke-width=".9" stroke-linejoin="round"/></g>`;
+  const arm=(id,x,flip)=>`<g transform="translate(${x} 170) scale(${flip?-1:1} 1)"><g id="a${id}1"><line x1="0" y1="0" x2="0" y2="62" stroke="${SHIRT}" stroke-width="22" stroke-linecap="round"/><g transform="translate(0 62)"><g id="a${id}2"><line x1="0" y1="10" x2="0" y2="52" stroke="${SKIN}" stroke-width="12" stroke-linecap="round"/><line x1="0" y1="0" x2="0" y2="13" stroke="${SHIRT}" stroke-width="18" stroke-linecap="round"/><g transform="translate(0 52)">${hand(id)}</g></g></g></g></g>`;
+  const eye=(cx,id,lid)=>`<g transform="translate(${cx} 93)"><ellipse rx="9" ry="8.6" fill="#fff"/><g id="${id}"><circle r="5.6" fill="#6b4328"/><circle r="5.6" fill="none" stroke="#3b2418" stroke-width="1"/><circle r="2.7" fill="#1d120d"/><circle cx="1.8" cy="-2" r="1.6" fill="#fff"/></g><rect id="${lid}" x="-11" y="-12" width="22" height="0" fill="url(#skG)"/><path d="M-9.5 -1.5 Q0 -12 9.5 -1.5" stroke="#2a1812" stroke-width="2.4" fill="none" stroke-linecap="round"/><path d="M-9.5 -1.5 L-12 -4.5M9.5 -1.5 L12 -4.5" stroke="#2a1812" stroke-width="1.6" stroke-linecap="round"/></g>`;
   return `<svg id="emma" viewBox="-38 0 276 282" class="emma-svg" role="img" aria-label="Emma, votre tutrice">
+  <defs>
+   <linearGradient id="skG" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#f7d3b1"/><stop offset="1" stop-color="#eebb94"/></linearGradient>
+   <linearGradient id="hrG" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="${HAIR2}"/><stop offset=".55" stop-color="${HAIR}"/><stop offset="1" stop-color="#2f1b14"/></linearGradient>
+  </defs>
   <g id="eBody">
-   <path d="M40 282 Q40 168 100 156 Q160 168 160 282Z" fill="${SHIRT}"/>
-   <path d="M82 158 Q100 180 118 158Z" fill="#fff" opacity=".92"/>
-   <rect x="88" y="124" width="24" height="38" rx="10" fill="${SKIN}"/>
+   <path d="M26 282 Q26 196 60 172 Q80 160 92 157 L108 157 Q120 160 140 172 Q174 196 174 282Z" fill="${SHIRT}"/>
+   <rect x="89" y="120" width="22" height="46" rx="10" fill="url(#skG)"/>
+   <path d="M89 150 Q100 160 111 150 L111 142 Q100 152 89 142Z" fill="#000" opacity=".08"/>
+   <path d="M80 158 Q100 192 120 158 Q100 166 80 158Z" fill="url(#skG)"/>
+   <path d="M76 157 Q100 198 124 157" stroke="#fff" stroke-opacity=".5" stroke-width="3" fill="none" stroke-linecap="round"/>
+   <path d="M62 180 Q70 240 66 282M138 180 Q130 240 134 282" stroke="#000" stroke-opacity=".07" stroke-width="3" fill="none"/>
    <g id="eHead">
-    <path d="M45 90 Q38 152 68 162 L78 114Z" fill="${HAIR}"/><path d="M155 90 Q162 152 132 162 L122 114Z" fill="${HAIR}"/>
-    <ellipse cx="100" cy="82" rx="55" ry="58" fill="${HAIR}"/>
-    <ellipse cx="100" cy="93" rx="44" ry="48" fill="${SKIN}"/>
-    <path d="M55 86 Q64 38 102 40 Q141 40 149 88 Q124 62 100 64 Q78 62 55 86Z" fill="${HAIR}"/>
-    <circle cx="70" cy="106" r="8" fill="#ff8a8a" opacity=".28"/><circle cx="130" cy="106" r="8" fill="#ff8a8a" opacity=".28"/>
-    <g transform="translate(82 93)"><ellipse rx="8.5" ry="9.5" fill="#fff"/><g id="pL"><circle r="5" fill="#2a1c17"/><circle cx="1.6" cy="-1.8" r="1.5" fill="#fff"/></g><rect id="lidL" x="-10" y="-11" width="20" height="0" fill="${SKIN}"/></g>
-    <g transform="translate(118 93)"><ellipse rx="8.5" ry="9.5" fill="#fff"/><g id="pR"><circle r="5" fill="#2a1c17"/><circle cx="1.6" cy="-1.8" r="1.5" fill="#fff"/></g><rect id="lidR" x="-10" y="-11" width="20" height="0" fill="${SKIN}"/></g>
-    <path id="bL" d="M70 77 Q82 70 95 76" stroke="${HAIR}" stroke-width="3.6" fill="none" stroke-linecap="round"/>
-    <path id="bR" d="M105 76 Q118 70 130 77" stroke="${HAIR}" stroke-width="3.6" fill="none" stroke-linecap="round"/>
-    <path d="M100 98 Q105 108 98 110" stroke="#c9946f" stroke-width="2.4" fill="none" stroke-linecap="round"/>
-    <path id="eMouth" d="M88 119 Q100 124 112 119" fill="#8a2d3b" stroke="#8a2d3b" stroke-width="2.6" stroke-linejoin="round" stroke-linecap="round"/>
+    <path d="M46 92 Q36 156 66 168 L80 112Z" fill="url(#hrG)"/><path d="M154 92 Q164 156 134 168 L120 112Z" fill="url(#hrG)"/>
+    <ellipse cx="100" cy="82" rx="56" ry="58" fill="url(#hrG)"/>
+    <ellipse cx="55.5" cy="100" rx="5" ry="9" fill="${SKIN}"/><ellipse cx="144.5" cy="100" rx="5" ry="9" fill="${SKIN}"/>
+    <path d="M100 52 Q60 54 56 98 Q58 138 100 144 Q142 138 144 98 Q140 54 100 52Z" fill="url(#skG)"/>
+    <path d="M58 98 Q60 136 100 144 Q140 136 142 98 Q136 128 100 134 Q64 128 58 98Z" fill="#c9835f" opacity=".16"/>
+    <path d="M52 94 Q56 34 102 38 Q146 38 148 94 Q140 66 118 58 Q100 72 84 60 Q62 68 52 94Z" fill="url(#hrG)"/>
+    <path d="M70 52 Q96 36 128 50" stroke="#a87a5e" stroke-opacity=".5" stroke-width="2.4" fill="none" stroke-linecap="round"/>
+    <path d="M88 44 Q74 70 56 100M112 44 Q130 66 144 100" stroke="#2f1b14" stroke-opacity=".35" stroke-width="1.4" fill="none"/>
+    <circle cx="71" cy="108" r="9" fill="#ff8a8a" opacity=".22"/><circle cx="129" cy="108" r="9" fill="#ff8a8a" opacity=".22"/>
+    ${eye(82,'pL','lidL')}${eye(118,'pR','lidR')}
+    <path id="bL" d="M69 78 Q81 70 95 76" stroke="${HAIR}" stroke-width="3.4" fill="none" stroke-linecap="round"/>
+    <path id="bR" d="M105 76 Q119 70 131 78" stroke="${HAIR}" stroke-width="3.4" fill="none" stroke-linecap="round"/>
+    <path d="M100 94 Q96 108 93 111 Q100 115 107 111 Q104 108 100 94" fill="#d89a76" opacity=".45"/>
+    <path d="M93 111 Q100 116 107 111" stroke="#b97a58" stroke-width="2" fill="none" stroke-linecap="round"/>
+    <path id="eMouth" d="M88 121 Q100 126 112 121" fill="#7a2433" stroke="#c4566a" stroke-width="3.2" stroke-linejoin="round" stroke-linecap="round"/>
    </g>
-   ${arm('L',62,false)}${arm('R',138,true)}
+   ${arm('L',60,false)}${arm('R',140,true)}
   </g></svg>`;
 }
 const EP={lS:7,lE:6,rS:7,rE:6,hr:0,hx:0,hy:0,sm:.55,br:0,ex:0,ey:0,fl:0,fr:0,th:0,eye:1,hs:1};
@@ -2169,7 +2185,7 @@ function emmaFrame(ts){
   const m=E.talk?(.22+.62*A_(S_(ts/78))*(.55+.45*A_(S_(ts/240)))):0;E.mouth+=(m-E.mouth)*.45;
   const $e=id=>svg.querySelector('#'+id),set=(id,tr)=>{const e=$e(id);if(e)e.setAttribute('transform',tr)};
   set('aL1',`rotate(${c.lS})`);set('aL2',`rotate(${c.lE})`);set('aR1',`rotate(${c.rS})`);set('aR2',`rotate(${c.rE})`);
-  set('hL',`scale(${c.hs})`);set('hR',`scale(${c.hs})`);
+  set('hL',`scale(${c.hs*1.25})`);set('hR',`scale(${c.hs*1.25})`);
   set('eHead',`translate(${c.hx} ${c.hy}) rotate(${c.hr} 100 130)`);
   set('eBody',`translate(0 ${S_(ts/850)*.8})`);
   [['L',c.fl],['R',c.fr]].forEach(([id,n])=>{
@@ -2180,6 +2196,7 @@ function emmaFrame(ts){
       r.setAttribute('width',c.th&&id==='R'?9:5.8);r.setAttribute('x',c.th&&id==='R'?-4.5:-2.9);
     });
   });
+  [['L',c.fl],['R',c.fr]].forEach(([id,n])=>{const k=svg.querySelector('#k'+id);if(k)k.setAttribute('opacity',Math.round(n)>=5?0:1)});
   const lid=(1-eye)*21;['lidL','lidR'].forEach(id=>{const e=$e(id);if(e)e.setAttribute('height',lid)});
   ['pL','pR'].forEach(id=>set(id,`translate(${c.ex} ${c.ey})`));
   const br=c.br;
