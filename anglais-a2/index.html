@@ -849,6 +849,7 @@ function shPhrase(){
    <div class="en">${esc(en)}</div><div class="fr">${esc(fr)}</div>${tip?`<div class="tip">💡 ${esc(tip)}</div>`:''}
    <div class="row"><button class="btn" onclick="sp(${T(en)})">🔊 Écouter</button><button class="btn" onclick="sp(${T(en)},1)">🐢 Lent</button>
     <button class="mic" id="mic" onclick="tryPhrase()">🎤</button><button class="btn" onclick="openType('phrase')" title="Écrire ou dicter au clavier">⌨️</button></div>
+   ${shadowHTML(T(en))}
    <div class="score" id="res">1) Écoutez 2) appuyez sur 🎤 et dites la phrase.</div>
    <div class="row"><button class="btn" ${pi?'':'disabled'} onclick="pi--;shPhrase()">←</button>
    <button class="btn primary" style="flex:1" onclick="nextPhrase()">${pi<u.phrases.length-1?'Suivant →':'Terminer ✔'}</button></div></div>`;
@@ -866,8 +867,9 @@ async function tryPhrase(){
   catch(e){if(e!=='cancelled')openType('phrase','<div>'+esc(errMsg(e))+'</div>')}
   m.classList.remove('rec');
 }
+function retryMic(){micFails=0;srDead=false;S.voiceMode=S.voiceMode==='keyboard'?'mic':S.voiceMode;save();toast('Micro intégré réactivé : appuyez sur 🎤.',3500)}
 function openType(kind,prefix){
-  $('res').innerHTML=(prefix?prefix+'<div style="height:8px"></div>':'')+'<div class="row" style="margin:0"><input type="text" id="tt" placeholder="Dictez avec le micro du clavier 🎤 ou écrivez" style="flex:1;min-width:0" autocapitalize="off" autocorrect="off" spellcheck="false" onkeydown="if(event.key===\'Enter\')typeSubmit(\''+kind+'\')"><button class="btn primary" onclick="typeSubmit(\''+kind+'\')">OK</button></div><div id="ttr"></div><div class="mute" style="margin-top:6px">⌨️ Touchez le champ puis le <b>micro du clavier</b> iPhone, parlez en anglais, puis OK. (Clavier anglais : Réglages → Général → Clavier → Claviers → Ajouter.)</div>';
+  $('res').innerHTML=(prefix?prefix+'<div style="height:8px"></div>':'')+'<div class="row" style="margin:0"><input type="text" lang="en" id="tt" placeholder="Dictez avec le micro du clavier 🎤 ou écrivez" style="flex:1;min-width:0" autocapitalize="off" autocorrect="off" spellcheck="false" onkeydown="if(event.key===\'Enter\')typeSubmit(\''+kind+'\')"><button class="btn primary" onclick="typeSubmit(\''+kind+'\')">OK</button></div><div id="ttr"></div><div class="mute" style="margin-top:6px">⌨️ Touchez le champ puis le <b>micro du clavier</b>, parlez en anglais, puis OK.<br><b>Important :</b> passez d’abord au <b>clavier anglais</b> avec la touche 🌐 (en bas à gauche). Avec « FR EN », iOS écoute votre anglais en français.</div>'+(SR?'<div class="row" style="margin-top:8px"><button class="btn" onclick="retryMic()">🎤 Réessayer le micro intégré</button></div>':'');
   try{$('tt').focus()}catch(e){}
 }
 function typeTry(){openType('phrase')}
@@ -1108,7 +1110,7 @@ function vChat(){
    <div class="score" id="status"></div>
    <div class="row">${chat.length?'':'<button class="btn primary" onclick="send(\'[start]\',null,true)">Commencer</button>'}
     <button class="mic" id="mic" onclick="talk()">🎤</button>
-    <input type="text" id="txt" placeholder="…ou écrivez en anglais" style="flex:1;min-width:120px" onkeydown="if(event.key==='Enter')sendTxt()"><button class="btn" onclick="sendTxt()">➤</button></div>
+    <input type="text" lang="en" id="txt" placeholder="…ou écrivez en anglais" style="flex:1;min-width:120px" onkeydown="if(event.key==='Enter')sendTxt()"><button class="btn" onclick="sendTxt()">➤</button></div>
    ${STANDALONE?'<div class="mute" style="margin-top:8px">🎤 Si le micro de l’app ne répond pas : touchez le champ ci-dessus puis le micro du clavier iPhone pour dicter en anglais.</div>':''}
    ${chat.length?`<div class="row"><button class="btn" onclick="hint()">💡 Aide : que répondre ?</button><button class="btn" onclick="bilan()">📝 Terminer et faire le bilan</button></div>`:''}<div id="extra"></div></div>`;
   const l=$('log');l.scrollTop=l.scrollHeight;emmaMount($('stage'));
@@ -2218,6 +2220,7 @@ async function showBW(){
    <div class="row" style="justify-content:center"><button class="btn" onclick="basicTeach()">🎬 Revoir Emma</button><button class="btn" onclick="spk++;speak(BL.l.w[BL.i].en,.5)">🐢 Lent</button></div>
    <div style="font-weight:800;margin-top:14px">À vous : répétez le mot</div>
    <div class="row" style="justify-content:center"><button class="mic" id="mic" onclick="tryBasic()">🎤</button><button class="btn" onclick="openType('basic')" title="Écrire ou dicter au clavier">⌨️</button></div>
+   ${shadowHTML(T(w.en))}
    <div class="score" id="res"></div>
    <div class="row"><button class="btn" ${BL.i?'':'disabled'} onclick="BL.i--;showBW()">←</button><button class="btn primary" style="flex:1" onclick="BL.i++;showBW()">Suivant →</button></div></div>`;
   emmaMount($('stage'));
@@ -2294,6 +2297,33 @@ async function bqPick(i){
   const tok=++spk;await emmaSay({say:w.en,g:ok?'nod':w.g,v:w.e,k:w.en,rate:.6},tok);
 }
 
+/* --- s'enregistrer et se réécouter : entraînement sans reconnaissance vocale --- */
+const RC={rec:null,chunks:[],url:null,stream:null,tm:0};
+function shadowHTML(i){
+  return `<div class="tip" style="margin-top:12px"><b>🎧 S’entraîner sans micro intelligent</b><div class="mute">Écoutez le modèle, enregistrez-vous, puis comparez à l’oreille.</div>
+  <div class="row" style="margin-top:8px"><button class="btn" id="recb" onclick="recToggle()">🔴 M’enregistrer</button><button class="btn" id="playb" onclick="recPlay()" hidden>▶️ Me réécouter</button><button class="btn" id="cmpb" onclick="recCompare(${i})" hidden>🔁 Modèle puis moi</button></div><div class="mute" id="recs" style="margin-top:6px"></div></div>`;
+}
+function recUI(state){
+  const b=$('recb'),pl=$('playb'),cm=$('cmpb'),st=$('recs');
+  if(state==='rec'){b.textContent='⏹️ Arrêter';st.textContent='🔴 Enregistrement… parlez (7 s maximum)'}
+  else{b.textContent='🔴 M’enregistrer';pl.hidden=cm.hidden=false;st.textContent='Enregistré ✅ Réécoutez-vous et comparez avec le modèle.'}
+}
+async function recToggle(){
+  if(RC.rec&&RC.rec.state==='recording'){RC.rec.stop();return}
+  if(!navigator.mediaDevices||!window.MediaRecorder){toast('L’enregistrement n’est pas disponible sur ce navigateur.',4000);return}
+  try{
+    spk++;try{speechSynthesis.cancel()}catch(e){}
+    RC.stream=await navigator.mediaDevices.getUserMedia({audio:true});
+    const mt=MediaRecorder.isTypeSupported('audio/mp4')?'audio/mp4':(MediaRecorder.isTypeSupported('audio/webm')?'audio/webm':'');
+    RC.rec=mt?new MediaRecorder(RC.stream,{mimeType:mt}):new MediaRecorder(RC.stream);RC.chunks=[];
+    RC.rec.ondataavailable=e=>{if(e.data&&e.data.size)RC.chunks.push(e.data)};
+    RC.rec.onstop=()=>{clearTimeout(RC.tm);RC.stream.getTracks().forEach(t=>t.stop());
+      const blob=new Blob(RC.chunks,{type:RC.rec.mimeType||mt||'audio/mp4'});if(RC.url)URL.revokeObjectURL(RC.url);RC.url=URL.createObjectURL(blob);recUI('done')};
+    RC.rec.start();recUI('rec');RC.tm=setTimeout(()=>{if(RC.rec&&RC.rec.state==='recording')RC.rec.stop()},7000);
+  }catch(e){toast('Micro inaccessible : autorisez-le dans Réglages → Safari → Micro. ('+(e&&e.name||'erreur')+')',6000)}
+}
+function recPlay(){return new Promise(res=>{if(!RC.url){res();return}const a=new Audio(RC.url);a.onended=res;a.onerror=res;a.play().catch(()=>{toast('Lecture bloquée : touchez de nouveau ▶️ (mode silencieux ?).',4000);res()})})}
+async function recCompare(i){await speak(_t[i],.7);await wait(400);await recPlay()}
 /* --- actualisation, service worker, sauvegarde --- */
 async function forceUpdate(){
   toast('🔄 Actualisation…',2500);
