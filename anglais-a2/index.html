@@ -881,6 +881,7 @@ function vCourse(){
   <h2>Ateliers gratuits</h2><div class="grid2" style="margin-bottom:14px">
    <div class="card node" style="flex-direction:column;text-align:center;margin:0" onclick="vPronList()"><div class="ic">🗣️</div><h3>Prononciation</h3><div class="mute">7 sons pièges</div></div>
    <div class="card node" style="flex-direction:column;text-align:center;margin:0" onclick="vSceneList()"><div class="ic">💬</div><h3>Mini-conversations</h3><div class="mute">${SCENES.length} situations</div></div>
+   <div class="card node" style="flex-direction:column;text-align:center;margin:0;grid-column:span 2;background:var(--soft)" onclick="vToeic()"><div class="ic">🎓</div><h3>TOEIC</h3><div class="mute">7 parties + test express · explications en français</div></div>
    <div class="card node" style="flex-direction:column;text-align:center;margin:0;grid-column:span 2" onclick="startComp()"><div class="ic">🎧</div><h3>Compréhension</h3><div class="mute">Écoute et lecture adaptées à votre niveau</div></div></div>
   <h2>💼 Votre métier : ${esc(S.job||'finance')}</h2><div class="path" style="margin-bottom:14px">${job.map(x=>node(x[0],x[1])).join('')}
    <div class="card node" onclick="dsub='fin';go('dico')"><div class="ic">📚</div><div style="flex:1"><h3>Glossaire finance</h3><div class="mute">${GLOS.length} termes de contrôle de gestion</div></div></div></div>
@@ -1425,6 +1426,169 @@ function cpPick(i){
   if(CP.lock)return;CP.lock=true;const it=CP.cur,ok=i===it.a;$('c'+it.a).classList.add('right');if(!ok)$('c'+i).classList.add('wrong');
   if(ok){CP.ok++;addXP(2)}
   $('fbk').innerHTML=`<div class="fbk ${ok?'ok':'no'}"><b>${ok?'✅ Bravo !':'❌ Pas tout à fait.'}</b>${it.k==='l'?`<div class="mute">Le texte : « ${esc(it.txt)} »</div>`:''}<button class="btn primary big" style="margin-top:10px" onclick="CP.i++;showComp()">Continuer</button></div>`;
+}
+
+/* ============================ TOEIC ============================ */
+// Exercices originaux dans le style du TOEIC (pas de vraies questions d’examen). Dans chaque tableau, la 1re réponse est la bonne (l’ordre est mélangé à l’affichage).
+const TOEIC_D={
+p1:[
+ ["👩‍💻",["A woman is typing on a laptop.","A woman is cooking in a kitchen.","A woman is waiting for a bus.","A woman is painting a wall."],"On voit une femme devant un ordinateur : to type = taper."],
+ ["🤝",["They are shaking hands.","They are eating lunch.","They are running a race.","They are carrying boxes."],"To shake hands = se serrer la main."],
+ ["📞👨‍💼",["A man is talking on the phone.","A man is washing a car.","A man is reading a newspaper.","A man is climbing stairs."],"Phone = téléphone. L’homme téléphone."],
+ ["🚆🧳",["A train is arriving at a station.","A plane is taking off.","A boat is leaving a harbor.","A bus is stuck in traffic."],"Train = train, station = gare."],
+ ["🍽️👥",["Some people are having a meal.","Some people are playing cards.","Some people are watching a film.","Some people are painting a room."],"To have a meal = prendre un repas."],
+ ["📊👩‍🏫",["A woman is giving a presentation.","A woman is cutting some paper.","A woman is buying a ticket.","A woman is watering plants."],"Presentation = présentation (graphique + personne qui explique)."],
+ ["🛒🧑",["A man is pushing a shopping cart.","A man is repairing a bicycle.","A man is opening a window.","A man is drinking coffee."],"Shopping cart = chariot de courses."],
+ ["📦🚚",["A truck is being loaded with boxes.","A truck is parked in a garage.","Some workers are cleaning a floor.","Some boxes are being thrown away."],"Loaded = chargé. Les cartons sont mis dans le camion."],
+ ["☔🧑‍💼",["A man is holding an umbrella.","A man is wearing sunglasses.","A man is riding a horse.","A man is closing a door."],"Umbrella = parapluie."],
+ ["🖨️👩",["A woman is using a printer.","A woman is answering the door.","A woman is picking flowers.","A woman is tying her shoes."],"Printer = imprimante."]
+],
+p2:[
+ ["Where is the meeting room?",["It's on the second floor.","At two o'clock.","Yes, I do."],"Where demande un lieu : « au deuxième étage »."],
+ ["When does the report need to be ready?",["By Friday afternoon.","In the conference room.","It's very long."],"When demande un moment : « d’ici vendredi après-midi »."],
+ ["Could you send me the invoice?",["Sure, I'll email it today.","It's a big company.","Because it was late."],"« Could you… ? » est une demande : on accepte (« Sure »)."],
+ ["How much does this printer cost?",["About two hundred euros.","Twice a week.","In the storage room."],"How much = combien (prix)."],
+ ["Who is leading the project?",["Ms. Martin is.","Next month.","Around the corner."],"Who demande une personne."],
+ ["Why was the flight delayed?",["Because of the bad weather.","At gate twelve.","Two tickets, please."],"Why → Because (cause)."],
+ ["Would you like some coffee?",["Yes, with a little milk, please.","He's in a meeting.","At the end of the hall."],"Proposition : on accepte ou refuse poliment."],
+ ["How often do you check your e-mails?",["Every morning and afternoon.","About fifty dollars.","In my office."],"How often = à quelle fréquence."],
+ ["Do you know if the bank is open today?",["I think it closes at five.","It's a new bank card.","We went there last year."],"On répond à la question d’horaire."],
+ ["What time does the training start?",["At nine thirty.","In room 4B.","For three days."],"What time = à quelle heure."],
+ ["Can I borrow your pen?",["Of course, here you are.","I'll have the chicken.","It was a long trip."],"To borrow = emprunter. On répond oui ou non."],
+ ["Which budget did you send to Mr. Lee?",["The one for next quarter.","Yes, around ten.","He's in Paris."],"Which = lequel : « celui du prochain trimestre »."]
+],
+p3:[
+ [[["Anna","Hi Tom, did you finish the sales report?"],["Tom","Almost. I just need the numbers from the finance team."],["Anna","The meeting is at three, so please send it before that."]],"What does Anna ask Tom to do?",["Send the report before three o'clock","Cancel the meeting","Call the finance team tomorrow","Print the numbers"],"« Send it before [three] » : avant 15 h."],
+ [[["Emma","Paul, the projector in room five isn't working."],["Paul","I'll call the technician right now."],["Emma","Thanks. We have a client presentation in twenty minutes."]],"What is the problem?",["A projector is broken","A client is late","A room is booked","The technician is on holiday"],"« isn't working » = ne marche pas."],
+ [[["Customer","Good morning. I'd like to book a table for six people tonight."],["Waiter","Certainly. What time would you like to come?"],["Customer","Around eight, please."],["Waiter","I'm sorry, we're full at eight. Is eight thirty OK?"]],"What does the waiter suggest?",["Coming at eight thirty","Coming tomorrow","Booking for four","Eating at the bar"],"« Is eight thirty OK? » = proposition d’horaire."],
+ [[["Woman","Excuse me, is this the right line for the airport bus?"],["Man","No, you need platform two. It leaves in ten minutes."],["Woman","Thank you, I'll hurry."]],"Where must the woman go?",["To platform two","To the ticket office","To the taxi stand","To platform ten"],"« You need platform two »."],
+ [[["Sam","Have you seen the new schedule?"],["Lisa","Yes, my shift starts earlier now, at seven o'clock."],["Sam","Mine too. I hate getting up early!"]],"What has changed?",["The starting time of work","The salary","The office location","The holiday dates"],"Schedule / shift starts earlier = horaires qui changent."],
+ [[["Caller","I'm calling about the job advertisement."],["Receptionist","Thank you for calling. Can you send us your CV by e-mail?"],["Caller","Of course. What is the address?"]],"What will the caller do next?",["Send a CV by e-mail","Visit the office","Call again on Monday","Fill in a form online"],"« Can you send us your CV by e-mail? » — « Of course »."],
+ [[["Client","The delivery was supposed to arrive yesterday."],["Seller","I'm very sorry. There was a problem at the warehouse."],["Client","When will it arrive?"],["Seller","Tomorrow morning, and we'll give you a ten percent discount."]],"Why does the seller apologize?",["A delivery was late","A product was broken","A price was wrong","An order was lost"],"« was supposed to arrive yesterday » = elle aurait dû arriver hier."],
+ [[["Ben","Are you coming to the team lunch on Friday?"],["Nina","I'd love to, but I have a dentist appointment."],["Ben","What a pity! Maybe next time."]],"Why can't Nina come?",["She has a medical appointment","She is on vacation","She has too much work","She doesn't like lunch"],"Dentist appointment = rendez-vous chez le dentiste."]
+],
+p4:[
+ ["Attention, passengers. Flight 208 to Madrid is now boarding at gate twelve. Please have your passport and boarding pass ready.","Where is this announcement probably heard?",["At an airport","At a hotel","At a school","At a bank"],"Flight, boarding, gate = aéroport."],
+ ["Welcome to our monthly meeting. Today, we will review the sales results, then discuss the new marketing plan. The meeting will finish at eleven.","What will be discussed first?",["The sales results","The marketing plan","The budget","The holiday dates"],"« First » = d’abord : the sales results, « then » = ensuite."],
+ ["Thank you for calling Blue Sky Travel. Our office is closed today. Please call back tomorrow after nine a.m. or visit our website.","What should callers do?",["Call again tomorrow","Leave a message today","Go to the office","Send a letter"],"« Call back tomorrow » = rappeler demain."],
+ ["This is a reminder that the office will be closed on Monday for a public holiday. All employees should save their work and turn off their computers before leaving on Friday.","What should employees do on Friday?",["Turn off their computers","Work from home","Come to the office on Monday","Call the manager"],"« Turn off their computers before leaving on Friday »."],
+ ["Good afternoon, customers. Today only, all winter coats are thirty percent off on the second floor. The sale ends at six o'clock tonight.","What is being announced?",["A sale on coats","A new restaurant","A store closing forever","A job offer"],"« thirty percent off » = 30 % de réduction : des soldes."],
+ ["Hello, this is Jane from the accounting department. I'm calling about the expense report you sent yesterday. Some receipts are missing. Please send them to me by Thursday.","What does Jane ask for?",["Missing receipts","A new report","A phone number","A meeting date"],"Receipts = justificatifs/reçus ; missing = manquants."],
+ ["Welcome to the museum. Please note that photos are not allowed inside the building. Tours begin every hour in the main hall, and each tour lasts forty-five minutes.","How long is a tour?",["Forty-five minutes","One hour","Thirty minutes","Four hours"],"« lasts forty-five minutes » = dure 45 minutes."],
+ ["Our train to Lyon has been delayed by twenty minutes because of a technical problem. We apologize for the inconvenience.","Why is the train late?",["A technical problem","Bad weather","A strike","A missing driver"],"« because of a technical problem » = cause du retard."]
+],
+p5:[
+ ["The manager ___ the report before the meeting yesterday.",["finished","finish","finishes","finishing"],"Hier = passé : finished."],
+ ["The meeting starts ___ 9 a.m.",["at","in","on","by"],"On dit at + heure (at 9 a.m.)."],
+ ["Ms. Lee is responsible ___ the budget.",["for","to","at","with"],"Responsible for = responsable de."],
+ ["We need to ___ a decision quickly.",["make","do","get","put"],"On dit make a decision (prendre une décision)."],
+ ["The new software is ___ than the old one.",["faster","fast","fastest","more fast"],"Comparatif de fast : faster than."],
+ ["If the shipment ___ late, we will call you.",["arrives","will arrive","arrived","arriving"],"Après if on met le présent : If it arrives…"],
+ ["All employees must wear a badge ___ the building.",["inside","during","while","since"],"Inside = à l’intérieur de (lieu)."],
+ ["She has worked here ___ 2019.",["since","for","from","during"],"Since + date de départ (since 2019)."],
+ ["Could you tell me ___ the conference room is?",["where","what","who","when"],"Where = où (lieu)."],
+ ["The company is looking for a ___ accountant.",["qualified","qualify","qualification","qualifying"],"Il faut un adjectif devant le nom : qualified."],
+ ["Our sales ___ by 10% last quarter.",["increased","increase","are increasing","will increase"],"Last quarter = passé : increased."],
+ ["Neither the manager ___ the assistants were present.",["nor","or","and","but"],"Neither… nor = ni… ni."],
+ ["The report must be ___ by tomorrow morning.",["completed","complete","completing","completion"],"Must be + participe passé (passif)."],
+ ["Please ___ me know if you have any questions.",["let","make","tell","say"],"Let me know = faites-moi savoir."]
+],
+p6:[
+ ["Dear Mr. Brown,\nThank you for your e-mail. I am writing ___ confirm your appointment on Monday at 10 a.m.\nBest regards,\nSophie",["to","for","of","at"],"On écrit « I am writing to + verbe » pour exprimer le but."],
+ ["Hello team,\nThe printer on the third floor is out of order. ___, please use the printer on the second floor.",["In the meantime","On the other hand","For example","As a result"],"In the meantime = en attendant."],
+ ["Dear customer,\nYour order has been shipped and ___ arrive within three working days.",["will","would have","is","was"],"Futur simple : will arrive."],
+ ["To all staff:\nThe annual party has been moved to June 12 ___ the lack of space in the hall.",["because of","because","although","so"],"Because of + nom ; because + sujet + verbe."],
+ ["Dear Ms. Evans,\nWe regret to inform you that the position has ___ filled.",["been","be","being","was been"],"Present perfect passif : has been filled."],
+ ["Hi Tom,\nI have attached the sales figures. ___ you have any questions, please contact me.",["If","Unless","Although","Because"],"If you have any questions = si vous avez des questions."],
+ ["Dear Sir or Madam,\nI am interested ___ the sales assistant position advertised on your website.",["in","on","at","for"],"Interested in = intéressé par."],
+ ["Notice to employees:\nThe company offers free training ___ all new employees.",["for","to","by","at"],"Training for = une formation destinée à."]
+],
+p7:[
+ ["From: HR Department\nTo: All staff\nSubject: New working hours\n\nStarting next month, the office will open at 8:30 a.m. instead of 9:00 a.m. and close at 5:30 p.m. The lunch break remains one hour. Please speak to your manager if you have questions.","What is changing?",["The opening time","The lunch break","The salary","The office address"],"« open at 8:30 instead of 9:00 » : l’heure d’ouverture change."],
+ ["PARKING NOTICE\nThe company car park will be closed from Monday to Wednesday for repairs. Employees can use the public car park on Elm Street. A free ticket is available at reception.","Where can employees park during the repairs?",["In a public car park","In the company car park","On the street for free","At the station"],"« can use the public car park on Elm Street »."],
+ ["WANTED: Sales Assistant\nFull-time position in our Lyon store. Experience is not necessary, but good English is required. Send your CV before May 15.","What is required for the job?",["Good English","Experience in sales","A driving licence","A university degree"],"« Experience is not necessary, but good English is required »."],
+ ["MEMO\nReminder: expense reports must be submitted by the 5th of each month. Reports sent after this date will be paid the following month.","What happens to a late report?",["It is paid the next month","It is refused","It is paid twice","It is lost"],"« paid the following month » = payée le mois suivant."],
+ ["INVOICE no. 4521 — March 3\nItems: 10 office chairs, 150 euros each\nDelivery: free\nPayment due within 30 days","How much does one chair cost?",["150 euros","1,500 euros","30 euros","10 euros"],"« 150 euros each » : each = chacun."],
+ ["Dear Ms. Clark,\nThank you for attending the interview yesterday. We were impressed by your experience and would like to offer you the position. Please reply by Friday to accept.\nBest regards, Paul Reed","What is the purpose of the e-mail?",["To offer a job","To cancel an interview","To ask for a CV","To refuse an application"],"« would like to offer you the position » = proposer le poste."],
+ ["TRAINING SCHEDULE\nMonday: Safety rules (9:00–10:30)\nTuesday: Customer service (9:00–12:00)\nWednesday: Computer systems (14:00–16:00)","When is the customer service session?",["On Tuesday morning","On Monday morning","On Wednesday afternoon","On Tuesday afternoon"],"Customer service : Tuesday 9:00–12:00 = mardi matin."],
+ ["CITY NEWS\nThe new tram line opens next week. It will connect the airport to the city center in twenty minutes. Tickets cost two euros.","What is the news about?",["A new tram line","A new airport","A price increase","A bus strike"],"« The new tram line opens next week »."]
+],
+v:[["invoice","facture"],["deadline","date limite"],["to schedule","planifier"],["meeting","réunion"],["agenda","ordre du jour"],["budget","budget"],["to hire","embaucher"],["employee","employé"],["manager","responsable"],["colleague","collègue"],["supplier","fournisseur"],["delivery","livraison"],["shipment","expédition"],["to attend","assister à"],["to postpone","reporter"],["to cancel","annuler"],["to confirm","confirmer"],["salary","salaire"],["raise","augmentation"],["contract","contrat"],["to sign","signer"],["revenue","chiffre d’affaires"],["profit","bénéfice"],["loss","perte"],["expenses","dépenses"],["to forecast","prévoir"],["target","objectif"],["to improve","améliorer"],["to submit","remettre"],["reimbursement","remboursement"],["warehouse","entrepôt"],["quarter","trimestre"],["overtime","heures supplémentaires"],["customer","client"],["refund","remboursement (produit)"]]
+};
+const TPARTS=[
+ {id:'p1',ic:'🖼️',t:'Partie 1 · Photos',d:'Écoutez 4 phrases : laquelle décrit l’image ?',n:6},
+ {id:'p2',ic:'❓',t:'Partie 2 · Question-réponse',d:'Une question, 3 réponses : choisissez la bonne',n:8},
+ {id:'p3',ic:'🗣️',t:'Partie 3 · Conversations',d:'Écoutez un dialogue de bureau, répondez à la question',n:6},
+ {id:'p4',ic:'📢',t:'Partie 4 · Annonces',d:'Messages, annonces, réunions : l’essentiel',n:6},
+ {id:'p5',ic:'✏️',t:'Partie 5 · Phrases à compléter',d:'Grammaire et vocabulaire en 1 phrase',n:10},
+ {id:'p6',ic:'📧',t:'Partie 6 · Texte à compléter',d:'Complétez un e-mail ou une note',n:6},
+ {id:'p7',ic:'📄',t:'Partie 7 · Lecture',d:'E-mails, annonces, factures : trouvez l’information',n:6},
+ {id:'v',ic:'💼',t:'Vocabulaire TOEIC',d:'35 mots du monde du travail',n:10}
+];
+const TCEFR=s=>s>=905?'C1':s>=785?'B2':s>=550?'B1':s>=225?'A2':'A1';
+let TQ=null;
+const tqBack='<a class="back" onclick="vToeic()">← TOEIC</a>';
+function tqMake(id,r){
+  if(id==='p1')return {id,pic:r[0],o:r[1],e:r[2],q:'Quelle phrase décrit l’image ?',aud:'opts'};
+  if(id==='p2')return {id,aud:r[0],hid:'« '+r[0]+' »',q:'Choisissez la meilleure réponse.',o:r[1],e:r[2]};
+  if(id==='p3')return {id,aud:r[0].map(x=>x[1]).join(' '),hid:r[0].map(x=>'<b>'+esc(x[0])+' :</b> '+esc(x[1])).join('<br>'),hidHTML:1,q:r[1],o:r[2],e:r[3]};
+  if(id==='p4')return {id,aud:r[0],hid:esc(r[0]),hidHTML:1,q:r[1],o:r[2],e:r[3]};
+  if(id==='p5')return {id,doc:r[0],q:'Complétez la phrase.',o:r[1],e:r[2]};
+  if(id==='p6')return {id,doc:r[0],q:'Quel mot complète le texte ?',o:r[1],e:r[2]};
+  if(id==='p7')return {id,doc:r[0],q:r[1],o:r[2],e:r[3]};
+  const d=sh(TOEIC_D.v.filter(x=>x[0]!==r[0])).slice(0,3).map(x=>x[1]);
+  return {id:'v',aud:r[0].replace(/^to /,''),q:'Que signifie « '+r[0]+' » ?',o:[r[1]].concat(d),e:r[0]+' = '+r[1]+'.'};
+}
+const tqPool=(id,n)=>sh(TOEIC_D[id]).slice(0,n).map(r=>tqMake(id,r));
+function vToeic(){
+  S.toeic=S.toeic||{};
+  $('view').innerHTML=`${atelierBack}<h2>🎓 TOEIC</h2><p class="mute">Entraînement au format du TOEIC (écoute et lecture) avec des exercices originaux adaptés à votre niveau. Chaque réponse est expliquée en français.</p>
+  <div class="card node" onclick="tqStart('mock')" style="background:var(--soft)"><div class="ic">⏱️</div><div style="flex:1"><h3>Test express (20 questions)</h3><div class="mute">Un peu de chaque partie · score TOEIC estimé${S.toeic.mock?' · meilleur : ~'+S.toeic.mock+' ('+TCEFR(S.toeic.mock)+')':''}</div></div></div>
+  ${TPARTS.map(p=>`<div class="card node" onclick="tqStart('${p.id}')"><div class="ic">${p.ic}</div><div style="flex:1"><h3>${p.t}</h3><div class="mute">${p.d}${S.toeic[p.id]!=null?' · meilleur : '+S.toeic[p.id]+'%':''}</div></div></div>`).join('')}
+  <div class="tip">ℹ️ Le « score estimé » est une indication très approximative, pas un résultat officiel. Pour un vrai TOEIC, passez un test officiel (ETS).</div>`;
+}
+function tqStart(id){
+  let list;
+  if(id==='mock')list=sh(['p1','p2','p3','p4','p5','p6','p7'].flatMap(k=>tqPool(k,2)).concat(tqPool('v',6)));
+  else list=tqPool(id,TPARTS.find(p=>p.id===id).n);
+  TQ={id,list,i:0,ok:0,lock:false};tqShow();
+}
+function tqShow(){
+  if(TQ.i>=TQ.list.length)return tqEnd();
+  spk++;const it=TQ.list[TQ.i];TQ.cur=it;TQ.lock=false;
+  it.opts=sh(it.o.map((x,i)=>[x,i]));
+  const L='ABCD';
+  it.audT=it.aud==='opts'?it.opts.map((x,i)=>L[i]+'. '+x[0]).join(' '):it.aud;
+  const part=TPARTS.find(p=>p.id===it.id),ti=it.audT?T(it.audT):-1;
+  $('view').innerHTML=`${tqBack}<div class="card"><div class="mute">${part.t} · ${TQ.i+1}/${TQ.list.length}</div><div class="bar" style="margin:6px 0 12px"><i style="width:${TQ.i/TQ.list.length*100}%"></i></div>
+  ${it.pic?`<div style="font-size:64px;text-align:center;margin:4px 0 10px">${it.pic}</div>`:''}
+  ${it.audT?`<div class="row" style="margin:0 0 10px"><button class="btn" onclick="sp(${ti})">🔊 Écouter</button><button class="btn" onclick="sp(${ti},1)">🐢 Lent</button>${it.hid?`<button class="btn ghost" onclick="this.outerHTML='<div class=tip style=margin:0;width:100%>'+_t[${T(it.hidHTML?it.hid:esc(it.hid))}]+'</div>'">Voir le texte</button>`:''}</div>`:''}
+  ${it.doc?`<div class="tip" style="margin:0 0 10px;white-space:pre-line">${esc(it.doc).replace('___','<span class="blank">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span>')}</div>`:''}
+  <div style="font-weight:800">${esc(it.q)}</div>
+  ${it.opts.map((x,i)=>`<button class="opt" id="q${x[1]}" onclick="tqPick(${i})">${it.id==='p2'||it.id==='p1'||it.id==='p3'||it.id==='p4'?`<b>${L[i]}.</b> `:''}${esc(x[0])}</button>`).join('')}<div id="fbk"></div></div>`;
+  if(it.audT)setTimeout(()=>sp(ti),300);
+}
+function tqPick(i){
+  if(TQ.lock)return;TQ.lock=true;spk++;const it=TQ.cur,ok=it.opts[i][1]===0;
+  $('q0').classList.add('right');if(!ok)$('q'+it.opts[i][1]).classList.add('wrong');
+  if(ok){TQ.ok++;addXP(2)}else{const k=('toeic: '+it.e).slice(0,70).toLowerCase();S.errs[k]=(S.errs[k]||0)+1;save()}
+  const last=TQ.i>=TQ.list.length-1;
+  $('fbk').innerHTML=`<div class="fbk ${ok?'ok':'no'}"><b>${ok?'✅ Bonne réponse !':'❌ Pas tout à fait.'}</b>
+  <div style="margin-top:6px">${esc(it.e)}</div>${it.hid&&!ok||it.hid?`<div class="mute" style="margin-top:6px">${it.hidHTML?it.hid:esc(it.hid)}</div>`:''}
+  ${it.id==='v'?`<div class="row"><button class="btn" onclick="sp(${T(it.aud)},1)">🔊 Écouter le mot</button></div>`:''}
+  <button class="btn primary big" style="margin-top:10px" onclick="TQ.i++;tqShow()">${last?'Voir le résultat':'Suite →'}</button></div>`;
+}
+function tqEnd(){
+  S.toeic=S.toeic||{};const n=TQ.list.length,p=Math.round(100*TQ.ok/n);
+  addXP(10,'atelier','toeic'+TQ.id);bump((p/100-.6)*1.2);
+  let extra='';
+  if(TQ.id==='mock'){const est=Math.max(10,Math.min(990,Math.round((p/100*880+100)/5)*5));S.toeic.mock=Math.max(S.toeic.mock||0,est);
+    extra=`<div class="hero" style="margin:12px 0"><div class="t"><small>Score TOEIC estimé (très approximatif)</small><div class="big">~${est} / 990 · niveau ${TCEFR(est)}</div></div></div><p class="mute">Repères : A2 ≈ 225–545 · B1 ≈ 550–780 · B2 ≈ 785–940. Un vrai test dure 2 h et compte 200 questions : refaites ce test chaque semaine pour suivre vos progrès.</p>`}
+  else S.toeic[TQ.id]=Math.max(S.toeic[TQ.id]||0,p);
+  save();if(p>=80)confetti();
+  $('view').innerHTML=`${tqBack}<div class="card" style="text-align:center"><div style="font-size:54px">${p>=80?'🏆':p>=50?'🎉':'💪'}</div><h2>${TQ.ok}/${n} · ${p}%</h2>${extra}
+  <p class="mute">${p>=80?'Excellent travail !':p>=50?'Bien ! Refaites la partie pour fixer les points difficiles.':'Courage : relisez les explications et recommencez, vous allez progresser vite.'}</p>
+  <div class="row" style="justify-content:center"><button class="btn primary" onclick="tqStart('${TQ.id}')">Refaire</button><button class="btn" onclick="vToeic()">Autres exercices</button></div></div>`;
 }
 
 /* --- Prompt pour discuter avec Claude via l'abonnement --- */
