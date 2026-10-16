@@ -37,15 +37,23 @@ def preparer(donnees):
     t["atr"] = pd.DataFrame({n: s.atr(df) for n, df in donnees.items()}).reindex(dates).shift(1)
     t["elan"] = pd.DataFrame({n: df["Close"] / df["Close"].shift(ELAN) - 1 for n, df in donnees.items()}
                              ).reindex(dates).shift(1)
+    # Marché crypto en hausse : Bitcoin au-dessus de sa moyenne 200 jours (clôture de la veille).
+    btc = donnees.get("Bitcoin")
+    hausse = (btc["Close"] > s.sma(btc["Close"], 200)) if btc is not None else pd.Series(True, index=dates)
+    t["marche"] = hausse.astype(float).reindex(dates).ffill().shift(1).fillna(0)
     return {k: v.to_numpy(float) for k, v in t.items()}, list(donnees), dates
 
 
-def simuler(t, noms, max_positions=MAX_POSITIONS, hasard=None, tp_atr=None, suiveur_atr=None):
+def simuler(t, noms, max_positions=MAX_POSITIONS, hasard=None, tp_atr=None, suiveur_atr=None,
+            nouveau_seulement=False, filtre_marche=False):
     """Valeur du portefeuille chaque soir. `hasard` : générateur pour classer au hasard.
 
     Variantes de sortie (test_sorties.py) : `tp_atr` vend dès que le cours monte de tp_atr × ATR
     au-dessus du prix d'achat ; `suiveur_atr` remonte le stop chaque soir à suiveur_atr × ATR
     sous la clôture (il ne redescend jamais).
+    Variantes d'entrée (test_entrees.py) : `nouveau_seulement` n'achète que le jour d'une nouvelle
+    cassure (pas en cours de route, pas de rachat juste après un stop) ; `filtre_marche` n'achète
+    que si Bitcoin est au-dessus de sa moyenne 200 jours.
     """
     o, h, l, c = t["Open"], t["High"], t["Low"], t["Close"]
     cash, positions, valeurs, trades = CAPITAL, {}, [], 0
@@ -59,7 +67,9 @@ def simuler(t, noms, max_positions=MAX_POSITIONS, hasard=None, tp_atr=None, suiv
         # 2. Entrées à l'ouverture, les plus fortes d'abord, dans la limite des places.
         valeur = cash + sum(p[0] * (o[i, j] if not np.isnan(o[i, j]) else dernier[j]) for j, p in positions.items())
         candidats = [j for j in range(len(noms)) if j not in positions and t["voulu"][i, j] == 1
-                     and not np.isnan(o[i, j]) and not np.isnan(t["atr"][i, j]) and not np.isnan(t["elan"][i, j])]
+                     and not np.isnan(o[i, j]) and not np.isnan(t["atr"][i, j]) and not np.isnan(t["elan"][i, j])
+                     and not (nouveau_seulement and (i == 0 or t["voulu"][i - 1, j] == 1))
+                     and not (filtre_marche and t["marche"][i] != 1)]
         if hasard is not None:
             hasard.shuffle(candidats)
         else:
