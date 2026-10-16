@@ -44,6 +44,7 @@ CAPITAL_DEPART = 1000.0
 ORDRE_MIN = 5.0       # en dessous, Kraken refuse l'ordre
 MAX_POSITIONS = 5     # cryptos tenues en même temps (variable GitHub BOT_MAX)
 ELAN = 90             # jours : quand les places manquent, les plus fortes sur cette durée d'abord
+FILTRE_JOURS = 200    # pas d'achat si Bitcoin est sous sa moyenne sur cette durée
 DOSSIER = os.path.dirname(os.path.abspath(__file__))
 ETAT = os.path.join(DOSSIER, "bot_portefeuille.json")
 JOURNAL = os.path.join(DOSSIER, "bot_journal.csv")
@@ -221,6 +222,18 @@ def elan(df):
     return float(df["Close"].iloc[-1] / df["Close"].iloc[-1 - ELAN] - 1)
 
 
+def marche_en_hausse(marche):
+    """Variante B (test_entrees.py, choisie le 16/10/2026) : le bot n'achète que si Bitcoin clôture
+    au-dessus de sa moyenne 200 jours. Sans données Bitcoin, prudence : pas d'achat. Historique de
+    moins de 200 jours (uniquement dans les tests) : pas de filtre."""
+    if "Bitcoin" not in marche:
+        return False
+    cloture = marche["Bitcoin"][0]["Close"]
+    if len(cloture) < FILTRE_JOURS:
+        return True
+    return bool(cloture.iloc[-1] > cloture.tail(FILTRE_JOURS).mean())
+
+
 def journee(etat, marche, aujourd_hui, courtier=None, operations=None, achats=True, tout_vendre=False,
             max_positions=MAX_POSITIONS):
     """Une passe du bot. `marche` : {nom: (bougies terminées, prix actuel)}. Modifie `etat`.
@@ -229,6 +242,7 @@ def journee(etat, marche, aujourd_hui, courtier=None, operations=None, achats=Tr
     de route, celles déjà exécutées restent connues de l'appelant. `achats=False` : bot à
     l'arrêt, il ne fait que gérer ses positions. `tout_vendre` : vend toutes les positions.
     Au plus `max_positions` cryptos en même temps : les plus fortes sur ELAN jours d'abord.
+    Aucun achat quand le marché crypto baisse (voir `marche_en_hausse`).
     """
     courtier = courtier or Papier()
     operations = [] if operations is None else operations
@@ -250,7 +264,8 @@ def journee(etat, marche, aujourd_hui, courtier=None, operations=None, achats=Tr
             operations.append(cloturer(etat, nom, courtier.vendre(nom, position, prix), "vente", aujourd_hui))
 
     total = valeur(etat, {nom: prix for nom, (_, prix) in marche.items()})
-    candidats = [] if not achats or tout_vendre else sorted(
+    etat["marche_en_hausse"] = marche_en_hausse(marche)
+    candidats = [] if not achats or tout_vendre or not etat["marche_en_hausse"] else sorted(
         (nom for nom in marche if nom not in etat["positions"] and voulu[nom] == 1),
         key=lambda nom: -elan(marche[nom][0]))
     for nom in candidats:

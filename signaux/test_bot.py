@@ -192,6 +192,43 @@ def test_page_du_bot():
     assert "1 sur 1" not in page and "0 sur 1" in page        # ventes gagnantes
     assert "Réel" not in page.split("<main>")[1].split("</main>")[0]  # pas de section réelle sans fichier
     assert "<polyline" in page
+    assert "Marché crypto en baisse" not in page
+    etat["marche_en_hausse"] = False
+    with open(os.path.join(dossier, "bot_portefeuille.json"), "w") as f:
+        json.dump(etat, f)
+    page_bot.ecrire(sortie, dossier)
+    assert "Marché crypto en baisse (Bitcoin sous sa moyenne 200 jours)" in open(sortie, encoding="utf-8").read()
+
+
+def test_pas_d_achat_quand_bitcoin_est_sous_sa_moyenne_200_jours():
+    jours = pd.date_range("2025-01-01", periods=260, freq="D")
+    def serie(prix):
+        return pd.DataFrame({"Open": prix, "High": [p * 1.01 for p in prix], "Low": [p * 0.99 for p in prix],
+                             "Close": prix}, index=jours)
+    btc_baisse = serie([200.0 - i * 0.5 for i in range(240)] + [80.0 + i for i in range(20)])  # rebond sous la moyenne
+    btc_hausse = serie([100.0 + i * 0.5 for i in range(260)])
+    autre = serie([100.0] * 230 + [102.0 + i for i in range(30)])  # cassure à la hausse
+    etat = bot.etat_initial()
+    marche = {"Bitcoin": (btc_baisse, 99.0), "Solana": (autre, 132.0)}
+    assert bot.journee(etat, marche, "2025-09-18") == [] and etat["marche_en_hausse"] is False
+    achats = bot.journee(etat, {"Bitcoin": (btc_hausse, 230.0), "Solana": (autre, 132.0)}, "2025-09-18")
+    assert [a["marche"] for a in achats] == ["Solana"] and etat["marche_en_hausse"] is True
+
+
+def test_sans_donnees_bitcoin_pas_d_achat():
+    assert bot.marche_en_hausse({"Solana": (marche_en_hausse(), 117.0)}) is False
+
+
+def test_marche_en_baisse_les_positions_sont_toujours_gerees():
+    jours = pd.date_range("2025-01-01", periods=260, freq="D")
+    btc = pd.DataFrame({"Open": 300.0, "High": 301.0, "Low": 299.0,
+                        "Close": [300.0] * 259 + [100.0]}, index=jours)  # chute sous la moyenne
+    df = marche_en_hausse()
+    etat = bot.etat_initial()
+    etat["positions"]["Solana"] = {"quantite": 1.0, "prix_entree": 117.0, "stop": 1000.0,  # stop forcément touché
+                                   "cout": 117.5, "date": "2026-02-01"}
+    [vente] = bot.journee(etat, {"Bitcoin": (btc, 100.0), "Solana": (df, 117.0)}, "2026-02-11")
+    assert vente["genre"] == "stop" and etat["positions"] == {}
 
 
 def test_interrupteur_d_arret():

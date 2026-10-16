@@ -139,6 +139,16 @@ def tableau_historique(operations):
             f'<tbody>{"".join(lignes)}</tbody></table></div>')
 
 
+MARCHE_BAISSE = ("⏸ Marché crypto en baisse (Bitcoin sous sa moyenne 200 jours) : le bot n'achète pas "
+                 "et reste en euros. Il gère seulement ses positions ouvertes.")
+
+
+def marche_html(etat):
+    if etat.get("marche_en_hausse") is False:
+        return f'<p class="etat">{html.escape(MARCHE_BAISSE)}</p>'
+    return ""
+
+
 def section(titre, sous_titre, etat, operations, ident):
     b = bilan(etat, operations)
     classe, fleche = sens(b["gain"])
@@ -155,7 +165,7 @@ def section(titre, sous_titre, etat, operations, ident):
 <h2>{html.escape(titre)} <span>{html.escape(sous_titre)}</span></h2>
 <div class="heros"><div class="valeur">{html.escape(euros(b['valeur']))}</div>
 <div class="{classe} total">{fleche} {html.escape(euros(b['gain'], True))} ({html.escape(pourcent(b['pct']))}) depuis le départ ({html.escape(euros(b['depart']))})</div></div>
-<div class="tuiles">{tuiles_html}</div>
+{marche_html(etat)}<div class="tuiles">{tuiles_html}</div>
 <h3>Valeur jour après jour</h3>{courbe(points_courbe(etat, operations), b['depart'], ident)}
 <h3>Positions ouvertes</h3>{tableau_positions(etat)}
 <h3>Historique des opérations</h3>{tableau_historique(operations)}

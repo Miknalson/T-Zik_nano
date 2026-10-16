@@ -130,6 +130,11 @@ parier sur la baisse (`test_spot.py` : la méthode reste gagnante en achat seul 
 - Marchés : Bitcoin, Ethereum, XRP, Dogecoin, Stellar, VeChain, plus Solana, BNB, Tron,
   Avalanche, NEAR, Hedera, Polkadot, Algorand et FLOKI (retenues par `test_kraken.py`), en euros sur
   Kraken.
+- **Pas d'achat quand le marché crypto baisse** (choisi le 16/10/2026, `test_entrees.py`) : le bot
+  n'achète que si Bitcoin clôture au-dessus de sa moyenne 200 jours. Sinon il reste en euros et
+  gère seulement ses positions ouvertes (stop et sortie normale). Sur 10 ans : 24 302 € au lieu de
+  28 434 €, mais +201 % au lieu de +115 % depuis 2021 et une pire baisse de −33 % au lieu de −38 %.
+  Parier sur la baisse a aussi été testé (`test_marge.py`, `test_hausse_baisse.py`) : rien de mieux.
 - **Au plus 5 cryptos en même temps** (variable GitHub `BOT_MAX` pour changer ce nombre) :
   quand il y a plus de candidates que de places, il prend celles qui ont le plus monté sur
   90 jours. Chaque position est plafonnée à 1/`BOT_MAX` du portefeuille. Test sur 10 ans

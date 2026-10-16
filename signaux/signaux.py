@@ -586,6 +586,7 @@ def bloc_bot(chemin=os.path.join(DOSSIER, "bot_portefeuille.json")):
               "Positions : " + (", ".join(positions) if positions else "aucune pour l'instant."),
               f"Dernier passage : {dt.date.fromisoformat(etat['maj']):%d/%m/%Y}. "
               + ("⏸ ARRÊTÉ : plus aucun achat (bouton « Reprendre » dans GitHub Actions)." if arrete
+                 else "⏸ Marché crypto en baisse : il n'achète pas et attend." if etat.get("marche_en_hausse") is False
                  else "Il agit seul, rien à faire.")]
     detail = "<br>".join(html.escape(l) for l in lignes)
     return (f'<div class="carte gris" data-marche="" data-suivie="1"><div class="marche">🤖 Bot Kraken'
