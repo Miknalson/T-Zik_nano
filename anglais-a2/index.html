@@ -642,7 +642,7 @@ const cloudOK=()=>!!(S.sttKey&&navigator.mediaDevices&&navigator.mediaDevices.ge
 const canMic=()=>cloudOK()||(!!SR&&!srDead);
 let voices=[];
 function loadVoices(){try{voices=speechSynthesis.getVoices().filter(v=>v.lang.startsWith('en'))}catch(e){}}
-if('speechSynthesis' in window){loadVoices();speechSynthesis.onvoiceschanged=loadVoices}
+if('speechSynthesis' in window){loadVoices();speechSynthesis.onvoiceschanged=()=>{loadVoices();if(tab==='course'&&!HY&&document.querySelector('[onchange^="S.hyp.eA"]'))vHypno()}}
 let spk=0;
 function speak(text,rate=.85){
   return new Promise(res=>{
@@ -1464,8 +1464,10 @@ function vHypno(){
    <div class="mute" style="margin-top:8px">Vitesse de l’anglais</div>${seg('rate',[[.45,'Très lente'],[.6,'Lente'],[.8,'Normale']])}
    <div class="mute" style="margin-top:10px">Répétitions de l’anglais</div>${seg('rep',[[1,'1 fois'],[2,'2 fois'],[3,'3 fois']])}
    <div class="mute" style="margin-top:10px">Silence entre les phrases</div>${seg('gap',[[1,'Court'],[2,'Moyen'],[4,'Long']])}
+   ${hypVoiceRow('eA','Voix anglaise (personne 1)')}${hypVoiceRow('eB','Voix anglaise (personne 2, dialogues)')}${hypVoiceRow('fA','Voix française')}${hypVoiceRow('fB','Voix française (personne 2)')}
    <div class="mute" style="margin-top:10px">Fond musical doux</div>${seg('music',[[true,'Oui'],[false,'Non']])}
    <div class="mute" style="margin-top:10px">Arrêt automatique</div>${seg('timer',[[15,'15 min'],[30,'30 min'],[60,'1 h'],[0,'Jamais']])}
+   <div class="tip">🎙️ Pour des voix bien plus naturelles sur iPhone : Réglages → Accessibilité → Contenu énoncé → Voix → Anglais puis Français, et téléchargez une voix « améliorée » ou « premium » (ex. Ava, Zoe, Evan, Audrey, Thomas). Elle apparaîtra ici en premier.</div>
    <div class="tip">💡 Gardez l’écran allumé pendant l’écoute (l’appli essaie de l’empêcher de se mettre en veille) : sur iPhone, la voix s’arrête quand l’écran se verrouille.</div></div>`;
 }
 function hypDraw(){
@@ -1481,22 +1483,33 @@ function hypDraw(){
   <div style="display:flex;gap:10px;margin-top:12px">${HY.paused?`<button class="btn primary" style="flex:1;padding:15px" onclick="hypResume()">▶ Reprendre</button>`:`<button class="btn primary" style="flex:1;padding:15px" onclick="hypPause()">⏸ Pause</button>`}<button class="btn" style="padding:15px 20px" title="Suivant" onclick="hypSkip()">⏭</button><button class="btn" style="padding:15px 20px" title="Arrêter" onclick="vHypno()">⏹</button></div>`;
   const cu=document.getElementById('hycur');if(cu&&HY.li)try{cu.scrollIntoView({block:'center',behavior:'smooth'})}catch(e){}
 }
+// Voix : on écarte les voix « gadget » et robotiques d'iOS/macOS, on préfère les voix améliorées/premium.
+const HYP_BAD=/albert|bad news|bahh|bells|boing|bubbles|cellos|good news|jester|organ|superstar|trinoids|whisper|wobble|zarvox|junior|ralph|fred|kathy|grandma|grandpa|rocko|shelley|flo\b|eddy|reed|sandy|grand-m|grand-p/i;
+const hvScore=v=>(/premium/i.test(v.name+v.voiceURI)?40:0)+(/enhanced|amélior|siri|neural|natural/i.test(v.name+v.voiceURI)?25:0)+(/google/i.test(v.name)?15:0)+(/samantha|daniel|karen|moira|tessa|aaron|nicky|arthur|serena|amélie|thomas|audrey|aurélie|marie/i.test(v.name)?10:0)+(v.localService===false?-5:0);
+function hypVoices(pre){try{return speechSynthesis.getVoices().filter(v=>v.lang&&v.lang.replace('_','-').toLowerCase().startsWith(pre)&&!HYP_BAD.test(v.name)).sort((a,b)=>hvScore(b)-hvScore(a)||(b.lang.endsWith('US')||b.lang.endsWith('FR'))-(a.lang.endsWith('US')||a.lang.endsWith('FR')))}catch(e){return[]}}
+function hypVoice(slot){                                      // slot : eA, eB, fA, fB
+  const c=hypCfg(),L=hypVoices(slot[0]==='e'?'en':'fr');if(!L.length)return null;
+  const byURI=u=>u&&L.find(v=>v.voiceURI===u);
+  if(slot==='eA'||slot==='fA')return byURI(c[slot])||L[0];
+  const a=hypVoice(slot[0]+'A');return byURI(c[slot])||L.find(v=>v!==a)||a;
+}
 function hypSpeak(text,lang,rate,alt){
   return new Promise(res=>{
     try{
       const u=new SpeechSynthesisUtterance(text);u.lang=lang;u.rate=rate;
-      const all=speechSynthesis.getVoices(),pre=lang.slice(0,2);
-      const v=lang==='en-US'?(voices.find(v=>v.lang==='en-US'&&/samantha|aaron|google|natural/i.test(v.name))||voices.find(v=>v.lang==='en-US')||voices[0]):(all.find(v=>v.lang==='fr-FR'&&/amélie|thomas|google|natural/i.test(v.name))||all.find(v=>v.lang==='fr-FR')||all.find(v=>v.lang.startsWith(pre)));
-      // Dialogue : l'interlocuteur (B) prend une autre voix si possible, sinon une voix plus grave.
-      const v2=alt&&v?(lang==='en-US'?(voices.find(x=>x.lang==='en-GB'&&x!==v)||voices.find(x=>x.lang==='en-US'&&x!==v)):all.find(x=>x.lang.startsWith(pre)&&x!==v)):null;
-      if(v2||v)u.voice=v2||v;if(alt&&!v2)u.pitch=.75;
-      if(v2)u.lang=v2.lang;
+      const v=hypVoice((lang.startsWith('en')?'e':'f')+(alt?'B':'A'));
+      if(v){u.voice=v;u.lang=v.lang}
       let fin=false;const done=()=>{if(!fin){fin=true;res()}};
       u.onend=done;u.onerror=done;setTimeout(done,Math.max(4000,text.length*170/rate));
       try{speechSynthesis.resume()}catch(e){}
       speechSynthesis.speak(u);
     }catch(e){res()}
   });
+}
+function hypTry(slot){unlockTTS();try{speechSynthesis.cancel()}catch(e){}const e=slot[0]==='e';hypSpeak(e?(slot==='eA'?'Hello, the budget is on track.':'Great, thank you for the update.'):(slot==='fA'?'Bonjour, le budget est respecté.':'Parfait, merci pour le point.'),e?'en-US':'fr-FR',hypCfg().rate,slot[1]==='B')}
+function hypVoiceRow(slot,label){
+  const L=hypVoices(slot[0]==='e'?'en':'fr'),cur=hypVoice(slot);
+  return `<div class="mute" style="margin-top:10px">${label}</div><div class="row" style="margin:6px 0 0"><select style="flex:1;min-width:0" onchange="S.hyp.${slot}=this.value;save();hypTry('${slot}')">${L.length?L.map(v=>`<option value="${esc(v.voiceURI)}" ${cur===v?'selected':''}>${esc(v.name)} (${esc(v.lang)})</option>`).join(''):'<option>Voix par défaut</option>'}</select><button class="btn" onclick="hypTry('${slot}')">🔊</button></div>`;
 }
 const hypWait=ms=>new Promise(z=>setTimeout(z,ms));
 async function hypLoop(t){
