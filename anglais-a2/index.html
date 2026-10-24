@@ -1429,12 +1429,12 @@ function hypSpeak(text,lang,rate){
 }
 const hypWait=ms=>new Promise(z=>setTimeout(z,ms));
 async function hypLoop(t){
-  const c=hypCfg(),alive=()=>HY&&HY.t===t&&t===spk&&!HY.paused;
+  const c=hypCfg(),alive=()=>!!HY&&HY.t===t&&t===spk&&!HY.paused;
   while(alive()){
     if(HY.end&&Date.now()>HY.end){hypStop();toast('🌙 Fin de la séance d’hypnose. Bravo !',4000);if(tab==='course')vHypno();return}
     if(!HY.keep){HY.it=hypNext(HY.src);HY.prev=HY.it.en}HY.keep=false;
     const it=HY.it;HY.ph='en';hypDraw();
-    for(let r=0;r<c.rep&&alive();r++){await hypSpeak(it.en,'en-US',c.rate);if(!alive())return;await hypWait(900+c.gap*250);if(r===0&&alive()){HY.ph='fr';hypDraw();await hypSpeak(it.fr,'fr-FR',Math.min(1,c.rate+.25));if(!alive())return;await hypWait(900+c.gap*250);HY.ph='en';if(alive())hypDraw()}}
+    for(let r=0;r<c.rep&&alive();r++){await hypSpeak(it.en,'en-US',c.rate);if(!alive())return;await hypWait(900+c.gap*250);if(r===0&&alive()){HY.ph='fr';hypDraw();await hypSpeak(it.fr,'fr-FR',Math.min(1,c.rate+.25));if(!alive())return;await hypWait(900+c.gap*250);if(!alive())return;HY.ph='en';hypDraw()}}
     if(!alive())return;HY.n++;await hypWait(c.gap*1000);
   }
 }
@@ -1462,7 +1462,7 @@ function hypStart(src){
 }
 function hypPause(){if(!HY)return;HY.paused=true;HY.keep=true;spk++;try{speechSynthesis.cancel()}catch(e){}hypMusic(false);hypWake(false);hypDraw()}
 function hypResume(){if(!HY)return;HY.paused=false;HY.t=++spk;hypMusic(hypCfg().music);hypWake(true);hypLoop(HY.t)}
-function hypSkip(){if(!HY)return;HY.paused=false;HY.keep=false;HY.t=++spk;try{speechSynthesis.cancel()}catch(e){}setTimeout(()=>hypLoop(HY.t),150)}
+function hypSkip(){if(!HY)return;HY.paused=false;HY.keep=false;const t=HY.t=++spk;try{speechSynthesis.cancel()}catch(e){}setTimeout(()=>{if(HY&&HY.t===t)hypLoop(t)},150)}
 function hypStop(){if(!HY&&!hypAC)return;HY=null;spk++;try{speechSynthesis.cancel()}catch(e){}hypMusic(false);hypWake(false)}
 let PR=null;
 function startPron(id){const l=PRON.find(x=>x.id===id);PR={l,i:0,ok:0,list:sh(l.pairs.concat(sh(l.pairs).slice(0,2))).map(p=>{const k=Math.random()<.5?0:1;return {p,k}})};
