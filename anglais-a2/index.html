@@ -58,6 +58,7 @@ h3{margin:0;font-size:17px;font-weight:900}
 .bar i{display:block;height:100%;background:linear-gradient(90deg,var(--brand),var(--brand2));border-radius:9px;transition:width .5s}
 .en{font-size:25px;font-weight:900;line-height:1.3}
 .fr{color:var(--mute);margin-top:2px}
+@keyframes hypb{0%,100%{transform:scale(1) rotate(0)}50%{transform:scale(1.15) rotate(180deg)}}
 .tip{background:var(--soft);border-radius:14px;padding:10px 12px;margin-top:12px;font-size:15px}
 .score{font-size:16px;margin-top:12px}
 .w-ok{color:var(--ok);font-weight:900}.w-bad{color:var(--bad);font-weight:900;text-decoration:underline}
@@ -771,7 +772,7 @@ let tab='home',cur=null;
 const _ic=d=>`<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">${d}</svg>`;
 const TABS=[['home',_ic('<path d="M3 11l9-8 9 8"/><path d="M5 10v10h5v-6h4v6h5V10"/>'),'Accueil'],['course',_ic('<path d="M4 5a2 2 0 012-2h13v16H6a2 2 0 00-2 2z"/><path d="M4 19V5"/>'),'Cours'],['chat',_ic('<path d="M21 12a8 8 0 01-11.6 7.1L4 20l1-4.6A8 8 0 1121 12z"/>'),'Tuteur'],['dico',_ic('<circle cx="11" cy="11" r="7"/><path d="M20 20l-4-4"/>'),'Dico'],['cards',_ic('<rect x="3" y="6" width="14" height="14" rx="2"/><path d="M7 3h12a2 2 0 012 2v12"/>'),'Révision'],['prog',_ic('<path d="M4 20V10M10 20V4M16 20v-8M22 20H2"/>'),'Progrès']];
 function drawNav(){$('nav').innerHTML=TABS.map(([k,i,l])=>`<button class="${tab===k?'on':''}" onclick="go('${k}')"><span>${i}</span>${l}</button>`).join('')}
-function go(t){tab=t;cur=null;spk++;try{speechSynthesis.cancel()}catch(e){}render()}
+function go(t){hypStop();tab=t;cur=null;spk++;try{speechSynthesis.cancel()}catch(e){}render()}
 function render(){
   if(cancelListen)cancelListen();
   head();drawNav();window.scrollTo(0,0);
@@ -882,6 +883,7 @@ function vCourse(){
    <div class="card node" style="flex-direction:column;text-align:center;margin:0" onclick="vPronList()"><div class="ic">🗣️</div><h3>Prononciation</h3><div class="mute">7 sons pièges</div></div>
    <div class="card node" style="flex-direction:column;text-align:center;margin:0" onclick="vSceneList()"><div class="ic">💬</div><h3>Mini-conversations</h3><div class="mute">${SCENES.length} situations</div></div>
    <div class="card node" style="flex-direction:column;text-align:center;margin:0;grid-column:span 2;background:var(--soft)" onclick="vToeic()"><div class="ic">🎓</div><h3>TOEIC</h3><div class="mute">7 parties + test express · explications en français</div></div>
+   <div class="card node" style="flex-direction:column;text-align:center;margin:0;grid-column:span 2;background:var(--soft)" onclick="vHypno()"><div class="ic">🌙</div><h3>Hypnose</h3><div class="mute">Écoute en boucle anglais → français, toujours différente</div></div>
    <div class="card node" style="flex-direction:column;text-align:center;margin:0;grid-column:span 2" onclick="startComp()"><div class="ic">🎧</div><h3>Compréhension</h3><div class="mute">Écoute et lecture adaptées à votre niveau</div></div></div>
   <h2>💼 Votre métier : ${esc(S.job||'finance')}</h2><div class="path" style="margin-bottom:14px">${job.map(x=>node(x[0],x[1])).join('')}
    <div class="card node" onclick="dsub='fin';go('dico')"><div class="ic">📚</div><div style="flex:1"><h3>Glossaire finance</h3><div class="mute">${GLOS.length} termes de contrôle de gestion</div></div></div></div>
@@ -1331,6 +1333,137 @@ function vPronList(){
   $('view').innerHTML=`${atelierBack}<h2>🗣️ Prononciation</h2><p class="mute">Les sons qui piègent les francophones. Écoutez, distinguez, puis répétez.</p>
   ${PRON.map(l=>`<div class="card node" onclick="startPron('${l.id}')"><div class="ic">🔊</div><div style="flex:1"><h3>${l.t}</h3><div class="mute">${l.pairs.slice(0,3).map(p=>p.join(' / ')).join(' · ')}${S.pron&&S.pron[l.id]!=null?' · meilleur : '+S.pron[l.id]+'%':''}</div></div></div>`).join('')}`;
 }
+/* ============================ HYPNOSE : écoute en boucle anglais → français ============================ */
+// Chaque élément est tiré au hasard à la volée : jamais deux écoutes identiques.
+const HYP_GRAM=`Everyone has access to my dashboard.|Tout le monde a accès à mon tableau de bord.
+Last month, all sales were below the budget.|Le mois dernier, toutes les ventes étaient en dessous du budget.
+We compare actuals with the budget.|Nous comparons le réalisé avec le budget.
+Because of the economic situation in France.|À cause de la situation économique en France.
+We work hard to create new products.|Nous travaillons dur pour créer de nouveaux produits.
+We want to win market share.|Nous voulons gagner des parts de marché.
+What does this word mean?|Que veut dire ce mot ?
+I am a management controller.|Je suis contrôleur de gestion.
+I work at a company that makes equipment.|Je travaille dans une entreprise qui fabrique des équipements.
+Right now, the report works automatically.|En ce moment, le rapport fonctionne automatiquement.
+Sales are ten percent above the budget.|Les ventes sont dix pour cent au-dessus du budget.
+I have worked here since 2018.|Je travaille ici depuis 2018.
+I have worked here for five years.|Je travaille ici depuis cinq ans.
+Yesterday, I sent the report to my manager.|Hier, j’ai envoyé le rapport à mon responsable.
+I have already sent the report.|J’ai déjà envoyé le rapport.
+If sales increase, we will reach our target.|Si les ventes augmentent, nous atteindrons notre objectif.
+If I had more time, I would analyze every variance.|Si j’avais plus de temps, j’analyserais chaque écart.
+The budget was approved by the board.|Le budget a été approuvé par le conseil.
+The forecast is updated every month.|La prévision est mise à jour chaque mois.
+We must close the accounts before Friday.|Nous devons clôturer les comptes avant vendredi.
+You do not have to come to the meeting.|Tu n’es pas obligé de venir à la réunion.
+Costs are higher than last year.|Les coûts sont plus élevés que l’année dernière.
+This is the biggest variance of the year.|C’est le plus gros écart de l’année.
+There is a risk that margins will fall.|Il y a un risque que les marges baissent.
+Could you send me the figures, please?|Pourriez-vous m’envoyer les chiffres, s’il vous plaît ?
+I look forward to hearing from you.|J’ai hâte d’avoir de vos nouvelles.
+I am used to working with large budgets.|J’ai l’habitude de travailler avec de gros budgets.
+We stopped spending on travel.|Nous avons arrêté de dépenser en déplacements.
+The more we sell, the more we earn.|Plus nous vendons, plus nous gagnons.
+Although sales fell, profit increased.|Bien que les ventes aient baissé, le bénéfice a augmenté.`.trim().split('\n').map(l=>{const [en,fr]=l.split('|');return {en,fr}});
+const HYP_T=['ps','ps','pc','pas','pas','pp','fs','fg','co','pac','pap'],HYP_TL={ps:'présent',pc:'présent continu',pas:'passé',pp:'present perfect',fs:'futur',fg:'futur proche',co:'conditionnel',pac:'passé continu',pap:'plus-que-parfait'};
+const hypClean=s=>s.replace(/\((e|s)\)/g,'').replace('he/she/it','he').replace('il/elle','il').replace('ils/elles','ils').replace(/\s+/g,' ').trim();
+const pick=a=>a[Math.floor(Math.random()*a.length)];
+const HYP_SRC={
+  conj:{t:'Conjugaison',i:'🔁',n:()=>'tous les temps, tous les verbes',g(){const v=pick(VERBS.filter(v=>v.fr&&v.k)),id=pick(HYP_T),k=pick([0,1,2,2,3,4,5]),m=Math.random()<.7?'aff':pick(['neg','q']),f=enForms(v),fd=frData(v.fr,v.k);
+    return {en:hypClean(enSentence(f,id,k,m)),fr:hypClean(frSentence(fd,id,k,m)),tag:'to '+v.b+' · '+HYP_TL[id]}}},
+  irr:{t:'Verbes irréguliers',i:'⚡',n:()=>VERBS.filter(v=>v.p).length+' verbes',g(){const v=pick(VERBS.filter(v=>v.p&&v.fr));return {en:v.b+'. '+v.p+'. '+v.pp+'.',fr:v.fr.split(' ')[0],tag:'base · passé · participe'}}},
+  fin:{t:'Vocabulaire finance',i:'📊',n:()=>GLOS.length+' termes',g(){const w=pick(GLOS);return {en:w.en,fr:w.fr,tag:'glossaire'}}},
+  job:{t:'Phrases métier',i:'💼',n:()=>UNITS.filter(u=>u.job).reduce((a,u)=>a+u.phrases.length,0)+' phrases',g(){const p=pick(pick(UNITS.filter(u=>u.job)).phrases);return {en:p[0],fr:p[1],tag:'métier'}}},
+  gram:{t:'Grammaire & mes erreurs',i:'🔤',n:()=>HYP_GRAM.length+' phrases',g(){const w=pick(HYP_GRAM);return {en:w.en,fr:w.fr,tag:'grammaire'}}},
+  gen:{t:'Phrases du quotidien',i:'🗣️',n:()=>UNITS.filter(u=>!u.job).reduce((a,u)=>a+u.phrases.length,0)+' phrases',g(){const p=pick(pick(UNITS.filter(u=>!u.job)).phrases);return {en:p[0],fr:p[1],tag:'quotidien'}}},
+  mine:{t:'Mes mots',i:'⭐',n:()=>(S.words||[]).length+' mots',ok:()=>(S.words||[]).length>0,g(){const w=pick(S.words);return {en:w.en,fr:w.fr,tag:'mes mots'}}}
+};
+const HYP_MIX=[['conj',35],['irr',20],['fin',15],['job',10],['gram',12],['gen',5],['mine',3]];
+function hypNext(src){
+  let k=src;
+  if(src==='mix'){const c=HYP_MIX.filter(([s])=>!HYP_SRC[s].ok||HYP_SRC[s].ok()),tot=c.reduce((a,x)=>a+x[1],0);let r=Math.random()*tot;k=c.find(x=>(r-=x[1])<0)[0]}
+  for(let n=0;n<5;n++){try{const it=HYP_SRC[k].g();if(it&&it.en&&it.fr&&!(HY&&HY.prev===it.en))return it}catch(e){}}
+  return HYP_SRC.fin.g();
+}
+const hypCfg=()=>S.hyp=Object.assign({rate:.6,rep:2,gap:2,music:true,timer:30},S.hyp||{});
+let HY=null;
+function vHypno(){
+  hypStop();const c=hypCfg();
+  const seg=(key,opts)=>`<div class="row" style="margin:6px 0 0">${opts.map(([v,l])=>`<button class="btn ${c[key]===v?'primary':''}" style="padding:8px 12px" onclick="S.hyp.${key}=${JSON.stringify(v)};save();vHypno()">${l}</button>`).join('')}</div>`;
+  const srcCard=(k,t,i,sub)=>`<div class="card node" onclick="hypStart('${k}')"><div class="ic">${i}</div><div style="flex:1"><h3>${t}</h3><div class="mute">${sub}</div></div><div style="font-size:22px">▶</div></div>`;
+  $('view').innerHTML=`${atelierBack}<h2>🌙 Hypnose</h2><p class="mute">Écoutez comme une chanson : l’anglais lentement, puis le français, puis l’anglais encore. Tout est tiré au hasard à chaque fois : jamais la même écoute. Fermez les yeux, laissez votre cerveau s’imprégner.</p>
+  <div class="hero" onclick="hypStart('mix')" style="cursor:pointer;margin-bottom:14px"><div style="font-size:54px">🌀</div><div class="t"><div class="big">Mélange infini</div><small>Conjugaison, verbes irréguliers, finance, grammaire… tout mélangé</small></div></div>
+  ${Object.entries(HYP_SRC).filter(([k,s])=>!s.ok||s.ok()).map(([k,s])=>srcCard(k,s.t,s.i,s.n())).join('')}
+  <div class="card"><h3>Réglages</h3>
+   <div class="mute" style="margin-top:8px">Vitesse de l’anglais</div>${seg('rate',[[.45,'Très lente'],[.6,'Lente'],[.8,'Normale']])}
+   <div class="mute" style="margin-top:10px">Répétitions de l’anglais</div>${seg('rep',[[1,'1 fois'],[2,'2 fois'],[3,'3 fois']])}
+   <div class="mute" style="margin-top:10px">Silence entre les phrases</div>${seg('gap',[[1,'Court'],[2,'Moyen'],[4,'Long']])}
+   <div class="mute" style="margin-top:10px">Fond musical doux</div>${seg('music',[[true,'Oui'],[false,'Non']])}
+   <div class="mute" style="margin-top:10px">Arrêt automatique</div>${seg('timer',[[15,'15 min'],[30,'30 min'],[60,'1 h'],[0,'Jamais']])}
+   <div class="tip">💡 Gardez l’écran allumé pendant l’écoute (l’appli essaie de l’empêcher de se mettre en veille) : sur iPhone, la voix s’arrête quand l’écran se verrouille.</div></div>`;
+}
+function hypDraw(){
+  if(!HY)return;const it=HY.it||{en:'…',fr:''},left=HY.end?Math.max(0,Math.ceil((HY.end-Date.now())/60000)):null;
+  $('view').innerHTML=`<a class="back" onclick="vHypno()">← Hypnose</a>
+  <div class="card" style="text-align:center;padding:34px 18px;background:linear-gradient(160deg,var(--soft),var(--card))">
+   <div style="font-size:46px;animation:hypb 6s ease-in-out infinite">🌀</div>
+   <div class="mute" style="margin-top:6px">${esc(HY.src==='mix'?'Mélange infini':HYP_SRC[HY.src].t)} · ${esc(it.tag||'')}</div>
+   <div id="hyen" style="font-size:24px;font-weight:900;margin-top:16px;line-height:1.3;transition:opacity .6s;opacity:${HY.ph==='fr'?.45:1}">${esc(it.en)}</div>
+   <div id="hyfr" style="font-size:19px;margin-top:12px;color:var(--mute);transition:opacity .6s;opacity:${HY.ph==='fr'?1:.45}">${esc(it.fr)}</div>
+   <div class="mute" style="margin-top:18px">${HY.n} écoutée${HY.n>1?'s':''}${left!=null?' · arrêt dans '+left+' min':''}</div></div>
+  <div style="display:flex;gap:10px;margin-top:12px">${HY.paused?`<button class="btn primary" style="flex:1;padding:15px" onclick="hypResume()">▶ Reprendre</button>`:`<button class="btn primary" style="flex:1;padding:15px" onclick="hypPause()">⏸ Pause</button>`}<button class="btn" style="padding:15px 20px" title="Suivant" onclick="hypSkip()">⏭</button><button class="btn" style="padding:15px 20px" title="Arrêter" onclick="vHypno()">⏹</button></div>`;
+}
+function hypSpeak(text,lang,rate){
+  return new Promise(res=>{
+    try{
+      const u=new SpeechSynthesisUtterance(text);u.lang=lang;u.rate=rate;
+      const all=speechSynthesis.getVoices(),pre=lang.slice(0,2);
+      const v=lang==='en-US'?(voices.find(v=>v.lang==='en-US'&&/samantha|aaron|google|natural/i.test(v.name))||voices.find(v=>v.lang==='en-US')||voices[0]):(all.find(v=>v.lang==='fr-FR'&&/amélie|thomas|google|natural/i.test(v.name))||all.find(v=>v.lang==='fr-FR')||all.find(v=>v.lang.startsWith(pre)));
+      if(v)u.voice=v;
+      let fin=false;const done=()=>{if(!fin){fin=true;res()}};
+      u.onend=done;u.onerror=done;setTimeout(done,Math.max(4000,text.length*170/rate));
+      try{speechSynthesis.resume()}catch(e){}
+      speechSynthesis.speak(u);
+    }catch(e){res()}
+  });
+}
+const hypWait=ms=>new Promise(z=>setTimeout(z,ms));
+async function hypLoop(t){
+  const c=hypCfg(),alive=()=>HY&&HY.t===t&&t===spk&&!HY.paused;
+  while(alive()){
+    if(HY.end&&Date.now()>HY.end){hypStop();toast('🌙 Fin de la séance d’hypnose. Bravo !',4000);if(tab==='course')vHypno();return}
+    if(!HY.keep){HY.it=hypNext(HY.src);HY.prev=HY.it.en}HY.keep=false;
+    const it=HY.it;HY.ph='en';hypDraw();
+    for(let r=0;r<c.rep&&alive();r++){await hypSpeak(it.en,'en-US',c.rate);if(!alive())return;await hypWait(900+c.gap*250);if(r===0&&alive()){HY.ph='fr';hypDraw();await hypSpeak(it.fr,'fr-FR',Math.min(1,c.rate+.25));if(!alive())return;await hypWait(900+c.gap*250);HY.ph='en';if(alive())hypDraw()}}
+    if(!alive())return;HY.n++;await hypWait(c.gap*1000);
+  }
+}
+let hypWL=null;
+async function hypWake(on){try{if(on&&navigator.wakeLock&&!hypWL){hypWL=await navigator.wakeLock.request('screen')}else if(!on&&hypWL){hypWL.release();hypWL=null}}catch(e){}}
+document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible'&&HY&&!HY.paused){hypWL=null;hypWake(true)}});
+let hypAC=null,hypG=null;
+function hypMusic(on){
+  try{
+    if(!on){if(hypG&&hypAC){hypG.gain.setTargetAtTime(0,hypAC.currentTime,.8);const a=hypAC;setTimeout(()=>{try{a.close()}catch(e){}},3000)}hypAC=null;hypG=null;return}
+    if(hypAC)return;const AC=window.AudioContext||window.webkitAudioContext;if(!AC)return;
+    const ac=hypAC=new AC(),g=hypG=ac.createGain();g.gain.value=0;g.connect(ac.destination);g.gain.setTargetAtTime(.05,ac.currentTime,2);
+    [[110,0],[164.8,.3],[220.5,.6],[277.2,.15]].forEach(([f,ph])=>{
+      const o=ac.createOscillator(),og=ac.createGain(),l=ac.createOscillator(),lg=ac.createGain();
+      o.type='sine';o.frequency.value=f;og.gain.value=.25;l.frequency.value=.05+ph*.1;lg.gain.value=.2;
+      l.connect(lg);lg.connect(og.gain);o.connect(og);og.connect(g);o.start();l.start();
+    });
+    try{ac.resume()}catch(e){}
+  }catch(e){}
+}
+function hypStart(src){
+  unlockTTS();const c=hypCfg();
+  HY={src,t:++spk,n:0,paused:false,end:c.timer?Date.now()+c.timer*60000:0};
+  hypMusic(c.music);hypWake(true);hypLoop(HY.t);
+}
+function hypPause(){if(!HY)return;HY.paused=true;HY.keep=true;spk++;try{speechSynthesis.cancel()}catch(e){}hypMusic(false);hypWake(false);hypDraw()}
+function hypResume(){if(!HY)return;HY.paused=false;HY.t=++spk;hypMusic(hypCfg().music);hypWake(true);hypLoop(HY.t)}
+function hypSkip(){if(!HY)return;HY.paused=false;HY.keep=false;HY.t=++spk;try{speechSynthesis.cancel()}catch(e){}setTimeout(()=>hypLoop(HY.t),150)}
+function hypStop(){if(!HY&&!hypAC)return;HY=null;spk++;try{speechSynthesis.cancel()}catch(e){}hypMusic(false);hypWake(false)}
 let PR=null;
 function startPron(id){const l=PRON.find(x=>x.id===id);PR={l,i:0,ok:0,list:sh(l.pairs.concat(sh(l.pairs).slice(0,2))).map(p=>{const k=Math.random()<.5?0:1;return {p,k}})};
   $('view').innerHTML=`<a class="back" onclick="vPronList()">← Prononciation</a><div class="card"><h2>${l.t}</h2><p>${esc(l.tip)}</p>
