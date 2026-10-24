@@ -1365,6 +1365,70 @@ I am used to working with large budgets.|J’ai l’habitude de travailler avec 
 We stopped spending on travel.|Nous avons arrêté de dépenser en déplacements.
 The more we sell, the more we earn.|Plus nous vendons, plus nous gagnons.
 Although sales fell, profit increased.|Bien que les ventes aient baissé, le bénéfice a augmenté.`.trim().split('\n').map(l=>{const [en,fr]=l.split('|');return {en,fr}});
+// Dialogues supplémentaires pour l'Hypnose (A = première personne, B = interlocuteur).
+const HYP_DLG=[
+ {t:'Point budget avec un responsable',job:1,l:`A|Do you have a minute to review your budget?|Avez-vous une minute pour revoir votre budget ?
+B|Sure. Is there a problem?|Bien sûr. Il y a un problème ?
+A|Your travel costs are twenty percent above budget.|Vos frais de déplacement sont vingt pour cent au-dessus du budget.
+B|Yes, we visited three new clients this quarter.|Oui, nous avons rendu visite à trois nouveaux clients ce trimestre.
+A|I understand. Can you reduce them next quarter?|Je comprends. Pouvez-vous les réduire le trimestre prochain ?
+B|I will try. We can use more video calls.|Je vais essayer. Nous pouvons faire plus de visioconférences.`},
+ {t:'Clôture mensuelle',job:1,l:`A|When will you send the invoices for October?|Quand enverrez-vous les factures d’octobre ?
+B|I will send them by Wednesday.|Je les enverrai d’ici mercredi.
+A|We need them before the closing on Thursday.|Nous en avons besoin avant la clôture de jeudi.
+B|No problem. Is there anything else?|Pas de problème. Il y a autre chose ?
+A|Yes, please check the accruals with accounting.|Oui, vérifiez les provisions avec la comptabilité, s’il vous plaît.
+B|Okay, I will call them this afternoon.|D’accord, je les appelle cet après-midi.`},
+ {t:'Expliquer un écart au directeur',job:1,l:`A|Why is the margin lower than last month?|Pourquoi la marge est-elle plus basse que le mois dernier ?
+B|Mainly because raw material prices increased.|Principalement parce que le prix des matières premières a augmenté.
+A|Is it a one-off or a trend?|Est-ce ponctuel ou une tendance ?
+B|I think it is a trend for the next six months.|Je pense que c’est une tendance pour les six prochains mois.
+A|What do you recommend?|Que recommandez-vous ?
+B|I recommend that we update our selling prices.|Je recommande de mettre à jour nos prix de vente.`},
+ {t:'Mise à jour de la prévision',job:1,l:`A|Can we talk about the year-end forecast?|Pouvons-nous parler de la prévision de fin d’année ?
+B|Of course. What are the main changes?|Bien sûr. Quels sont les principaux changements ?
+A|Sales are lower, but costs are under control.|Les ventes sont plus faibles, mais les coûts sont maîtrisés.
+B|Will we reach the profit target?|Allons-nous atteindre l’objectif de résultat ?
+A|Probably not. We expect a gap of two percent.|Probablement pas. Nous prévoyons un écart de deux pour cent.
+B|Please prepare an action plan for Monday.|Préparez un plan d’action pour lundi, s’il vous plaît.`},
+ {t:'Appel avec un fournisseur',job:1,l:`A|Hello, this is Nano from Pronas. Is this a good time?|Bonjour, ici Nano de Pronas. C’est un bon moment ?
+B|Yes, of course. How can I help you?|Oui, bien sûr. Comment puis-je vous aider ?
+A|We received your invoice, but the price is wrong.|Nous avons reçu votre facture, mais le prix est faux.
+B|I am sorry. Can you send me the details by email?|Je suis désolé. Pouvez-vous m’envoyer les détails par e-mail ?
+A|Yes, I will send them right now.|Oui, je vous les envoie tout de suite.
+B|Thank you. I will correct it today.|Merci. Je la corrige aujourd’hui.`},
+ {t:'Demande d’investissement',job:1,l:`A|We would like to buy a new machine.|Nous aimerions acheter une nouvelle machine.
+B|How much does it cost?|Combien coûte-t-elle ?
+A|About two hundred thousand euros.|Environ deux cent mille euros.
+B|What is the payback period?|Quel est le délai de retour sur investissement ?
+A|Around three years, thanks to lower maintenance costs.|Environ trois ans, grâce à des coûts de maintenance plus bas.
+B|Good. Please send me the business case.|Bien. Envoyez-moi le dossier d’investissement, s’il vous plaît.`},
+ {t:'Réunion de lancement du budget',job:1,l:`A|Today we start the budget process for next year.|Aujourd’hui, nous lançons le processus budgétaire de l’an prochain.
+B|What is the deadline for the first version?|Quelle est la date limite pour la première version ?
+A|Please send your figures before the fifteenth.|Envoyez vos chiffres avant le quinze, s’il vous plaît.
+B|Do we use the same template as last year?|Utilisons-nous le même modèle que l’an dernier ?
+A|Yes, but there is a new tab for investments.|Oui, mais il y a un nouvel onglet pour les investissements.
+B|Okay. I will call you if I have questions.|D’accord. Je vous appelle si j’ai des questions.`},
+ {t:'Au café avec un collègue',job:0,l:`A|Good morning! Did you have a nice weekend?|Bonjour ! Tu as passé un bon week-end ?
+B|Yes, thanks. I went to the mountains with my family.|Oui, merci. Je suis allé à la montagne avec ma famille.
+A|That sounds great. Was the weather good?|Ça a l’air super. Il faisait beau ?
+B|It was sunny but very cold. And you?|Il faisait soleil mais très froid. Et toi ?
+A|I stayed at home and watched a film.|Je suis resté à la maison et j’ai regardé un film.
+B|Sometimes a quiet weekend is the best.|Parfois, un week-end tranquille, c’est le mieux.`},
+ {t:'Au restaurant',job:0,l:`A|Good evening. Do you have a table for two?|Bonsoir. Avez-vous une table pour deux ?
+B|Yes, of course. Follow me, please.|Oui, bien sûr. Suivez-moi, s’il vous plaît.
+A|Could we see the menu, please?|Pourrions-nous voir la carte, s’il vous plaît ?
+B|Here you are. Would you like something to drink?|Voici. Voulez-vous quelque chose à boire ?
+A|Two glasses of water, please.|Deux verres d’eau, s’il vous plaît.
+B|Perfect. I will be back in a minute.|Parfait. Je reviens dans une minute.`},
+ {t:'À l’hôtel',job:0,l:`A|Hello, I have a reservation in the name of Nano.|Bonjour, j’ai une réservation au nom de Nano.
+B|Welcome. Can I see your passport, please?|Bienvenue. Puis-je voir votre passeport, s’il vous plaît ?
+A|Here it is. What time is breakfast?|Le voici. À quelle heure est le petit-déjeuner ?
+B|Breakfast is from seven to ten.|Le petit-déjeuner est servi de sept à dix heures.
+A|Is there Wi-Fi in the room?|Y a-t-il le Wi-Fi dans la chambre ?
+B|Yes, the password is on your key card.|Oui, le mot de passe est sur votre carte-clé.`}
+].map(d=>({t:d.t,job:d.job,lines:d.l.trim().split('\n').map(x=>{const [w,en,fr]=x.split('|');return {w,en,fr}})}));
+const hypDialogs=job=>UNITS.filter(u=>!!u.job===!!job&&u.dialogue).map(u=>({t:u.title,lines:u.dialogue.map(x=>({w:x.w==='bot'?'A':'B',en:x.en,fr:x.fr}))})).concat(HYP_DLG.filter(d=>!!d.job===!!job));
 const HYP_T=['ps','ps','pc','pas','pas','pp','fs','fg','co','pac','pap'],HYP_TL={ps:'présent',pc:'présent continu',pas:'passé',pp:'present perfect',fs:'futur',fg:'futur proche',co:'conditionnel',pac:'passé continu',pap:'plus-que-parfait'};
 const hypClean=s=>s.replace(/\((e|s)\)/g,'').replace('he/she/it','he').replace('il/elle','il').replace('ils/elles','ils').replace(/\s+/g,' ').trim();
 const pick=a=>a[Math.floor(Math.random()*a.length)];
@@ -1376,9 +1440,11 @@ const HYP_SRC={
   job:{t:'Phrases métier',i:'💼',n:()=>UNITS.filter(u=>u.job).reduce((a,u)=>a+u.phrases.length,0)+' phrases',g(){const p=pick(pick(UNITS.filter(u=>u.job)).phrases);return {en:p[0],fr:p[1],tag:'métier'}}},
   gram:{t:'Grammaire & mes erreurs',i:'🔤',n:()=>HYP_GRAM.length+' phrases',g(){const w=pick(HYP_GRAM);return {en:w.en,fr:w.fr,tag:'grammaire'}}},
   gen:{t:'Phrases du quotidien',i:'🗣️',n:()=>UNITS.filter(u=>!u.job).reduce((a,u)=>a+u.phrases.length,0)+' phrases',g(){const p=pick(pick(UNITS.filter(u=>!u.job)).phrases);return {en:p[0],fr:p[1],tag:'quotidien'}}},
+  dlgj:{t:'Conversations métier',i:'🤝',n:()=>hypDialogs(1).length+' dialogues à deux voix',g(){const d=pick(hypDialogs(1));return {lines:d.lines,en:d.lines[0].en,fr:d.lines[0].fr,tag:d.t}}},
+  dlgg:{t:'Conversations du quotidien',i:'💬',n:()=>hypDialogs(0).length+' dialogues à deux voix',g(){const d=pick(hypDialogs(0));return {lines:d.lines,en:d.lines[0].en,fr:d.lines[0].fr,tag:d.t}}},
   mine:{t:'Mes mots',i:'⭐',n:()=>(S.words||[]).length+' mots',ok:()=>(S.words||[]).length>0,g(){const w=pick(S.words);return {en:w.en,fr:w.fr,tag:'mes mots'}}}
 };
-const HYP_MIX=[['conj',35],['irr',20],['fin',15],['job',10],['gram',12],['gen',5],['mine',3]];
+const HYP_MIX=[['conj',32],['irr',18],['fin',14],['job',9],['gram',11],['gen',4],['dlgj',8],['dlgg',4],['mine',3]];
 function hypNext(src){
   let k=src;
   if(src==='mix'){const c=HYP_MIX.filter(([s])=>!HYP_SRC[s].ok||HYP_SRC[s].ok()),tot=c.reduce((a,x)=>a+x[1],0);let r=Math.random()*tot;k=c.find(x=>(r-=x[1])<0)[0]}
@@ -1408,18 +1474,23 @@ function hypDraw(){
   <div class="card" style="text-align:center;padding:34px 18px;background:linear-gradient(160deg,var(--soft),var(--card))">
    <div style="font-size:46px;animation:hypb 6s ease-in-out infinite">🌀</div>
    <div class="mute" style="margin-top:6px">${esc(HY.src==='mix'?'Mélange infini':HYP_SRC[HY.src].t)} · ${esc(it.tag||'')}</div>
+   ${it.lines?`<div style="margin-top:14px">${it.lines.map((ln,i)=>`<div ${i===(HY.li||0)?'id="hycur"':''} style="text-align:${ln.w==='B'?'right':'left'};opacity:${i===(HY.li||0)?1:.35};transition:opacity .6s;margin:8px 0"><div class="bubble ${ln.w==='B'?'you':'bot'}" style="display:inline-block;max-width:88%;text-align:left"><div style="font-weight:${i===(HY.li||0)&&HY.ph!=='fr'?900:600}">${esc(ln.en)}</div><div style="font-size:14px;color:var(--mute);font-weight:${i===(HY.li||0)&&HY.ph==='fr'?800:400}">${esc(ln.fr)}</div></div></div>`).join('')}</div>`:`
    <div id="hyen" style="font-size:24px;font-weight:900;margin-top:16px;line-height:1.3;transition:opacity .6s;opacity:${HY.ph==='fr'?.45:1}">${esc(it.en)}</div>
-   <div id="hyfr" style="font-size:19px;margin-top:12px;color:var(--mute);transition:opacity .6s;opacity:${HY.ph==='fr'?1:.45}">${esc(it.fr)}</div>
+   <div id="hyfr" style="font-size:19px;margin-top:12px;color:var(--mute);transition:opacity .6s;opacity:${HY.ph==='fr'?1:.45}">${esc(it.fr)}</div>`}
    <div class="mute" style="margin-top:18px">${HY.n} écoutée${HY.n>1?'s':''}${left!=null?' · arrêt dans '+left+' min':''}</div></div>
   <div style="display:flex;gap:10px;margin-top:12px">${HY.paused?`<button class="btn primary" style="flex:1;padding:15px" onclick="hypResume()">▶ Reprendre</button>`:`<button class="btn primary" style="flex:1;padding:15px" onclick="hypPause()">⏸ Pause</button>`}<button class="btn" style="padding:15px 20px" title="Suivant" onclick="hypSkip()">⏭</button><button class="btn" style="padding:15px 20px" title="Arrêter" onclick="vHypno()">⏹</button></div>`;
+  const cu=document.getElementById('hycur');if(cu&&HY.li)try{cu.scrollIntoView({block:'center',behavior:'smooth'})}catch(e){}
 }
-function hypSpeak(text,lang,rate){
+function hypSpeak(text,lang,rate,alt){
   return new Promise(res=>{
     try{
       const u=new SpeechSynthesisUtterance(text);u.lang=lang;u.rate=rate;
       const all=speechSynthesis.getVoices(),pre=lang.slice(0,2);
       const v=lang==='en-US'?(voices.find(v=>v.lang==='en-US'&&/samantha|aaron|google|natural/i.test(v.name))||voices.find(v=>v.lang==='en-US')||voices[0]):(all.find(v=>v.lang==='fr-FR'&&/amélie|thomas|google|natural/i.test(v.name))||all.find(v=>v.lang==='fr-FR')||all.find(v=>v.lang.startsWith(pre)));
-      if(v)u.voice=v;
+      // Dialogue : l'interlocuteur (B) prend une autre voix si possible, sinon une voix plus grave.
+      const v2=alt&&v?(lang==='en-US'?(voices.find(x=>x.lang==='en-GB'&&x!==v)||voices.find(x=>x.lang==='en-US'&&x!==v)):all.find(x=>x.lang.startsWith(pre)&&x!==v)):null;
+      if(v2||v)u.voice=v2||v;if(alt&&!v2)u.pitch=.75;
+      if(v2)u.lang=v2.lang;
       let fin=false;const done=()=>{if(!fin){fin=true;res()}};
       u.onend=done;u.onerror=done;setTimeout(done,Math.max(4000,text.length*170/rate));
       try{speechSynthesis.resume()}catch(e){}
@@ -1432,10 +1503,16 @@ async function hypLoop(t){
   const c=hypCfg(),alive=()=>!!HY&&HY.t===t&&t===spk&&!HY.paused;
   while(alive()){
     if(HY.end&&Date.now()>HY.end){hypStop();toast('🌙 Fin de la séance d’hypnose. Bravo !',4000);if(tab==='course')vHypno();return}
-    if(!HY.keep){HY.it=hypNext(HY.src);HY.prev=HY.it.en}HY.keep=false;
-    const it=HY.it;HY.ph='en';hypDraw();
-    for(let r=0;r<c.rep&&alive();r++){await hypSpeak(it.en,'en-US',c.rate);if(!alive())return;await hypWait(900+c.gap*250);if(r===0&&alive()){HY.ph='fr';hypDraw();await hypSpeak(it.fr,'fr-FR',Math.min(1,c.rate+.25));if(!alive())return;await hypWait(900+c.gap*250);if(!alive())return;HY.ph='en';hypDraw()}}
-    if(!alive())return;HY.n++;await hypWait(c.gap*1000);
+    if(!HY.keep){HY.it=hypNext(HY.src);HY.prev=HY.it.en;HY.li=0}HY.keep=false;
+    const it=HY.it,L=it.lines||[{w:'A',en:it.en,fr:it.fr}];
+    for(let li=HY.li||0;li<L.length;li++){                       // un dialogue = plusieurs répliques, chacune EN → FR → EN
+      if(!alive())return;HY.li=li;const ln=L[li],alt=ln.w==='B';HY.ph='en';hypDraw();
+      for(let r=0;r<c.rep;r++){
+        await hypSpeak(ln.en,'en-US',c.rate,alt);if(!alive())return;await hypWait(900+c.gap*250);if(!alive())return;
+        if(r===0){HY.ph='fr';hypDraw();await hypSpeak(ln.fr,'fr-FR',Math.min(1,c.rate+.25),alt);if(!alive())return;await hypWait(900+c.gap*250);if(!alive())return;HY.ph='en';hypDraw()}
+      }
+    }
+    if(!alive())return;HY.li=0;HY.n++;await hypWait(c.gap*1000);
   }
 }
 let hypWL=null;
@@ -1457,7 +1534,7 @@ function hypMusic(on){
 }
 function hypStart(src){
   unlockTTS();const c=hypCfg();
-  HY={src,t:++spk,n:0,paused:false,end:c.timer?Date.now()+c.timer*60000:0};
+  window.scrollTo(0,0);HY={src,t:++spk,n:0,paused:false,end:c.timer?Date.now()+c.timer*60000:0};
   hypMusic(c.music);hypWake(true);hypLoop(HY.t);
 }
 function hypPause(){if(!HY)return;HY.paused=true;HY.keep=true;spk++;try{speechSynthesis.cancel()}catch(e){}hypMusic(false);hypWake(false);hypDraw()}
