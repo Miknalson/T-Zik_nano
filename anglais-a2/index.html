@@ -1587,7 +1587,7 @@ function hypNext(src){
   for(let n=0;n<5;n++){try{const it=HYP_SRC[k].g();if(it&&it.en&&it.fr&&!(HY&&HY.prev===it.en))return it}catch(e){}}
   return HYP_SRC.fin.g();
 }
-const hypCfg=()=>S.hyp=Object.assign({rate:.6,rep:2,gap:2,music:true,timer:30},S.hyp||{});
+const hypCfg=()=>S.hyp=Object.assign({rate:.6,rep:2,gap:2,music:true,timer:30,human:true},S.hyp||{});
 let HY=null;
 function vHypno(){
   hypStop();const c=hypCfg();
@@ -1601,6 +1601,7 @@ function vHypno(){
    <div class="mute" style="margin-top:8px">Vitesse de l’anglais</div>${seg('rate',[[.45,'Très lente'],[.6,'Lente'],[.8,'Normale']])}
    <div class="mute" style="margin-top:10px">Répétitions de l’anglais</div>${seg('rep',[[1,'1 fois'],[2,'2 fois'],[3,'3 fois']])}
    <div class="mute" style="margin-top:10px">Silence entre les phrases</div>${seg('gap',[[1,'Court'],[2,'Moyen'],[4,'Long']])}
+   <div class="mute" style="margin-top:10px">Voix</div>${seg('human',[[true,'🧑 Humaines (enregistrées)'],[false,'📱 De l’appareil']])}
    ${hypVoiceRow('eA','Voix anglaise (personne 1)')}${hypVoiceRow('eB','Voix anglaise (personne 2, dialogues)')}${hypVoiceRow('fA','Voix française')}${hypVoiceRow('fB','Voix française (personne 2)')}
    <div class="mute" style="margin-top:10px">Fond musical doux</div>${seg('music',[[true,'Oui'],[false,'Non']])}
    <div class="mute" style="margin-top:10px">Arrêt automatique</div>${seg('timer',[[15,'15 min'],[30,'30 min'],[60,'1 h'],[0,'Jamais']])}
@@ -1632,7 +1633,27 @@ function hypVoice(slot){                                      // slot : eA, eB, 
   if(slot==='eA'||slot==='fA')return byURI(c[slot])||L[0];
   const a=hypVoice(slot[0]+'A');return byURI(c[slot])||L.find(v=>v!==a)||a;
 }
+// Voix humaines : phrases fixes pré-enregistrées avec une voix neuronale (Piper) dans audio/<hash>.mp3 ; sinon voix de l'appareil.
+const hypH=s=>{let x=0x811c9dc5;for(let i=0;i<s.length;i++){x^=s.charCodeAt(i);x=Math.imul(x,0x01000193)>>>0}return x.toString(16).padStart(8,'0')};
+let HYP_REC=new Set(),hypAud=null;
+try{fetch('audio/index.json').then(r=>r.ok?r.json():[]).then(a=>{HYP_REC=new Set(a)}).catch(()=>{})}catch(e){}
+function hypAudStop(){try{if(hypAud){hypAud.onended=hypAud.onerror=null;hypAud.pause()}}catch(e){}}
 function hypSpeak(text,lang,rate,alt){
+  const n=hypH((lang.startsWith('en')?(alt?'eB':'eA'):'f')+'|'+text);
+  if(!hypCfg().human||!HYP_REC.has(n))return hypTTS(text,lang,rate,alt);
+  return new Promise(res=>{
+    try{
+      const a=hypAud=hypAud||new Audio();let fin=false;
+      const done=ok=>{if(fin)return;fin=true;a.onended=a.onerror=null;ok?res():hypTTS(text,lang,rate,alt).then(res)};
+      a.onended=()=>done(true);a.onerror=()=>done(false);
+      a.src='audio/'+n+'.mp3';a.preservesPitch=true;a.webkitPreservesPitch=true;
+      a.playbackRate=Math.max(.7,Math.min(1.25,.55+rate*.7));
+      const pr=a.play();if(pr&&pr.catch)pr.catch(()=>done(false));
+      setTimeout(()=>done(true),Math.max(6000,text.length*220));
+    }catch(e){hypTTS(text,lang,rate,alt).then(res)}
+  });
+}
+function hypTTS(text,lang,rate,alt){
   return new Promise(res=>{
     try{
       const u=new SpeechSynthesisUtterance(text);u.lang=lang;u.rate=rate;
@@ -1695,10 +1716,10 @@ function hypStart(src){
   window.scrollTo(0,0);HY={src,t:++spk,n:0,paused:false,end:c.timer?Date.now()+c.timer*60000:0};
   hypMusic(c.music);hypWake(true);hypLoop(HY.t);
 }
-function hypPause(){if(!HY)return;HY.paused=true;HY.keep=true;spk++;try{speechSynthesis.cancel()}catch(e){}hypMusic(false);hypWake(false);hypDraw()}
+function hypPause(){if(!HY)return;HY.paused=true;HY.keep=true;spk++;hypAudStop();try{speechSynthesis.cancel()}catch(e){}hypMusic(false);hypWake(false);hypDraw()}
 function hypResume(){if(!HY)return;HY.paused=false;HY.t=++spk;hypMusic(hypCfg().music);hypWake(true);hypLoop(HY.t)}
-function hypSkip(){if(!HY)return;HY.paused=false;HY.keep=false;const t=HY.t=++spk;try{speechSynthesis.cancel()}catch(e){}setTimeout(()=>{if(HY&&HY.t===t)hypLoop(t)},150)}
-function hypStop(){if(!HY&&!hypAC)return;HY=null;spk++;try{speechSynthesis.cancel()}catch(e){}hypMusic(false);hypWake(false)}
+function hypSkip(){if(!HY)return;HY.paused=false;HY.keep=false;const t=HY.t=++spk;hypAudStop();try{speechSynthesis.cancel()}catch(e){}setTimeout(()=>{if(HY&&HY.t===t)hypLoop(t)},150)}
+function hypStop(){hypAudStop();if(!HY&&!hypAC)return;HY=null;spk++;try{speechSynthesis.cancel()}catch(e){}hypMusic(false);hypWake(false)}
 let PR=null;
 function startPron(id){const l=PRON.find(x=>x.id===id);PR={l,i:0,ok:0,list:sh(l.pairs.concat(sh(l.pairs).slice(0,2))).map(p=>{const k=Math.random()<.5?0:1;return {p,k}})};
   $('view').innerHTML=`<a class="back" onclick="vPronList()">← Prononciation</a><div class="card"><h2>${l.t}</h2><p>${esc(l.tip)}</p>
