@@ -1428,6 +1428,141 @@ B|Breakfast is from seven to ten.|Le petit-déjeuner est servi de sept à dix he
 A|Is there Wi-Fi in the room?|Y a-t-il le Wi-Fi dans la chambre ?
 B|Yes, the password is on your key card.|Oui, le mot de passe est sur votre carte-clé.`}
 ].map(d=>({t:d.t,job:d.job,lines:d.l.trim().split('\n').map(x=>{const [w,en,fr]=x.split('|');return {w,en,fr}})}));
+// Slow English : petits textes 100 % anglais, lus lentement comme un podcast, en karaoké.
+const HYP_STORY=[
+['Train your brain every day',`Hello, everyone. Welcome back to slow English.
+Today, I want to talk about a simple idea.
+Your brain learns with repetition.
+When you hear a sentence many times, it becomes easy.
+At first, English sounds fast and difficult.
+But after a few weeks, your ears get used to it.
+So listen a little every day.
+Ten minutes in the morning is enough.
+Do not worry about every word.
+Try to understand the general idea.
+Little by little, the words will come.
+Thank you for listening. See you tomorrow.`],
+['My job as a controller',`Hello, my name is Nano.
+I work as a management controller.
+My job is to help managers make good decisions.
+Every month, I look at the numbers.
+I compare the actual figures with the budget.
+When there is a big gap, I try to understand why.
+Sometimes sales are lower than expected.
+Sometimes costs are higher.
+Then I explain the variance to my director.
+I also prepare the forecast for the end of the year.
+It is not always easy, but I like it.
+Numbers tell a story, and I like to tell it.`],
+['The month-end close',`At the end of every month, we close the accounts.
+It is a busy time for the finance team.
+First, we collect all the invoices.
+Then, we check the accruals and the stock.
+We make sure that every number is correct.
+After that, I prepare the monthly report.
+I write a short comment for each big variance.
+On the third day, I send the report to management.
+Sometimes there is a mistake, and we fix it quickly.
+When everything is done, I feel relieved.
+And then, a new month begins.`],
+['A budget meeting',`This morning, I had a budget meeting.
+There were five managers around the table.
+Each manager presented their needs for next year.
+The sales team wanted more money for travel.
+The production team wanted a new machine.
+But our budget is limited.
+So we had to make choices.
+I asked each manager to justify their request.
+We talked about the return on investment.
+In the end, we agreed on a realistic plan.
+It was a long meeting, but a good one.`],
+['Speaking in a meeting',`Many people are afraid to speak in a meeting.
+They think their English is not good enough.
+But you do not need perfect English.
+You need clear and simple sentences.
+Say one idea at a time.
+Speak slowly, and make short pauses.
+If you do not understand, just ask.
+You can say: could you repeat that, please?
+Nobody will laugh at you.
+In fact, people like simple English.
+It is easy to understand for everyone.`],
+['My morning routine',`I usually wake up at six thirty.
+First, I drink a big glass of water.
+Then, I make a coffee and I look out of the window.
+I like the quiet of the morning.
+While I have breakfast, I listen to English.
+It helps me start the day in a good mood.
+After that, I take a shower and get dressed.
+I leave home at half past seven.
+On the way to work, I listen again.
+Small habits make a big difference.`],
+['A business trip',`Last month, I went on a business trip to London.
+I took the train early in the morning.
+The journey was fast and comfortable.
+When I arrived, a colleague was waiting for me.
+We went directly to the office.
+I presented our results to the British team.
+I was a little nervous at the beginning.
+But they were very kind and patient.
+In the evening, we had dinner together.
+We talked about work, family, and football.
+It was a great experience for my English.`],
+['Presenting to management',`Tomorrow, I will present our results to the director.
+I prepared my slides this afternoon.
+My presentation has three parts.
+First, I will show the key figures.
+Then, I will explain the main variances.
+Finally, I will give my recommendations.
+I will keep each slide simple.
+One message per slide is enough.
+I will speak slowly and look at the audience.
+If they ask a difficult question, I will take my time.
+I am ready.`],
+['English is a habit',`English is not only about grammar.
+English is a habit.
+Like sport, you need to practice often.
+You cannot learn to swim by reading a book.
+And you cannot speak English only by studying rules.
+You need to listen, repeat, and speak.
+Every day, a little bit.
+Make mistakes, and learn from them.
+Mistakes are not a problem.
+They show that you are trying.
+Keep going, and you will see the progress.`],
+['A phone call with a supplier',`This morning, I called one of our suppliers.
+Their last invoice was not correct.
+The price was higher than in the contract.
+I explained the problem politely.
+The person on the phone was very helpful.
+She checked the contract and agreed with me.
+She promised to send a new invoice today.
+I thanked her and said goodbye.
+The call lasted only five minutes.
+Before, I was afraid of phone calls in English.
+Now, I feel much more confident.`],
+['My weekend',`Last weekend, the weather was beautiful.
+On Saturday, I went for a long walk in the park.
+The trees were red and yellow.
+In the afternoon, I met some friends for a coffee.
+We talked and laughed a lot.
+On Sunday, I stayed at home.
+I cooked a nice meal for my family.
+In the evening, I watched a film in English.
+I did not understand everything, but I understood the story.
+It was a calm and happy weekend.`],
+['Negotiating a budget',`Negotiating a budget is like a game.
+Each manager wants more money.
+And my job is to protect the company.
+So I listen carefully to each request.
+I ask simple questions.
+Why do you need this? What is the benefit?
+Sometimes, the answer is very good.
+Then, I accept the request.
+Sometimes, the answer is not clear.
+Then, I propose a smaller budget.
+The goal is to find a fair compromise for everyone.`]
+].map(([t,x])=>({t,lines:x.trim().split('\n').map(en=>({w:'A',en,fr:''}))}));
 const hypDialogs=job=>UNITS.filter(u=>!!u.job===!!job&&u.dialogue).map(u=>({t:u.title,lines:u.dialogue.map(x=>({w:x.w==='bot'?'A':'B',en:x.en,fr:x.fr}))})).concat(HYP_DLG.filter(d=>!!d.job===!!job));
 const HYP_T=['ps','ps','pc','pas','pas','pp','fs','fg','co','pac','pap'],HYP_TL={ps:'présent',pc:'présent continu',pas:'passé',pp:'present perfect',fs:'futur',fg:'futur proche',co:'conditionnel',pac:'passé continu',pap:'plus-que-parfait'};
 const hypClean=s=>s.replace(/\((e|s)\)/g,'').replace('he/she/it','he').replace('il/elle','il').replace('ils/elles','ils').replace(/\s+/g,' ').trim();
@@ -1442,6 +1577,7 @@ const HYP_SRC={
   gen:{t:'Phrases du quotidien',i:'🗣️',n:()=>UNITS.filter(u=>!u.job).reduce((a,u)=>a+u.phrases.length,0)+' phrases',g(){const p=pick(pick(UNITS.filter(u=>!u.job)).phrases);return {en:p[0],fr:p[1],tag:'quotidien'}}},
   dlgj:{t:'Conversations métier',i:'🤝',n:()=>hypDialogs(1).length+' dialogues à deux voix',g(){const d=pick(hypDialogs(1));return {lines:d.lines,en:d.lines[0].en,fr:d.lines[0].fr,tag:d.t}}},
   dlgg:{t:'Conversations du quotidien',i:'💬',n:()=>hypDialogs(0).length+' dialogues à deux voix',g(){const d=pick(hypDialogs(0));return {lines:d.lines,en:d.lines[0].en,fr:d.lines[0].fr,tag:d.t}}},
+  story:{t:'Slow English',hero:1,g(){const d=pick(HYP_STORY);return {story:true,lines:d.lines,en:d.lines[0].en,fr:'–',tag:d.t}}},
   mine:{t:'Mes mots',i:'⭐',n:()=>(S.words||[]).length+' mots',ok:()=>(S.words||[]).length>0,g(){const w=pick(S.words);return {en:w.en,fr:w.fr,tag:'mes mots'}}}
 };
 const HYP_MIX=[['conj',32],['irr',18],['fin',14],['job',9],['gram',11],['gen',4],['dlgj',8],['dlgg',4],['mine',3]];
@@ -1459,7 +1595,8 @@ function vHypno(){
   const srcCard=(k,t,i,sub)=>`<div class="card node" onclick="hypStart('${k}')"><div class="ic">${i}</div><div style="flex:1"><h3>${t}</h3><div class="mute">${sub}</div></div><div style="font-size:22px">▶</div></div>`;
   $('view').innerHTML=`${atelierBack}<h2>🌙 Hypnose</h2><p class="mute">Écoutez comme une chanson : l’anglais lentement, puis le français, puis l’anglais encore. Tout est tiré au hasard à chaque fois : jamais la même écoute. Fermez les yeux, laissez votre cerveau s’imprégner.</p>
   <div class="hero" onclick="hypStart('mix')" style="cursor:pointer;margin-bottom:14px"><div style="font-size:54px">🌀</div><div class="t"><div class="big">Mélange infini</div><small>Conjugaison, verbes irréguliers, finance, grammaire… tout mélangé</small></div></div>
-  ${Object.entries(HYP_SRC).filter(([k,s])=>!s.ok||s.ok()).map(([k,s])=>srcCard(k,s.t,s.i,s.n())).join('')}
+  <div class="hero" onclick="hypStart('story')" style="cursor:pointer;margin-bottom:14px;background:linear-gradient(160deg,#0f1630,#1d2547);color:#fff"><div style="font-size:54px">🎧</div><div class="t"><div class="big">Slow English</div><small style="color:#cfd6ff">100 % anglais, lentement, avec musique · ${HYP_STORY.length} histoires de la vie et du travail</small></div></div>
+  ${Object.entries(HYP_SRC).filter(([k,s])=>!s.hero&&(!s.ok||s.ok())).map(([k,s])=>srcCard(k,s.t,s.i,s.n())).join('')}
   <div class="card"><h3>Réglages</h3>
    <div class="mute" style="margin-top:8px">Vitesse de l’anglais</div>${seg('rate',[[.45,'Très lente'],[.6,'Lente'],[.8,'Normale']])}
    <div class="mute" style="margin-top:10px">Répétitions de l’anglais</div>${seg('rep',[[1,'1 fois'],[2,'2 fois'],[3,'3 fois']])}
@@ -1474,14 +1611,16 @@ function hypDraw(){
   if(!HY)return;const it=HY.it||{en:'…',fr:''},left=HY.end?Math.max(0,Math.ceil((HY.end-Date.now())/60000)):null;
   $('view').innerHTML=`<a class="back" onclick="vHypno()">← Hypnose</a>
   <div class="card" style="text-align:center;padding:34px 18px;background:linear-gradient(160deg,var(--soft),var(--card))">
-   <div style="font-size:46px;animation:hypb 6s ease-in-out infinite">🌀</div>
+   <div style="font-size:46px;animation:hypb 6s ease-in-out infinite">${it.story?'🎧':'🌀'}</div>
    <div class="mute" style="margin-top:6px">${esc(HY.src==='mix'?'Mélange infini':HYP_SRC[HY.src].t)} · ${esc(it.tag||'')}</div>
-   ${it.lines?`<div style="margin-top:14px">${it.lines.map((ln,i)=>`<div ${i===(HY.li||0)?'id="hycur"':''} style="text-align:${ln.w==='B'?'right':'left'};opacity:${i===(HY.li||0)?1:.35};transition:opacity .6s;margin:8px 0"><div class="bubble ${ln.w==='B'?'you':'bot'}" style="display:inline-block;max-width:88%;text-align:left"><div style="font-weight:${i===(HY.li||0)&&HY.ph!=='fr'?900:600}">${esc(ln.en)}</div><div style="font-size:14px;color:var(--mute);font-weight:${i===(HY.li||0)&&HY.ph==='fr'?800:400}">${esc(ln.fr)}</div></div></div>`).join('')}</div>`:`
+   ${it.story?`<div id="hystory" style="margin:14px -18px 0;padding:20px 16px;background:linear-gradient(180deg,#0f1630,#1d2547);max-height:56vh;overflow:auto">${it.lines.map((ln,i)=>{const cur=i===(HY.li||0);return `<div ${cur?'id="hycur"':''} style="font-size:${cur?22:19}px;line-height:1.35;margin:14px 0;font-weight:${cur?800:500};color:${cur?'#f5b13d':'#e9ecff'};opacity:${cur?1:i<(HY.li||0)?.45:.75};transition:all .6s">${esc(ln.en)}</div>`}).join('')}</div>`:it.lines?`<div style="margin-top:14px">${it.lines.map((ln,i)=>`<div ${i===(HY.li||0)?'id="hycur"':''} style="text-align:${ln.w==='B'?'right':'left'};opacity:${i===(HY.li||0)?1:.35};transition:opacity .6s;margin:8px 0"><div class="bubble ${ln.w==='B'?'you':'bot'}" style="display:inline-block;max-width:88%;text-align:left"><div style="font-weight:${i===(HY.li||0)&&HY.ph!=='fr'?900:600}">${esc(ln.en)}</div><div style="font-size:14px;color:var(--mute);font-weight:${i===(HY.li||0)&&HY.ph==='fr'?800:400}">${esc(ln.fr)}</div></div></div>`).join('')}</div>`:`
    <div id="hyen" style="font-size:24px;font-weight:900;margin-top:16px;line-height:1.3;transition:opacity .6s;opacity:${HY.ph==='fr'?.45:1}">${esc(it.en)}</div>
    <div id="hyfr" style="font-size:19px;margin-top:12px;color:var(--mute);transition:opacity .6s;opacity:${HY.ph==='fr'?1:.45}">${esc(it.fr)}</div>`}
    <div class="mute" style="margin-top:18px">${HY.n} écoutée${HY.n>1?'s':''}${left!=null?' · arrêt dans '+left+' min':''}</div></div>
   <div style="display:flex;gap:10px;margin-top:12px">${HY.paused?`<button class="btn primary" style="flex:1;padding:15px" onclick="hypResume()">▶ Reprendre</button>`:`<button class="btn primary" style="flex:1;padding:15px" onclick="hypPause()">⏸ Pause</button>`}<button class="btn" style="padding:15px 20px" title="Suivant" onclick="hypSkip()">⏭</button><button class="btn" style="padding:15px 20px" title="Arrêter" onclick="vHypno()">⏹</button></div>`;
-  const cu=document.getElementById('hycur');if(cu&&HY.li)try{cu.scrollIntoView({block:'center',behavior:'smooth'})}catch(e){}
+  const cu=document.getElementById('hycur'),bx=document.getElementById('hystory');
+  if(cu&&bx)bx.scrollTop=Math.max(0,cu.offsetTop-bx.clientHeight/2+cu.clientHeight/2);
+  else if(cu&&HY.li)try{cu.scrollIntoView({block:'center',behavior:'smooth'})}catch(e){}
 }
 // Voix : on écarte les voix « gadget » et robotiques d'iOS/macOS, on préfère les voix améliorées/premium.
 const HYP_BAD=/albert|bad news|bahh|bells|boing|bubbles|cellos|good news|jester|organ|superstar|trinoids|whisper|wobble|zarvox|junior|ralph|fred|kathy|grandma|grandpa|rocko|shelley|flo\b|eddy|reed|sandy|grand-m|grand-p/i;
@@ -1520,28 +1659,34 @@ async function hypLoop(t){
     const it=HY.it,L=it.lines||[{w:'A',en:it.en,fr:it.fr}];
     for(let li=HY.li||0;li<L.length;li++){                       // un dialogue = plusieurs répliques, chacune EN → FR → EN
       if(!alive())return;HY.li=li;const ln=L[li],alt=ln.w==='B';HY.ph='en';hypDraw();
+      if(it.story){await hypSpeak(ln.en,'en-US',Math.min(.9,c.rate+.15));if(!alive())return;await hypWait(500+c.gap*250);continue}
       for(let r=0;r<c.rep;r++){
         await hypSpeak(ln.en,'en-US',c.rate,alt);if(!alive())return;await hypWait(900+c.gap*250);if(!alive())return;
         if(r===0){HY.ph='fr';hypDraw();await hypSpeak(ln.fr,'fr-FR',Math.min(1,c.rate+.25),alt);if(!alive())return;await hypWait(900+c.gap*250);if(!alive())return;HY.ph='en';hypDraw()}
       }
     }
-    if(!alive())return;HY.li=0;HY.n++;await hypWait(c.gap*1000);
+    if(!alive())return;HY.li=0;HY.n++;await hypWait(it.story?3500:c.gap*1000);
   }
 }
 let hypWL=null;
 async function hypWake(on){try{if(on&&navigator.wakeLock&&!hypWL){hypWL=await navigator.wakeLock.request('screen')}else if(!on&&hypWL){hypWL.release();hypWL=null}}catch(e){}}
 document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible'&&HY&&!HY.paused){hypWL=null;hypWake(true)}});
 let hypAC=null,hypG=null;
+let hypMT=null;
 function hypMusic(on){
   try{
-    if(!on){if(hypG&&hypAC){hypG.gain.setTargetAtTime(0,hypAC.currentTime,.8);const a=hypAC;setTimeout(()=>{try{a.close()}catch(e){}},3000)}hypAC=null;hypG=null;return}
+    if(!on){clearInterval(hypMT);hypMT=null;if(hypG&&hypAC){hypG.gain.setTargetAtTime(0,hypAC.currentTime,.8);const a=hypAC;setTimeout(()=>{try{a.close()}catch(e){}},3000)}hypAC=null;hypG=null;return}
     if(hypAC)return;const AC=window.AudioContext||window.webkitAudioContext;if(!AC)return;
-    const ac=hypAC=new AC(),g=hypG=ac.createGain();g.gain.value=0;g.connect(ac.destination);g.gain.setTargetAtTime(.05,ac.currentTime,2);
-    [[110,0],[164.8,.3],[220.5,.6],[277.2,.15]].forEach(([f,ph])=>{
-      const o=ac.createOscillator(),og=ac.createGain(),l=ac.createOscillator(),lg=ac.createGain();
-      o.type='sine';o.frequency.value=f;og.gain.value=.25;l.frequency.value=.05+ph*.1;lg.gain.value=.2;
-      l.connect(lg);lg.connect(og.gain);o.connect(og);og.connect(g);o.start();l.start();
-    });
+    const ac=hypAC=new AC(),g=hypG=ac.createGain(),lp=ac.createBiquadFilter();
+    lp.type='lowpass';lp.frequency.value=1400;lp.connect(g);g.gain.value=0;g.connect(ac.destination);g.gain.setTargetAtTime(.09,ac.currentTime,2);
+    // Am – F – C – G, 8 s par accord : nappe douce + arpège type piano feutré
+    const CH=[[57,60,64],[53,57,60],[48,52,55],[55,59,62]],hz=m=>440*Math.pow(2,(m-69)/12);
+    const note=(m,t,d,vol,type)=>{const o=ac.createOscillator(),e=ac.createGain();o.type=type;o.frequency.value=hz(m);e.gain.setValueAtTime(0,t);e.gain.linearRampToValueAtTime(vol,t+(type==='triangle'?1.5:.02));e.gain.exponentialRampToValueAtTime(.0001,t+d);o.connect(e);e.connect(lp);o.start(t);o.stop(t+d+.1)};
+    let k=0;const bar=()=>{if(hypAC!==ac)return;const t=ac.currentTime+.05,c=CH[k++%4];
+      c.forEach(m=>note(m-12,t,8.5,.10,'triangle'));                       // nappe
+      [0,1,2,1,0,2,1,2].forEach((x,i)=>note(c[x]+12,t+i*1+.5,2.6,.05,'sine'));// arpège
+    };
+    bar();hypMT=setInterval(bar,8000);
     try{ac.resume()}catch(e){}
   }catch(e){}
 }
