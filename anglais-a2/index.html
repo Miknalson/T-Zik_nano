@@ -644,7 +644,27 @@ let voices=[];
 function loadVoices(){try{voices=speechSynthesis.getVoices().filter(v=>v.lang.startsWith('en'))}catch(e){}}
 if('speechSynthesis' in window){loadVoices();speechSynthesis.onvoiceschanged=()=>{loadVoices();if(tab==='course'&&!HY&&document.querySelector('[onchange^="S.hyp.eA"]'))vHypno()}}
 let spk=0;
+// Voix humaine : si la phrase (ou le mot) est pré-enregistrée (audio/, voir l'Hypnose), on joue l'enregistrement ; sinon voix de l'appareil.
+let recAud=null;
 function speak(text,rate=.85){
+  try{
+    const t=String(text||'').trim(),one=!/\s/.test(t),kS=hypH('eA|'+t),kW=one?hypH('w|'+hypNorm(t)):'';
+    const n=HYP_REC.has(kS)?kS:kW&&HYP_REC.has(kW)?kW:'';
+    if(n&&hypCfg().human){
+      return new Promise(res=>{
+        const a=recAud=recAud||new Audio(),tok=spk;let fin=false;
+        const done=ok=>{if(fin)return;fin=true;clearInterval(iv);a.onended=a.onerror=null;ok?res():speakTTS(text,rate).then(res)};
+        const iv=setInterval(()=>{if(tok!==spk){try{a.pause()}catch(e){}done(true)}},150);   // arrêt quand on change d'écran
+        a.onended=()=>done(true);a.onerror=()=>done(false);
+        a.src='audio/'+n+'.mp3';a.preservesPitch=true;a.webkitPreservesPitch=true;a.playbackRate=hypPR(rate);
+        const pr=a.play();if(pr&&pr.catch)pr.catch(()=>done(false));
+        setTimeout(()=>done(true),Math.max(6000,t.length*120/hypPR(rate)));
+      });
+    }
+  }catch(e){}
+  return speakTTS(text,rate);
+}
+function speakTTS(text,rate=.85){
   return new Promise(res=>{
     try{
       if(!('speechSynthesis' in window)){res();return}

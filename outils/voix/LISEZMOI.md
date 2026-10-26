@@ -1,6 +1,6 @@
 # Voix humaines de l'Hypnose
 
-Les phrases fixes de l’atelier Hypnose (histoires Slow English, dialogues, phrases, glossaire, verbes irréguliers) et chaque mot isolé (mode « mot à mot », clé `w|mot`) sont pré-enregistrées avec [Piper](https://github.com/rhasspy/piper) dans `anglais-a2/audio/<hash>.mp3`, listées dans `anglais-a2/audio/index.json`. L'appli joue l'enregistrement s'il existe, sinon la voix de l'appareil (la conjugaison, générée au hasard, reste en voix de l'appareil).
+Les phrases fixes de l’atelier Hypnose (histoires Slow English, dialogues, phrases, glossaire, verbes irréguliers) et chaque mot isolé (mode « mot à mot », clé `w|mot`) ainsi que les phrases anglaises du reste de l'appli (Emma, cours, scènes, TOEIC, test) sont pré-enregistrées avec [Piper](https://github.com/rhasspy/piper) dans `anglais-a2/audio/<hash>.mp3`, listées dans `anglais-a2/audio/index.json`. L'appli (`speak()` et l'Hypnose) joue l'enregistrement s'il existe, sinon la voix de l'appareil (conjugaison générée au hasard et réponses du tuteur IA restent en voix de l'appareil).
 
 Voix utilisées (https://github.com/rhasspy/piper/releases/tag/v0.0.2) :
 - `en-us-lessac-medium` : anglais, personne 1
