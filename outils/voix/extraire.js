@@ -10,6 +10,11 @@ const {chromium}=require('playwright-core');const fs=require('fs');
     HYP_GRAM.forEach(x=>{add('eA',x.en);add('fA',x.fr)});
     GLOS.forEach(x=>{add('eA',x.en);add('fA',x.fr)});
     VERBS.filter(v=>v.p&&v.fr).forEach(v=>{add('eA',v.b+'. '+v.p+'. '+v.pp+'.');add('fA',v.fr.split(' ')[0])});
+    // Reste de l'appli (Emma, cours, scènes, TOEIC, test…) : toutes les chaînes anglaises des données, voix eA.
+    const FR=/[éèêëàâçùûîïôœ«»]|\b(le|la|les|des|une|est|sont|pour|avec|vous|nous|je|et|du|au|aux|ou|pas|que|qui|dans|sur|mot|phrase|réponse|exemple)\b/i;
+    const isEn=t=>typeof t==='string'&&/^[A-Za-z0-9 ,.'’?!:;()\-$%€£/&"]+$/.test(t.trim())&&/[a-z]/.test(t)&&!/___|<|=>|\bhttps?:/.test(t)&&!FR.test(t)&&t.trim().length<220&&!/^[a-z]{0,2}[0-9]*$/i.test(t.trim());
+    const walk=(x,d)=>{if(d>8||x==null)return;if(typeof x==='string'){if(isEn(x))add('eA',x.trim());return}if(Array.isArray(x)){x.forEach(y=>walk(y,d+1));return}if(typeof x==='object')Object.values(x).forEach(y=>walk(y,d+1))};
+    [UNITS,BASICS,SCENES,PRON,PLB,ORAL,TOEIC_D,TOEIC_J].forEach(x=>{try{walk(x,0)}catch(e){}});
     // mots isolés pour le « mot à mot » : tous les mots anglais ci-dessus + formes de la conjugaison
     const W=new Set();o.filter(x=>x[0][0]==='e').forEach(([v,t])=>t.split(/\s+/).forEach(w=>{w=hypNorm(w);if(w)W.add(w)}));
     VERBS.forEach(v=>{const f=enForms(v);[f.b,f.s3,f.ing,f.past,f.pp].forEach(w=>w&&W.add(hypNorm(w)))});
