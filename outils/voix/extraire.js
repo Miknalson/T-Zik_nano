@@ -10,6 +10,11 @@ const {chromium}=require('playwright-core');const fs=require('fs');
     HYP_GRAM.forEach(x=>{add('eA',x.en);add('fA',x.fr)});
     GLOS.forEach(x=>{add('eA',x.en);add('fA',x.fr)});
     VERBS.filter(v=>v.p&&v.fr).forEach(v=>{add('eA',v.b+'. '+v.p+'. '+v.pp+'.');add('fA',v.fr.split(' ')[0])});
+    // mots isolés pour le « mot à mot » : tous les mots anglais ci-dessus + formes de la conjugaison
+    const W=new Set();o.filter(x=>x[0][0]==='e').forEach(([v,t])=>t.split(/\s+/).forEach(w=>{w=hypNorm(w);if(w)W.add(w)}));
+    VERBS.forEach(v=>{const f=enForms(v);[f.b,f.s3,f.ing,f.past,f.pp].forEach(w=>w&&W.add(hypNorm(w)))});
+    ['I','you','he','she','it','we','they','am','is','are','was','were','will','would','have','has','had','been','being','going','to','do','does','did','not'].concat(Object.values(CONTR)).forEach(w=>W.add(hypNorm(w)));
+    W.forEach(w=>w&&o.push(['w',w]));
     const seen=new Set();return o.filter(([v,t])=>{const k=v+'|'+t;if(seen.has(k))return false;seen.add(k);return true})});
   fs.writeFileSync('items.json',JSON.stringify(items));console.log(items.length,items.filter(x=>x[0][0]==='e').length);await b.close();
 })();

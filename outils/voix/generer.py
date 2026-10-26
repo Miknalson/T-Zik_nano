@@ -2,7 +2,7 @@ import json,wave,io,subprocess,os,sys
 from piper import PiperVoice, SynthesisConfig
 P=os.environ.get('PIPER_DIR','piper/');OUT=os.path.join(os.path.dirname(os.path.abspath(__file__)),'../../anglais-a2/audio/')
 os.makedirs(OUT,exist_ok=True)
-M={'eA':('en-us-lessac-medium.onnx',1.15),'eB':('en-us-ryan-high.onnx',1.15),'f':('fr-siwis-medium.onnx',1.0)}
+M={'w':('en-us-lessac-medium.onnx',1.3),'eA':('en-us-lessac-medium.onnx',1.15),'eB':('en-us-ryan-high.onnx',1.15),'f':('fr-siwis-medium.onnx',1.0)}
 V={k:PiperVoice.load(P+f) for k,(f,_) in M.items()}
 def h(s):
     x=0x811c9dc5;b=s.encode('utf-16-le')
