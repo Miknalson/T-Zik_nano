@@ -1587,7 +1587,7 @@ function hypNext(src){
   for(let n=0;n<5;n++){try{const it=HYP_SRC[k].g();if(it&&it.en&&it.fr&&!(HY&&HY.prev===it.en))return it}catch(e){}}
   return HYP_SRC.fin.g();
 }
-const hypCfg=()=>S.hyp=Object.assign({rate:.6,rep:2,gap:2,music:true,timer:30,human:true},S.hyp||{});
+const hypCfg=()=>S.hyp=Object.assign({rate:.6,rep:2,gap:2,music:true,timer:30,human:true,wbw:true},S.hyp||{});
 let HY=null;
 function vHypno(){
   hypStop();const c=hypCfg();
@@ -1598,7 +1598,8 @@ function vHypno(){
   <div class="hero" onclick="hypStart('story')" style="cursor:pointer;margin-bottom:14px;background:linear-gradient(160deg,#0f1630,#1d2547);color:#fff"><div style="font-size:54px">🎧</div><div class="t"><div class="big">Slow English</div><small style="color:#cfd6ff">100 % anglais, lentement, avec musique · ${HYP_STORY.length} histoires de la vie et du travail</small></div></div>
   ${Object.entries(HYP_SRC).filter(([k,s])=>!s.hero&&(!s.ok||s.ok())).map(([k,s])=>srcCard(k,s.t,s.i,s.n())).join('')}
   <div class="card"><h3>Réglages</h3>
-   <div class="mute" style="margin-top:8px">Vitesse de l’anglais</div>${seg('rate',[[.45,'Très lente'],[.6,'Lente'],[.8,'Normale']])}
+   <div class="mute" style="margin-top:8px">Vitesse de l’anglais</div>${seg('rate',[[.3,'Ultra lente'],[.45,'Très lente'],[.6,'Lente'],[.8,'Normale']])}
+   <div class="mute" style="margin-top:10px">Lecture</div>${seg('wbw',[[true,'🐢 Mot à mot puis phrase'],[false,'Phrase entière']])}
    <div class="mute" style="margin-top:10px">Répétitions de l’anglais</div>${seg('rep',[[1,'1 fois'],[2,'2 fois'],[3,'3 fois']])}
    <div class="mute" style="margin-top:10px">Silence entre les phrases</div>${seg('gap',[[1,'Court'],[2,'Moyen'],[4,'Long']])}
    <div class="mute" style="margin-top:10px">Voix</div>${seg('human',[[true,'🧑 Humaines (enregistrées)'],[false,'📱 De l’appareil']])}
@@ -1614,11 +1615,11 @@ function hypDraw(){
   <div class="card" style="text-align:center;padding:34px 18px;background:linear-gradient(160deg,var(--soft),var(--card))">
    <div style="font-size:46px;animation:hypb 6s ease-in-out infinite">${it.story?'🎧':'🌀'}</div>
    <div class="mute" style="margin-top:6px">${esc(HY.src==='mix'?'Mélange infini':HYP_SRC[HY.src].t)} · ${esc(it.tag||'')}</div>
-   ${it.story?`<div id="hystory" style="margin:14px -18px 0;padding:20px 16px;background:linear-gradient(180deg,#0f1630,#1d2547);max-height:56vh;overflow:auto">${it.lines.map((ln,i)=>{const cur=i===(HY.li||0);return `<div ${cur?'id="hycur"':''} style="font-size:${cur?22:19}px;line-height:1.35;margin:14px 0;font-weight:${cur?800:500};color:${cur?'#f5b13d':'#e9ecff'};opacity:${cur?1:i<(HY.li||0)?.45:.75};transition:all .6s">${esc(ln.en)}</div>`}).join('')}</div>`:it.lines?`<div style="margin-top:14px">${it.lines.map((ln,i)=>`<div ${i===(HY.li||0)?'id="hycur"':''} style="text-align:${ln.w==='B'?'right':'left'};opacity:${i===(HY.li||0)?1:.35};transition:opacity .6s;margin:8px 0"><div class="bubble ${ln.w==='B'?'you':'bot'}" style="display:inline-block;max-width:88%;text-align:left"><div style="font-weight:${i===(HY.li||0)&&HY.ph!=='fr'?900:600}">${esc(ln.en)}</div><div style="font-size:14px;color:var(--mute);font-weight:${i===(HY.li||0)&&HY.ph==='fr'?800:400}">${esc(ln.fr)}</div></div></div>`).join('')}</div>`:`
-   <div id="hyen" style="font-size:24px;font-weight:900;margin-top:16px;line-height:1.3;transition:opacity .6s;opacity:${HY.ph==='fr'?.45:1}">${esc(it.en)}</div>
+   ${it.story?`<div id="hystory" style="position:relative;margin:14px -18px 0;padding:20px 16px;background:linear-gradient(180deg,#0f1630,#1d2547);max-height:56vh;overflow:auto">${it.lines.map((ln,i)=>{const cur=i===(HY.li||0);return `<div ${cur?'id="hycur"':''} style="font-size:${cur?22:19}px;line-height:1.35;margin:14px 0;font-weight:${cur?800:500};color:${cur?'#f5b13d':'#e9ecff'};opacity:${cur?1:i<(HY.li||0)?.45:.75};transition:all .6s">${hypEnHTML(ln.en,cur)}</div>`}).join('')}</div>`:it.lines?`<div style="margin-top:14px">${it.lines.map((ln,i)=>`<div ${i===(HY.li||0)?'id="hycur"':''} style="text-align:${ln.w==='B'?'right':'left'};opacity:${i===(HY.li||0)?1:.35};transition:opacity .6s;margin:8px 0"><div class="bubble ${ln.w==='B'?'you':'bot'}" style="display:inline-block;max-width:88%;text-align:left"><div style="font-weight:${i===(HY.li||0)&&HY.ph!=='fr'?900:600}">${hypEnHTML(ln.en,i===(HY.li||0)&&HY.ph!=='fr')}</div><div style="font-size:14px;color:var(--mute);font-weight:${i===(HY.li||0)&&HY.ph==='fr'?800:400}">${esc(ln.fr)}</div></div></div>`).join('')}</div>`:`
+   <div id="hyen" style="font-size:24px;font-weight:900;margin-top:16px;line-height:1.3;transition:opacity .6s;opacity:${HY.ph==='fr'?.45:1}">${hypEnHTML(it.en,HY.ph!=='fr')}</div>
    <div id="hyfr" style="font-size:19px;margin-top:12px;color:var(--mute);transition:opacity .6s;opacity:${HY.ph==='fr'?1:.45}">${esc(it.fr)}</div>`}
    <div class="mute" style="margin-top:18px">${HY.n} écoutée${HY.n>1?'s':''}${left!=null?' · arrêt dans '+left+' min':''}</div></div>
-  <div style="display:flex;gap:10px;margin-top:12px">${HY.paused?`<button class="btn primary" style="flex:1;padding:15px" onclick="hypResume()">▶ Reprendre</button>`:`<button class="btn primary" style="flex:1;padding:15px" onclick="hypPause()">⏸ Pause</button>`}<button class="btn" style="padding:15px 20px" title="Suivant" onclick="hypSkip()">⏭</button><button class="btn" style="padding:15px 20px" title="Arrêter" onclick="vHypno()">⏹</button></div>`;
+  <div style="display:flex;gap:10px;margin-top:12px">${HY.paused?`<button class="btn primary" style="flex:1;padding:15px" onclick="hypResume()">▶ Reprendre</button>`:`<button class="btn primary" style="flex:1;padding:15px" onclick="hypPause()">⏸ Pause</button>`}<button class="btn" style="padding:15px 14px" title="Mot à mot" onclick="S.hyp.wbw=!S.hyp.wbw;save();toast(S.hyp.wbw?'🐢 Mot à mot activé':'Phrase entière',1800);hypDraw()">${hypCfg().wbw?'🐢':'🐇'}</button><button class="btn" style="padding:15px 20px" title="Suivant" onclick="hypSkip()">⏭</button><button class="btn" style="padding:15px 20px" title="Arrêter" onclick="vHypno()">⏹</button></div>`;
   const cu=document.getElementById('hycur'),bx=document.getElementById('hystory');
   if(cu&&bx)bx.scrollTop=Math.max(0,cu.offsetTop-bx.clientHeight/2+cu.clientHeight/2);
   else if(cu&&HY.li)try{cu.scrollIntoView({block:'center',behavior:'smooth'})}catch(e){}
@@ -1638,21 +1639,37 @@ const hypH=s=>{let x=0x811c9dc5;for(let i=0;i<s.length;i++){x^=s.charCodeAt(i);x
 let HYP_REC=new Set(),hypAud=null;
 try{fetch('audio/index.json').then(r=>r.ok?r.json():[]).then(a=>{HYP_REC=new Set(a)}).catch(()=>{})}catch(e){}
 function hypAudStop(){try{if(hypAud){hypAud.onended=hypAud.onerror=null;hypAud.pause()}}catch(e){}}
-function hypSpeak(text,lang,rate,alt){
-  const n=hypH((lang.startsWith('en')?(alt?'eB':'eA'):'f')+'|'+text);
-  if(!hypCfg().human||!HYP_REC.has(n))return hypTTS(text,lang,rate,alt);
+const hypPR=rate=>Math.max(.5,Math.min(1.25,.3+rate*.9));           // vitesse de lecture des enregistrements
+function hypPlay(n,rate,maxMs,fallback){                              // joue audio/<n>.mp3, sinon la voix de l'appareil
+  if(!hypCfg().human||!HYP_REC.has(n))return fallback();
   return new Promise(res=>{
     try{
       const a=hypAud=hypAud||new Audio();let fin=false;
-      const done=ok=>{if(fin)return;fin=true;a.onended=a.onerror=null;ok?res():hypTTS(text,lang,rate,alt).then(res)};
+      const done=ok=>{if(fin)return;fin=true;a.onended=a.onerror=null;ok?res():fallback().then(res)};
       a.onended=()=>done(true);a.onerror=()=>done(false);
-      a.src='audio/'+n+'.mp3';a.preservesPitch=true;a.webkitPreservesPitch=true;
-      a.playbackRate=Math.max(.7,Math.min(1.25,.55+rate*.7));
+      a.src='audio/'+n+'.mp3';a.preservesPitch=true;a.webkitPreservesPitch=true;a.playbackRate=hypPR(rate);
       const pr=a.play();if(pr&&pr.catch)pr.catch(()=>done(false));
-      setTimeout(()=>done(true),Math.max(6000,text.length*220));
-    }catch(e){hypTTS(text,lang,rate,alt).then(res)}
+      setTimeout(()=>done(true),maxMs);
+    }catch(e){fallback().then(res)}
   });
 }
+function hypSpeak(text,lang,rate,alt){
+  const n=hypH((lang.startsWith('en')?(alt?'eB':'eA'):'f')+'|'+text);
+  return hypPlay(n,rate,Math.max(6000,text.length*120/hypPR(rate)),()=>hypTTS(text,lang,rate,alt));
+}
+// Mot à mot : chaque mot est lu seul (enregistrement « w|mot »), surligné, puis la phrase entière.
+const hypNorm=w=>{w=w.replace(/[’‘]/g,"'").replace(/^[^A-Za-z0-9']+|[^A-Za-z0-9']+$/g,'');return !w?'':(w==='I'||/^I'/.test(w))?w:w.toLowerCase()};
+const hypWord=(w,rate)=>hypPlay(hypH('w|'+w),rate,5000,()=>hypTTS(w,'en-US',Math.max(.3,rate-.1)));
+async function hypSayEN(text,rate,alt,alive){
+  const c=hypCfg();
+  if(c.wbw){
+    const tk=text.split(/\s+/);
+    for(let i=0;i<tk.length;i++){if(!alive())return false;const w=hypNorm(tk[i]);if(!w)continue;HY.wi=i;hypDraw();await hypWord(w,rate);if(!alive())return false;await hypWait(350+c.gap*150)}
+    if(!alive())return false;HY.wi=-1;hypDraw();await hypWait(600);if(!alive())return false;
+  }
+  await hypSpeak(text,'en-US',rate,alt);return alive();
+}
+const hypEnHTML=(en,on)=>on&&HY&&HY.wi>=0?en.split(/\s+/).map((t,i)=>i===HY.wi?`<span style="background:#f5b13d;color:#111;border-radius:6px;padding:0 4px">${esc(t)}</span>`:esc(t)).join(' '):esc(en);
 function hypTTS(text,lang,rate,alt){
   return new Promise(res=>{
     try{
@@ -1676,13 +1693,13 @@ async function hypLoop(t){
   const c=hypCfg(),alive=()=>!!HY&&HY.t===t&&t===spk&&!HY.paused;
   while(alive()){
     if(HY.end&&Date.now()>HY.end){hypStop();toast('🌙 Fin de la séance d’hypnose. Bravo !',4000);if(tab==='course')vHypno();return}
-    if(!HY.keep){HY.it=hypNext(HY.src);HY.prev=HY.it.en;HY.li=0}HY.keep=false;
+    if(!HY.keep){HY.it=hypNext(HY.src);HY.prev=HY.it.en;HY.li=0}HY.keep=false;HY.wi=-1;
     const it=HY.it,L=it.lines||[{w:'A',en:it.en,fr:it.fr}];
     for(let li=HY.li||0;li<L.length;li++){                       // un dialogue = plusieurs répliques, chacune EN → FR → EN
       if(!alive())return;HY.li=li;const ln=L[li],alt=ln.w==='B';HY.ph='en';hypDraw();
-      if(it.story){await hypSpeak(ln.en,'en-US',Math.min(.9,c.rate+.15));if(!alive())return;await hypWait(500+c.gap*250);continue}
+      if(it.story){if(!await hypSayEN(ln.en,c.rate,false,alive))return;await hypWait(500+c.gap*250);continue}
       for(let r=0;r<c.rep;r++){
-        await hypSpeak(ln.en,'en-US',c.rate,alt);if(!alive())return;await hypWait(900+c.gap*250);if(!alive())return;
+        if(r===0){if(!await hypSayEN(ln.en,c.rate,alt,alive))return}else{await hypSpeak(ln.en,'en-US',c.rate,alt);if(!alive())return}await hypWait(900+c.gap*250);if(!alive())return;
         if(r===0){HY.ph='fr';hypDraw();await hypSpeak(ln.fr,'fr-FR',Math.min(1,c.rate+.25),alt);if(!alive())return;await hypWait(900+c.gap*250);if(!alive())return;HY.ph='en';hypDraw()}
       }
     }
