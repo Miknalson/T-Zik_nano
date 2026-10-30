@@ -1581,7 +1581,107 @@ Sometimes, the answer is very good.
 Then, I accept the request.
 Sometimes, the answer is not clear.
 Then, I propose a smaller budget.
-The goal is to find a fair compromise for everyone.`]
+The goal is to find a fair compromise for everyone.`],
+['A quiet walk by the river',`After a busy day, I like to walk by the river.
+I leave my phone in my pocket.
+The air is cool, and the sky is clear.
+A small boat moves slowly across the water.
+On the other side, two people are walking their dog.
+I stop for a moment and listen to the birds.
+I do not need to hurry.
+I take a slow breath and relax my shoulders.
+On my way home, I buy some fresh bread.
+I feel ready for a quiet evening.`],
+['At the local market',`Every Saturday, I visit the market near my home.
+I take a large bag with me.
+First, I choose some apples and a few tomatoes.
+The seller asks if I need anything else.
+I ask for a kilo of potatoes, please.
+Then I walk to the cheese stall.
+There are many different kinds of cheese.
+I try a small piece before I buy some.
+Before leaving, I count my change.
+Now I have everything I need for lunch.`],
+['Cooking dinner together',`Tonight, my friend is coming over for dinner.
+We are going to make a simple vegetable soup.
+I wash the carrots while she cuts the onions.
+We put a little oil in a large pot.
+Then we add the vegetables and some water.
+While the soup cooks, we set the table.
+My friend tells me about her new job.
+I listen and ask a few questions.
+The soup smells good, but it needs some salt.
+We sit down together and enjoy our meal.`],
+['Finding my way in a new city',`I am visiting a new city for the first time.
+I want to find the museum, but I am lost.
+I stop near a small bookshop.
+Excuse me, how do I get to the museum?
+A woman smiles and points down the street.
+Go straight ahead, then turn left at the lights.
+The museum is next to the library.
+I repeat the directions to make sure I understand.
+She says that it is only a ten-minute walk.
+I thank her and continue on my way.`],
+['A train that is late',`I arrive at the station early this morning.
+My train is on the board, but it is delayed.
+I have a meeting at ten o'clock.
+First, I check the new arrival time.
+Then I send a short message to my colleague.
+My train is late, so I may miss the beginning.
+She replies that she will take notes for me.
+I buy a cup of tea and find a seat.
+When the train arrives, I feel less worried.
+Sometimes plans change, and we need to adapt.`],
+['Planning a weekend away',`We would like to spend a weekend by the sea.
+On Monday evening, we look for a small hotel.
+We want somewhere quiet and close to the beach.
+One hotel looks nice, but it is too expensive.
+Another one includes breakfast and has good reviews.
+We decide to book a room for two nights.
+Next, we check the weather and the train times.
+I write a short list of things to pack.
+A warm jacket will be useful in the evening.
+It feels good to have something to look forward to.`],
+['Welcoming a new colleague',`A new colleague joins our team today.
+Her name is Anna, and she works in finance.
+I meet her at reception at nine o'clock.
+First, I show her where she can leave her coat.
+Then we walk around the office together.
+I introduce her to the people in our team.
+There is a lot to remember on the first day.
+I tell her that she can always ask me for help.
+At lunchtime, we find a table in the kitchen.
+We talk about our hobbies and get to know each other.`],
+['Explaining a change in costs',`This month, our transport costs are higher than planned.
+My manager asks me to explain the difference.
+I start by checking the invoices.
+We sent more orders than usual last month.
+The price of each delivery also went up.
+I separate these two effects in a simple table.
+Then I compare the figures with last year.
+I write a short explanation using clear sentences.
+My manager can now see why the costs changed.
+Together, we decide what to watch next month.`],
+['Asking for more time',`I am preparing a report for Friday morning.
+On Thursday, I notice that some information is missing.
+I cannot finish the report without it.
+I contact the team and explain what I need.
+They can send the figures tomorrow afternoon.
+So I speak to my manager before the deadline.
+Could I send the final report on Monday instead?
+I can share the main results with you today.
+She agrees and thanks me for telling her early.
+A clear message helps everyone plan their work.`],
+['Learning something new',`Last week, I decided to learn a new skill.
+I wanted to make better charts for my reports.
+At first, there were too many buttons on the screen.
+I felt confused, so I started with one simple chart.
+I followed the instructions and tried each step.
+My first attempt was not very clear.
+I changed the title and removed a few colours.
+Then I asked a colleague what she thought.
+Her advice helped me improve the result.
+I still have a lot to learn, but I have made a start.`]
 ].map(([t,x])=>({t,lines:x.trim().split('\n').map(en=>({w:'A',en,fr:''}))}));
 const hypDialogs=job=>UNITS.filter(u=>!!u.job===!!job&&u.dialogue).map(u=>({t:u.title,lines:u.dialogue.map(x=>({w:x.w==='bot'?'A':'B',en:x.en,fr:x.fr}))})).concat(HYP_DLG.filter(d=>!!d.job===!!job));
 const HYP_T=['ps','ps','pc','pas','pas','pp','fs','fg','co','pac','pap'],HYP_TL={ps:'présent',pc:'présent continu',pas:'passé',pp:'present perfect',fs:'futur',fg:'futur proche',co:'conditionnel',pac:'passé continu',pap:'plus-que-parfait'};
