@@ -1,5 +1,0 @@
-{
-  "date": "2026-10-30",
-  "type": "TypeError",
-  "message": "Object of type int64 is not JSON serializable"
-}
