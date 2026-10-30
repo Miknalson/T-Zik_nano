@@ -6,6 +6,8 @@ on:
       - claude/hello-claude-hi46j6
     paths:
       - '.github/workflows/recherche-trading.yml'
+      - 'signaux/recherche_trading.py'
+      - 'signaux/test_recherche.py'
   workflow_dispatch:
 
 permissions:

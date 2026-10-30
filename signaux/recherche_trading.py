@@ -87,7 +87,7 @@ def simuler(t, noms, dates, debut, fin, options, commission=.004, glissement=.00
     pertes = -sum(v for v in sorties if v < 0)
     return {'capital_final': float(cash), 'rendement': float(cash / CAPITAL - 1),
             'drawdown': float((valeurs / np.maximum.accumulate(valeurs) - 1).min()),
-            'achats': achats, 'clotures': len(sorties), 'gagnantes': sum(v > 0 for v in sorties),
+            'achats': achats, 'clotures': len(sorties), 'gagnantes': int(sum(v > 0 for v in sorties)),
             'profit_factor': float(sum(v for v in sorties if v > 0) / pertes) if pertes else None,
             'couts_estimes': float(couts), 'courbe': courbe}
 

@@ -1,4 +1,5 @@
 """Prix synthétiques pour vérifier le moteur, jamais pour estimer la rentabilité."""
+import json
 import numpy as np
 import pandas as pd
 import recherche_trading as r
@@ -43,6 +44,7 @@ def test_selection_independante_du_final():
     for k in r.VARIANTES:
         assert a['variantes'][k]['selection'] == b['variantes'][k]['selection']
     assert a['production_activee'] is False
+    json.dumps(a, allow_nan=False)
 
 
 if __name__ == '__main__':
