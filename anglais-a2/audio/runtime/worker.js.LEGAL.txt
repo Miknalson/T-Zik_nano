@@ -1,0 +1,8 @@
+Bundled license information:
+
+onnxruntime-web/dist/esm/ort.wasm.min.js:
+  /*!
+   * ONNX Runtime Web v1.18.0
+   * Copyright (c) Microsoft Corporation. All rights reserved.
+   * Licensed under the MIT License.
+   */

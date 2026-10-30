@@ -1,0 +1,18 @@
+{
+  "name": "speakup-local-voice",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "node build.mjs",
+    "test:mp3": "node test-mp3.cjs",
+    "test:background": "node test-background.cjs"
+  },
+  "dependencies": {
+    "@diffusionstudio/piper-wasm": "1.0.0",
+    "esbuild": "0.25.12",
+    "onnxruntime-web": "1.18.0"
+  },
+  "devDependencies": {
+    "playwright-core": "1.62.1"
+  }
+}

@@ -16,3 +16,16 @@ for i in 0 1 2 3; do PIPER_DIR=dossier/des/voix/ python3 outils/voix/generer.py 
 ```
 
 Les fichiers existants sont gardés : seuls les nouveaux textes sont enregistrés. Le nom de fichier est le hash FNV-1a 32 bits de `voix|texte`, identique à `hypH` dans `index.html`.
+
+## Textes générés et couverture de tous les modules
+
+Les nouvelles phrases sans MP3 sont maintenant lues par le moteur naturel local
+[web/README.md](web/README.md). Les MP3 restent prioritaires dans tous les ateliers.
+Le premier chargement attend l’index audio afin de ne pas utiliser prématurément une
+voix de secours. Les erreurs du moteur local sont signalées avant le recours à la voix
+système, et les lectures sont interrompues quand on change d’écran.
+
+L’extracteur inclut explicitement les dialogues TOEIC assemblés, les questions orales,
+les phrases d’Emma, les paires de prononciation et les formes verbales. Il accepte
+`CHROMIUM_PATH`, `APP_URL` et `ITEMS_PATH` pour utiliser un Chromium système, un serveur
+HTTP local et un fichier de sortie extérieur au dépôt.

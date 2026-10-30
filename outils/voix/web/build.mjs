@@ -1,0 +1,12 @@
+import fs from 'node:fs/promises';
+import path from 'node:path';
+import {fileURLToPath} from 'node:url';
+import {build} from 'esbuild';
+const here=path.dirname(fileURLToPath(import.meta.url));
+const out=path.resolve(here,'../../../anglais-a2/audio/runtime');
+const modules=path.join(here,'node_modules');
+await fs.mkdir(out,{recursive:true});
+await build({entryPoints:[path.join(here,'worker.js')],bundle:true,format:'esm',platform:'browser',external:['fs','path'],outdir:out,minify:true,target:'es2020',legalComments:'linked'});
+for(const name of ['ort-wasm.wasm','ort-wasm-simd.wasm'])await fs.copyFile(path.join(modules,'onnxruntime-web/dist',name),path.join(out,name));
+for(const name of ['piper_phonemize.wasm','piper_phonemize.data'])await fs.copyFile(path.join(modules,'@diffusionstudio/piper-wasm/build',name),path.join(out,name));
+console.log('Runtime local compilé dans',out);
