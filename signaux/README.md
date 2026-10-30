@@ -281,3 +281,10 @@ python signaux/recherche_trading.py --donnees /chemin/recherche-data --sortie ra
 Les tests `test_recherche.py` vérifient l’absence de fuite du futur, l’indépendance
 du choix vis-à-vis des résultats finaux, la conservation du capital sans ordre et
 les frais. Les prix synthétiques de ces tests ne servent jamais au rapport réel.
+
+Qualité des sources : un actif dont une seule barre OHLC est incohérente est exclu
+**de toutes les variantes**, sans consulter ses résultats. Bitcoin doit rester
+valide pour calculer le filtre commun et l’univers doit conserver au moins cinq
+actifs. Les exclusions et les dates fautives sont enregistrées dans le rapport et
+l’application. La référence reproduit les règles du bot sur cet univers vérifiable,
+pas les transactions exactes du bot à 15 actifs. Les barres ne sont pas réinventées.

@@ -82,6 +82,8 @@ def recherche_html(chemin):
                 'Aucun résultat synthétique ne sert à choisir une stratégie.</p></section>')
     r = json.loads(Path(chemin).read_text())
     lignes = []
+    exclusions = ', '.join(html.escape(x['ticker']) for x in r.get('actifs_exclus', []))
+    qualite = (f' Univers commun : {r.get("univers_teste", 15)} actifs. Exclus pour données incohérentes : {exclusions}.' if exclusions else '')
     for cle, v in r['variantes'].items():
         choisi = ' · retenue sur 2021–2022' if cle == r['choisi_sur_selection'] else ''
         lignes.append(f'<tr><td>{html.escape(v["label"] + choisi)}</td>'
@@ -91,7 +93,7 @@ def recherche_html(chemin):
                'Elle reste expérimentale et ne remplace pas le bot.' if r['amelioration_descriptive'] else
                'Aucune amélioration ne franchit tous les critères fixés. Le bot reste inchangé.')
     return ('<section><div class="eyebrow">Recherche de rentabilité · bot au comptant</div>'
-            f'<h2>Cinq variantes, un même capital.</h2><p>{verdict}</p>'
+            f'<h2>Cinq variantes, un même capital.</h2><p>{verdict}</p><p>{qualite}</p>'
             '<details class="validation"><summary>Comparer les résultats chiffrés</summary>'
             '<div class="defile"><table><thead><tr><th>Variante</th><th>2021–2022</th>'
             '<th>2023+ · gain</th><th>Pire baisse</th><th>Frais doublés</th></tr></thead><tbody>'

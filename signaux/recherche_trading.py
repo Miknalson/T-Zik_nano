@@ -15,7 +15,7 @@ import signaux as s
 from test_portefeuille import UNIVERS, preparer
 
 VARIANTES = {
-    'reference': {'label': 'Bot actuel · filtre Bitcoin 200 j'},
+    'reference': {'label': 'Règles du bot · univers vérifiable'},
     'cassure_neuve': {'label': 'Nouvelle cassure uniquement', 'neuve': True},
     'pause_5j': {'label': 'Pause de 5 jours après un stop', 'pause': 5},
     'tendance_actif': {'label': 'Actif au-dessus de sa moyenne 200 j', 'actif': True},
@@ -142,7 +142,7 @@ def main():
     ap.add_argument('--donnees', help='dossier de snapshots CSV locaux, sinon téléchargement Yahoo')
     ap.add_argument('--snapshots', help='sauvegarder les prix normalisés pour reproduire ce calcul')
     args = ap.parse_args()
-    donnees, sources = {}, []
+    donnees, sources, exclus = {}, [], []
     hier = pd.Timestamp(dt.datetime.now(dt.timezone.utc).date()) - pd.Timedelta(days=1)
     for nom, ticker in UNIVERS.items():
         if args.donnees:
@@ -152,9 +152,15 @@ def main():
         df = df.loc[df.index <= hier, ['Open', 'High', 'Low', 'Close']].sort_index()
         if df.index.duplicated().any() or df.empty or not np.isfinite(df.to_numpy()).all():
             raise ValueError(f'Prix invalides : {ticker}')
-        if ((df <= 0).any(axis=1) | (df.High < df[['Open', 'Close', 'Low']].max(axis=1))
-                | (df.Low > df[['Open', 'Close', 'High']].min(axis=1))).any():
-            raise ValueError(f'OHLC incohérents : {ticker}')
+        invalides = ((df <= 0).any(axis=1) | (df.High < df[['Open', 'Close', 'Low']].max(axis=1))
+                     | (df.Low > df[['Open', 'Close', 'High']].min(axis=1)))
+        if invalides.any():
+            exclus.append({'ticker': ticker, 'raison': 'OHLC incohérents',
+                           'lignes_invalides': int(invalides.sum()),
+                           'premieres_dates': [str(d.date()) for d in df.index[invalides][:5]]})
+            if nom == 'Bitcoin':
+                raise ValueError('Bitcoin invalide : filtre de marché impossible')
+            continue
         if df.index[-1] < hier - pd.Timedelta(days=3):
             raise ValueError(f'Historique périmé : {ticker}')
         contenu = df.to_csv().encode()
@@ -164,7 +170,12 @@ def main():
             Path(args.snapshots).mkdir(parents=True, exist_ok=True)
             (Path(args.snapshots) / f'{ticker}.csv').write_bytes(contenu)
         donnees[nom] = df
+    if len(donnees) < 5 or 'Bitcoin' not in donnees:
+        raise ValueError('Univers vérifiable insuffisant')
     rapport = comparer(donnees)
+    rapport['actifs_exclus'] = exclus
+    rapport['univers_demande'] = len(UNIVERS)
+    rapport['univers_teste'] = len(donnees)
     rapport['sources'] = sources
     Path(args.sortie).write_text(json.dumps(rapport, ensure_ascii=False, indent=2) + '\n')
     print('VARIANTE | SELECTION 2021-2022 | FINAL 2023+ | DRAWDOWN FINAL | FINAL FRAIS DOUBLES')
