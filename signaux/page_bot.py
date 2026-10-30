@@ -10,6 +10,7 @@ import json
 import os
 
 from signaux import DOSSIER, prix
+from ios_ui import CSS as IOS_CSS, navigation
 
 BOTS = [("Papier", "argent fictif", "bot_portefeuille.json", "bot_journal.csv"),
         ("Réel", "ton compte Kraken", "bot_reel.json", "bot_reel_journal.csv")]
@@ -58,7 +59,15 @@ def bilan(etat, operations):
     ventes = [float(o["resultat"]) for o in operations if o["operation"] in ("vente", "stop")]
     latent = sum(p["quantite"] * p.get("prix_actuel", p["prix_entree"]) - p.get("cout", 0)
                  for p in etat["positions"].values())
-    return {"depart": depart, "valeur": etat["valeur"], "gain": etat["valeur"] - depart,
+    valeurs = [depart] + [float(h["valeur"]) for h in etat.get("historique", [])] + [float(etat["valeur"])]
+    sommet, drawdown = depart, 0.
+    for v in valeurs:
+        sommet = max(sommet, v)
+        drawdown = min(drawdown, v / sommet - 1 if sommet else 0.)
+    gains = sum(v for v in ventes if v > 0)
+    pertes = -sum(v for v in ventes if v < 0)
+    return {"drawdown": drawdown, "profit_factor": gains / pertes if pertes else None,
+            "depart": depart, "valeur": etat["valeur"], "gain": etat["valeur"] - depart,
             "pct": etat["valeur"] / depart - 1 if depart else 0.0, "realise": sum(ventes), "latent": latent,
             "ventes": len(ventes), "gagnantes": sum(v > 0 for v in ventes)}
 
@@ -158,13 +167,16 @@ def section(titre, sous_titre, etat, operations, ident):
               ("En cours (positions ouvertes)", f'<span class="{sens(b["latent"])[0]}">{sens(b["latent"])[1]} '
                                                 f'{html.escape(euros(b["latent"], True))}</span>'),
               ("Ventes gagnantes", html.escape(taux)),
-              ("Positions ouvertes", str(len(etat["positions"])))]
+              ("Positions ouvertes", str(len(etat["positions"]))),
+              ("Pire baisse observée", html.escape(pourcent(b["drawdown"]))),
+              ("Gains / pertes clôturés", f"{b['profit_factor']:.2f}" if b['profit_factor'] is not None else "Non calculable")]
     tuiles_html = "".join(f'<div class="tuile"><div class="etiquette">{e}</div><div class="chiffre">{v}</div></div>'
                           for e, v in tuiles)
     return f"""<section>
 <h2>{html.escape(titre)} <span>{html.escape(sous_titre)}</span></h2>
 <div class="heros"><div class="valeur">{html.escape(euros(b['valeur']))}</div>
 <div class="{classe} total">{fleche} {html.escape(euros(b['gain'], True))} ({html.escape(pourcent(b['pct']))}) depuis le départ ({html.escape(euros(b['depart']))})</div></div>
+<p class="note">Le taux de réussite seul ne mesure pas la rentabilité. Un ratio gains / pertes inférieur à 1 indique des pertes clôturées supérieures aux gains. Les frais sont inclus ; les positions ouvertes restent variables.</p>
 {marche_html(etat)}<div class="tuiles">{tuiles_html}</div>
 <h3>Valeur jour après jour</h3>{courbe(points_courbe(etat, operations), b['depart'], ident)}
 <h3>Positions ouvertes</h3>{tableau_positions(etat)}
@@ -188,7 +200,7 @@ def ecrire(chemin_sortie, dossier=DOSSIER):
                 else "▶ Actif : il achète et vend tout seul chaque nuit")
     contenu = "".join(sections) or '<p class="vide">Le bot n\'a pas encore tourné.</p>'
     page = f"""<!doctype html><html lang="fr"><head><meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1"><title>Bot Kraken</title>
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="theme-color" content="#0c1018"><title>Bot Kraken</title>
 <link rel="apple-touch-icon" href="icone.png">
 <style>
 :root{{--fond:#f6f6f4;--carte:#fff;--texte:#1d1d1b;--doux:#6b6b66;--gain:#1f7a4d;--perte:#b3261e;--bord:#e2e2dd;--grille:#e8e8e4;--serie:#2a78d6}}
@@ -218,12 +230,13 @@ th,td{{text-align:left;padding:6px 8px;border-bottom:1px solid var(--bord);white
 .positions{{list-style:none;margin:0;padding:0}} .positions li{{padding:8px 0;border-bottom:1px solid var(--bord)}}
 .positions .haut{{display:flex;justify-content:space-between;gap:8px;font-weight:600}}
 .positions .detail{{color:var(--doux);font-size:12px;margin-top:2px}}
+{IOS_CSS}
 </style></head><body><main>
 <p class="sous"><a href="index.html">← Signaux du jour</a></p>
-<h1>🤖 Bot Kraken</h1>
+<div class="eyebrow">Suivi des résultats</div><h1>Portefeuille Kraken</h1>
 <p class="etat">{html.escape(etat_bot)}</p>
 {contenu}
-</main>
+</main>{navigation("bot")}
 <script>
 document.querySelectorAll(".graphe").forEach(function (g) {{
   var pts = JSON.parse(g.querySelector("script").textContent);

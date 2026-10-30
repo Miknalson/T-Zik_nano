@@ -1,5 +1,9 @@
 # Signaux quotidiens
 
+> Depuis le 30/10/2026 : les nouvelles entrées doivent aussi franchir le contrôle prudent
+> décrit en fin de document. Le statut « méthode suivie » ne suffit plus ; les anciennes
+> consignes d’entrée ci-dessous ne s’appliquent que lorsque ce contrôle est validé.
+
 Analyse chaque matin 15 marchés (crypto, gaz, pétrole, or, CAC 40, S&P 500, EUR/USD, GBP/USD)
 avec 3 règles simples, et n'affiche un signal que si la règle a battu le hasard sur
 l'historique en simulant **exactement les consignes affichées** : entrée à l'ouverture,
@@ -187,3 +191,93 @@ Une notification confirme chaque commande.
 En réel, le stop est un vrai ordre stop-loss posé chez Kraken : il protège la position même
 entre deux passages du bot. État dans `bot_reel.json`, opérations dans `bot_reel_journal.csv`.
 En cas d'erreur, une notification « Bot : ERREUR (argent réel) » arrive.
+
+## Révision iOS et contrôle prudent — 30/10/2026
+
+Les méthodes « suivies » restent des références de test, mais ce statut **ne contourne
+plus la validation**. Les nouvelles entrées (y compris après un stop et en cours de
+route) sont bloquées tant que les contrôles ci-dessous ne passent pas. Les sorties
+et stops restent affichés/notifiés. Une inversion non validée devient une sortie
+sans nouvelle entrée. Le bot Kraken conserve sa stratégie et son fonctionnement :
+aucun ordre réel ni changement de paramètres du bot ne fait partie de cette révision.
+
+Chaque méthode est étudiée sans ajuster ses paramètres pour embellir le résultat :
+
+- contrôle historique initial conservé, avec jusqu’à 1 200 décalages en production ;
+- correction de Bonferroni du p historique sur les 45 combinaisons marché/méthode
+  de cette page, seuil familial 5 %, en plus du seuil initial 1 % ;
+- 30 % les plus récents séparés, indicateurs préparés uniquement avec le passé,
+  positions remises à zéro à la coupure, première entrée à l’ouverture suivante ;
+- au moins 30 entrées et un gain dans chacun des trois segments récents ;
+- borne basse de l’IC exploratoire à 95 % de la moyenne par séance strictement
+  positive (bootstrap de blocs de 20 séances, 2 000 tirages, graine fixe) ;
+- résultat récent positif en doublant commission et financement.
+
+La période récente est une vérification **rétrospective**, pas un test prospectif
+jamais consulté. Les anciennes recherches sur d’autres actions/paramètres ne sont
+pas toutes incluses dans les 45 essais ; ce contrôle ne les efface pas. Le bootstrap
+ne garantit pas la stabilité future. Les décalages sont un comparateur exploratoire,
+pas une preuve causale ; une résolution insuffisante bloque la validation.
+Aucune nouvelle stratégie rentable n’est démontrée par cette modification.
+
+Correction du moteur : le financement entre la dernière clôture et l’ouverture de
+sortie est désormais déduit, notamment sur le week-end. Les sommes de rendements de
+position ne sont pas des rendements de capital : elles n’intègrent pas un portefeuille
+avec le dimensionnement réel de chaque ordre. Les prix Yahoo et les frais estimés
+ne reproduisent pas exactement les CFD Libertex. Les gaps peuvent dépasser le stop.
+
+La page portefeuille affiche la pire baisse depuis un sommet (capital initial inclus)
+et le ratio des gains/pertes clôturés nets de frais. Ces mesures décrivent le journal
+enregistré, sans ajuster les pertes ni réinitialiser le capital. En cas d’apports ou
+retraits, les anciennes valeurs ne sont pas ajustées : la courbe et le drawdown ne
+constituent alors pas une performance corrigée des flux.
+
+Vérifications hors réseau :
+
+```sh
+cd signaux
+python test_validation.py
+python test_prudence.py
+python test_bot.py
+python signaux.py --demo --sortie ../site/index.html
+```
+
+Le workflow vérifie ces régressions avant le calcul réel. Un push de code déclenche
+la publication, sans notification ntfy lors de ce push. Les passages programmés
+conservent leurs notifications démo, avec le filtre prudent sur les nouvelles entrées.
+
+## Recherche de variantes de portefeuille
+
+`recherche_trading.py` compare cinq règles **au comptant, achat seulement** : le bot
+actuel (filtre Bitcoin 200 jours), nouvelle cassure uniquement, pause de cinq jours
+après un stop, filtre 200 jours de l’actif, et ce dernier filtre avec nouvelle cassure.
+Le filtre Bitcoin reste commun aux cinq. La comparaison conserve les 15 actifs, le
+classement à 90 jours, cinq places et 20 % maximum du capital par actif, sans levier.
+Tous les ordres incluent 0,4 % de commission et 0,1 % de glissement. Un scénario
+double ces deux coûts. La liquidation finale inclut aussi ces coûts.
+
+Le choix utilise **2021–2022 seulement** : résultat positif et supérieur à la référence,
+pire baisse au moins aussi bonne ; parmi les variantes admissibles, le gain le plus
+élevé. Sinon la référence reste retenue. Les résultats **2023 à hier UTC** sont ensuite
+affichés pour toutes les variantes. Une amélioration descriptive requiert un gain
+final positif et supérieur à la référence, une pire baisse au moins aussi bonne,
+un gain encore positif avec les coûts doublés et au moins 30 clôtures.
+
+Cette recherche reste rétrospective : ni cette période, ni les actifs actuels n’étaient
+inconnus des recherches passées. L’univers survivant crée un biais. Les prix USD ne
+reproduisent pas les achats Kraken EUR ni les CFD Libertex. Ces résultats ne sont
+pas une démonstration statistique de rentabilité et n’activent aucune stratégie.
+Les indicateurs sont calculés avec le passé ; chaque période démarre avec 1 000 €
+en liquide, sans position héritée. Le capital ne reçoit aucun apport pendant le test.
+
+Le workflow calcule le rapport public `recherche_trading.json` et publie les snapshots
+OHLC normalisés dans `recherche-data/`. Le rapport inclut leurs empreintes SHA256.
+Pour rejouer un snapshot téléchargé :
+
+```sh
+python signaux/recherche_trading.py --donnees /chemin/recherche-data --sortie rapport.json
+```
+
+Les tests `test_recherche.py` vérifient l’absence de fuite du futur, l’indépendance
+du choix vis-à-vis des résultats finaux, la conservation du capital sans ordre et
+les frais. Les prix synthétiques de ces tests ne servent jamais au rapport réel.

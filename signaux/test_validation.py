@@ -131,7 +131,7 @@ def resultat(ticker, regle, action, sens=1, position_sens=0):
     conseil = {"action": action, "orientation": sens, "sens": sens, "position_sens": position_sens,
                "en_cours": True, "apres_stop": False,
                "cloture": 84914.6, "stop_estime": 81745.2, "nominal": 150.7, "stop_pct": 0.0664}
-    return {"ticker": ticker, "nom": "Bitcoin", "regle": regle, "erreur": None, "conseil": conseil}
+    return {"ticker": ticker, "nom": "Bitcoin", "regle": regle, "erreur": None, "conseil": conseil, "eval": {"prudent": {"valide": True}}}
 
 
 def test_notification_entrer_reprend_les_cases_libertex():

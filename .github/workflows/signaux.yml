@@ -6,6 +6,7 @@ on:
       - claude/hello-claude-hi46j6
     paths:
       - 'anglais-a2/**'
+      - 'signaux/*.py'
       - '.github/workflows/signaux.yml'
   schedule:
     # 7h17, 7h47 et 8h17 à Paris l'été (une heure plus tôt l'hiver). GitHub saute parfois un
@@ -43,12 +44,27 @@ jobs:
 
       - run: pip install -r signaux/requirements.txt
 
+      - name: Vérifier les calculs et les garde-fous
+        run: |
+          cd signaux
+          python test_validation.py
+          python test_prudence.py
+          python test_recherche.py
+          python test_bot.py
+
+      - name: Comparer les variantes sans modifier le bot
+        continue-on-error: true
+        run: |
+          mkdir -p site
+          python signaux/recherche_trading.py --snapshots site/recherche-data
+
       - name: Calculer les signaux
         env:
-          NTFY_TOPIC: ${{ secrets.NTFY_TOPIC }}
+          NTFY_TOPIC: ${{ github.event_name != 'push' && secrets.NTFY_TOPIC || '' }}
         run: |
           python signaux/signaux.py --capital 1000 --sortie site/index.html ${{ inputs.test_notification && '--notif-test' || '' }}
           cp signaux/icone.png site/
+          if [ -f signaux/recherche_trading.json ]; then cp signaux/recherche_trading.json site/; fi
 
       - name: Ajouter l'application d'anglais au site
         run: |
@@ -62,6 +78,7 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add signaux/journal_signaux.csv
+          if [ -f signaux/recherche_trading.json ]; then git add signaux/recherche_trading.json; fi
           if git diff --cached --quiet; then exit 0; fi
           git commit -m "Journal des signaux du $(date -u +%F)"
           git pull --rebase origin "$GITHUB_REF_NAME"

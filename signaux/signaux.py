@@ -22,6 +22,9 @@ import sys
 import time
 from zoneinfo import ZoneInfo
 
+from ios_ui import CSS as IOS_CSS, navigation
+from prudence import controler, autorisee, diagnostic_html, recherche_html
+
 import numpy as np
 import pandas as pd
 
@@ -201,7 +204,7 @@ def executer(df, voulu, frais, decalages=(), en_cours=False):
         avant = V[:, t - 2] if t >= 2 else np.zeros(nb)
 
         sortie = (sens != 0) & (prec != sens)
-        ret[sortie, t] += sens[sortie] * (o[t] / c[t - 1] - 1) - demi
+        ret[sortie, t] += sens[sortie] * (o[t] / c[t - 1] - 1) - demi - financement * jours[t]
         if sortie[0]:
             operations.append((t, "sortie", sens[0], o[t]))
         sens[sortie] = 0
@@ -507,9 +510,22 @@ def consigne(r):
     if r["erreur"]:
         return "Données indisponibles", [r["erreur"]], "gris"
     if suivie(r):
+        if not autorisee(r):
+            c = r["conseil"]
+            # Les sorties et stops restent visibles ; aucune nouvelle entrée non validée.
+            if c["action"] == "SORTIR":
+                return consigne_suivie(r)
+            if c["action"] == "INVERSER":
+                return "Démo : fermer, sans nouvelle entrée", ["Ferme la position de la méthode si tu la suivais. La nouvelle entrée n'est pas validée."], "sortir"
+            lignes = ["Pas de nouvelle entrée conseillée : cette méthode n'a pas franchi les contrôles de robustesse."]
+            if c["position_sens"]:
+                lignes.append("Position démo déjà ouverte : conserve le stop prévu et suis la sortie de la méthode.")
+            if r.get("suivi") and r["suivi"]["commence"]:
+                lignes.append(f"Rejeu démo depuis le {DEBUT_SUIVI:%d/%m} : {r['suivi']['trades']} entrées, somme des rendements de position {r['suivi']['resultat']:+.1%}. Ce n'est pas le rendement du compte.")
+            return "Observation · avantage non confirmé", lignes, "gris"
         return consigne_suivie(r)
     e, c, s = r["eval"], r["conseil"], r["suivi"]
-    if not e["valide"]:
+    if not autorisee(r):
         return "Pas une de tes méthodes", ["N'agis pas dessus : elle n'est là que pour information."], "gris"
     suivi = (f"Suivi démo depuis le {DEBUT_SUIVI:%d/%m} : {s['trades']} trade(s), "
              f"résultat {s['resultat']:+.1%}" if s["commence"]
@@ -524,7 +540,7 @@ def consigne(r):
 
 
 def afficher_console(resultats, nb_tests):
-    valides = [r for r in resultats if r["eval"] and r["eval"]["valide"]]
+    valides = [r for r in resultats if autorisee(r)]
     print()
     for r in resultats:
         titre, lignes, _ = consigne(r)
@@ -533,7 +549,7 @@ def afficher_console(resultats, nb_tests):
         for ligne in lignes:
             print(f"{'':<45}{ligne}")
     print(f"\n{len(valides)} règle(s) validée(s) sur {nb_tests} testées. "
-          f"Par pur hasard, on en attendrait environ {nb_tests * P_MAX:.1f}.")
+          "Contrôle exploratoire, aucune garantie de gains futurs.")
     clotures = {r["ticker"]: r["date_cloture"] for r in resultats if r["date_cloture"] is not None}
     print("Dernières clôtures : " + ", ".join(f"{t} {d:%d/%m}" for t, d in clotures.items()))
     bruts = {r["ticker"]: r.get("brut") for r in resultats if r.get("brut") is not None}
@@ -545,7 +561,7 @@ def priorite(r):
     """Les cartes qui demandent d'agir aujourd'hui passent en tête de page."""
     if r["erreur"]:
         return 5
-    valide, action = r["eval"]["valide"] or suivie(r), r["conseil"]["action"]
+    valide, action = autorisee(r), r["conseil"]["action"]
     if action in ("ENTRER", "INVERSER", "SORTIR"):
         return 0 if valide else 1
     if action == "EN COURS":
@@ -560,12 +576,12 @@ def carte_html(r):
     if r["conseil"]:
         texte, couleur = ORIENTATION[r["conseil"]["orientation"]]
         badge = f'<b class="badge {couleur}">{texte}</b>'
-    etoile = '<div class="suivie">★ Méthode suivie</div>' if suivie(r) else ""
+    etoile = '<div class="suivie">★ Méthode de référence · démo</div>' if suivie(r) else ""
     attributs = f'data-marche="{html.escape(r["nom"])}" data-suivie="{int(suivie(r))}"'
     return (f'<div class="carte {style}" {attributs}>{etoile}<div class="marche">{html.escape(r["nom"])}'
             f'<span>{html.escape(r["regle"])}</span>{badge}</div>'
             f'<div class="statut">{html.escape(titre)}</div>'
-            f'<div class="detail">{detail}</div></div>')
+            f'<div class="detail">{detail}</div>{diagnostic_html(r)}</div>')
 
 
 def bloc_bot(chemin=os.path.join(DOSSIER, "bot_portefeuille.json")):
@@ -599,11 +615,20 @@ def ecrire_html(resultats, chemin, capital, risque, demo):
     autres = sorted((r for r in resultats if not suivie(r)), key=priorite)
     a_faire = [r["nom"] for r in suivies if priorite(r) == 0]
     possibles = [r["nom"] for r in suivies
-                 if not r["erreur"] and r["conseil"]["action"] == "EN COURS" and r["conseil"]["en_cours"]]
+                 if not r["erreur"] and autorisee(r) and r["conseil"]["action"] == "EN COURS" and r["conseil"]["en_cours"]]
     resume = (f"À faire aujourd'hui : {', '.join(a_faire)}." if a_faire
-              else "Rien d'obligatoire aujourd'hui.")
+              else "Aucune nouvelle entrée validée aujourd’hui. Les méthodes restent en observation.")
     if possibles:
         resume += f" Si tu n'es pas dedans, tu peux entrer sur : {', '.join(possibles)}."
+    fiables = sum(autorisee(r) for r in resultats)
+    total_tests = sum(not r["erreur"] for r in resultats)
+    hero = (f'<div class="hero-panel"><div class="eyebrow">Trading · laboratoire personnel</div>'
+            f'<h2>La qualité avant le signal.</h2><p>{html.escape(resume)}</p>'
+            f'<div class="kpis"><div><b>{fiables} / {total_tests}</b><span>contrôles franchis</span></div>'
+            f'<div><b>30 %</b><span>historique récent séparé</span></div></div>'
+            f'<p>Entrées bloquées sans robustesse. Le test démo de référence continue d’être mesuré ; '
+            f'aucun gain futur n’est garanti.</p></div>')
+    recherche = recherche_html(os.path.join(DOSSIER, 'recherche_trading.json'))
     cartes = ([bloc_bot()] + [carte_html(r) for r in suivies]
               + ['<h2 id="autres">Pas tes méthodes : n\'agis pas dessus</h2>']
               + [carte_html(r) for r in autres])
@@ -615,7 +640,7 @@ def ecrire_html(resultats, chemin, capital, risque, demo):
     cloture = f" · clôtures du {max(dates):%d/%m/%Y}" if dates else ""
     compte = f" · capital {eur(capital)}"
     page = f"""<!doctype html><html lang="fr"><head><meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1"><title>Signaux du jour</title>
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="theme-color" content="#0c1018"><title>Signaux du jour</title>
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="Signaux">
 <link rel="apple-touch-icon" href="icone.png">
@@ -640,21 +665,24 @@ h1{{font-size:20px;margin:4px 0}} .sous{{color:var(--doux);font-size:13px;margin
 .filtres select{{border-radius:8px;margin-left:auto}} .vide{{color:var(--doux);display:none}}
 .suivie{{font-size:12px;font-weight:700;color:var(--sortir);margin-bottom:2px}}
 h2{{font-size:15px;color:var(--doux);margin:22px 0 4px}}
+{IOS_CSS}
 </style></head><body><main>
-<h1>Signaux du jour</h1>
+<div class="eyebrow">Votre espace marchés</div><h1>Signaux du jour</h1>
 <p class="sous">Mis à jour le {maintenant:%d/%m/%Y à %H:%M}{cloture}{compte} · risque {risque} % par trade</p>
-{avert}<p class="resume">{html.escape(resume)}</p>
+{avert}{hero}{recherche}
 <div class="filtres">
-<button data-filtre="suivies">★ Mes méthodes</button><button data-filtre="toutes">Toutes</button>
+<button data-filtre="suivies">★ Références démo</button><button data-filtre="toutes">Toutes</button>
 <select id="marche" aria-label="Marché"><option value="">Tous les marchés</option>{options_marches}</select>
 </div>
 <p class="vide" id="vide">Aucune carte pour ce filtre.</p>
 {''.join(cartes)}
-<p class="note">Recopie les cases telles quelles dans l'écran d'ordre Libertex. Si le prix a bougé
-depuis le prix de référence, garde le même écart en % pour le stop loss. Un stop touché coûte
-environ {risque} % du capital. Aucune méthode n'a encore prouvé qu'elle bat le hasard :
-compte démo uniquement.</p>
-</main>
+<p class="note">Étude exploratoire : 70 % de l’historique initial, puis 30 % récents séparés,
+incertitude par blocs et frais doublés. Correction des essais multiples. Avec au plus 1 200 décalages,
+la résolution statistique peut être insuffisante pour valider l’ensemble des méthodes.
+Prix Yahoo : ils ne reproduisent pas exactement les contrats et coûts de Libertex.
+Les rendements des positions ne sont pas ceux du portefeuille. Les gaps peuvent dépasser le risque prévu.
+Compte démo uniquement.</p>
+</main>{navigation("signaux")}
 <script>
 (function () {{
   var cartes = document.querySelectorAll(".carte");
@@ -749,6 +777,12 @@ def notifications(resultats):
         if r["erreur"] or not suivie(r):
             continue
         c = r["conseil"]
+        if not autorisee(r) and c["action"] in ("ENTRER", "INVERSER"):
+            if c["action"] == "INVERSER":
+                messages.append({"title": f"{r['nom']} : FERME (démo)",
+                                 "message": "Fin de la position démo. Aucune nouvelle entrée validée.",
+                                 "priority": 4, "tags": ["warning"]})
+            continue
         if c["action"] in ("ENTRER", "INVERSER"):
             verbe = "ACHÈTE" if c["sens"] > 0 else "VENDS"
             instrument = NOM_LIBERTEX.get(r["ticker"], r["nom"])
@@ -814,7 +848,9 @@ def analyser(demo, annees, capital, risque):
                 # Méthodes suivies : entrée permise en cours de route (testé le 29/09/2026,
                 # résultat historique équivalent à l'attente d'un nouveau signal).
                 en_cours = METHODE_SUIVIE.get(ticker) == nom_regle
-                base["eval"] = evaluer(df, voulu, FRAIS[classe], en_cours=en_cours)
+                base["eval"] = evaluer(df, voulu, FRAIS[classe], nb_decalages=1200, en_cours=en_cours)
+                base["eval"]["prudent"] = controler(df, voulu, FRAIS[classe], base["eval"],
+                                                       en_cours, len(MARCHES) * len(REGLES))
                 base["conseil"] = conseil_du_jour(df, voulu, base["eval"]["execution"], capital, risque,
                                                   en_cours)
                 base["conseil"]["sortie"] = niveau_sortie(df, nom_regle, base["conseil"]["sens"])
