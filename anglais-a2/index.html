@@ -3,8 +3,8 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: light)">
-<meta name="theme-color" content="#212121" media="(prefers-color-scheme: dark)">
+<meta name="theme-color" content="#f2f2f7" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#000000" media="(prefers-color-scheme: dark)">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="Speak Up">
@@ -13,8 +13,6 @@
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
 <link rel="icon" type="image/png" href="icon-192.png">
 <title>Speak Up A2</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
 :root{--bg:#fff;--card:#fff;--ink:#0d0d0d;--mute:#6e6e80;--brand:#10a37f;--brand2:#10a37f;--accent:#10a37f;--ok:#10a37f;--bad:#ef4146;--warn:#e8a317;--line:#e5e5e5;--soft:#f4f4f4;--shadow:none;--pri:#0d0d0d;--onpri:#fff}
 @media (prefers-color-scheme:dark){:root{--bg:#212121;--card:#2a2a2a;--ink:#ececec;--mute:#a1a1aa;--brand:#19c37d;--brand2:#19c37d;--accent:#19c37d;--ok:#19c37d;--bad:#ff6b6f;--line:#3a3a3a;--soft:#303030;--shadow:none;--pri:#ececec;--onpri:#171717}}
@@ -106,53 +104,42 @@ canvas#fx{position:fixed;inset:0;pointer-events:none;z-index:40}
 .blurtxt .bubble.bot .bt{filter:blur(7px);cursor:pointer}.blurtxt .bubble.bot.open .bt{filter:none}
 a.back{cursor:pointer;color:var(--brand);font-weight:800;font-size:14px;display:inline-block;margin-bottom:4px}
 
-/* ===== Thème façon OpenAI / ChatGPT ===== */
-body{letter-spacing:-.005em;-webkit-font-smoothing:antialiased}
-header{background:var(--bg);border-bottom:1px solid var(--line);max-width:none;padding-left:max(16px,calc((100% - 760px)/2 + 16px));padding-right:max(16px,calc((100% - 760px)/2 + 16px))}
-header .logo{font-weight:600;font-size:17px;letter-spacing:-.2px}header .logo b{color:var(--ink);font-weight:600}
-.pill{background:transparent;border:1px solid var(--line);font-weight:500;font-size:13px;box-shadow:none}
-h2{font-size:24px;font-weight:600;letter-spacing:-.4px}h3{font-size:16px;font-weight:600}
-.card,.stat{border:1px solid var(--line);border-radius:16px;box-shadow:none}
-.stat b{color:var(--ink);font-weight:600}
-.hero{background:var(--soft);color:var(--ink);border:0;border-radius:20px;box-shadow:none}
-.hero small{opacity:1;color:var(--mute);font-weight:400}.hero .big{font-weight:600;letter-spacing:-.4px}
-.ring b{font-weight:600}
-.btn{border-radius:99px;background:var(--soft);color:var(--ink);font-weight:500;border:1px solid transparent;padding:10px 18px}
-.btn.primary{background:var(--pri);color:var(--onpri);box-shadow:none}
-.btn.ok{background:var(--ok);color:#fff}.btn.bad{background:var(--bad);color:#fff}
-.btn.ghost{background:transparent;color:var(--mute)}
-.btn:hover{filter:brightness(.97)}
-.step{background:var(--soft);border-radius:14px}
-.step .ic,.node .ic{background:var(--card);border:1px solid var(--line);border-radius:50%}
-.step.done .ic{background:var(--ok);border-color:var(--ok);color:#fff}
-.bar{height:6px;background:var(--line)}.bar i{background:var(--ink)}
-.en{font-weight:600;letter-spacing:-.4px}
-.tip{background:var(--soft);border-radius:12px}
-.opt{border:1px solid var(--line);border-radius:14px;font-weight:500}
-.opt:hover{background:var(--soft)}
-.chip{box-shadow:none;border:1px solid var(--line);background:var(--card);font-weight:500;border-radius:99px}
-.chips{border:1px dashed var(--line)}
-.blank{border-bottom-color:var(--ink);color:var(--ink)}
-.mic{background:var(--pri);color:var(--onpri);box-shadow:none}
-.mic.rec{background:var(--bad);color:#fff}
-.bubble{border-radius:18px}
-.bubble.bot{background:transparent;padding-left:0;padding-right:0;max-width:100%;border-radius:0}
-.bubble.you{background:var(--soft);color:var(--ink);border-bottom-right-radius:18px}
-.bubble .btn,.tip .btn{background:var(--card);border:1px solid var(--line);box-shadow:none}
-input[type=text],input[type=password],select{font-weight:400;border:1px solid var(--line);border-radius:12px}
-input:focus,select:focus{outline:none;border-color:var(--mute)}
-nav{box-shadow:none;border-top:1px solid var(--line);background:var(--bg)}
-nav button{font-weight:500;font-size:11px;border-radius:12px}
-nav button span{display:flex;transition:none}
-nav button.on{background:var(--soft);color:var(--ink)}nav button.on span{transform:none}
-#toast{border-radius:12px}
-.bars i{background:var(--ink)}
-.stage{background:var(--soft);border-radius:16px}
-.emma-pic{border:1px solid var(--line);box-shadow:none}.emma-pic .pk{color:var(--ink)}
-a.back{color:var(--mute);font-weight:500}
-.fbk.ok{background:rgba(16,163,127,.12)}
-.mute,.fr{font-weight:400}
-b,strong{font-weight:600}
+/* Interface iOS : surfaces groupées, contrôles tactiles et matériaux translucides. */
+:root{color-scheme:light dark;--bg:#f2f2f7;--card:#fff;--ink:#1c1c1e;--mute:#63636e;--brand:#0066d6;--brand2:#5856d6;--accent:#0066d6;--ok:#248a3d;--bad:#d70015;--warn:#a56300;--line:#dcdce2;--soft:#ededf2;--pri:#0066d6;--onpri:#fff;--glass:rgba(242,242,247,.88);--shadow:0 2px 10px rgba(28,28,30,.035)}
+@media(prefers-color-scheme:dark){:root{--bg:#000;--card:#1c1c1e;--ink:#f5f5f7;--mute:#ababB5;--brand:#64aaff;--brand2:#a5a3ff;--accent:#64aaff;--ok:#63d582;--bad:#ff6961;--warn:#ffcc66;--line:#38383a;--soft:#2c2c2e;--pri:#0a66d8;--onpri:#fff;--glass:rgba(18,18,20,.88);--shadow:none}}
+body{font-family:-apple-system,BlinkMacSystemFont,"SF Pro Text","Helvetica Neue",sans-serif;line-height:1.5;letter-spacing:-.015em;-webkit-font-smoothing:antialiased;padding-bottom:calc(108px + env(safe-area-inset-bottom))}
+header{max-width:none;background:var(--glass);backdrop-filter:blur(24px) saturate(160%);-webkit-backdrop-filter:blur(24px) saturate(160%);border-bottom:1px solid var(--line);padding:calc(12px + env(safe-area-inset-top)) max(20px,calc((100% - 720px)/2 + 20px)) 12px;gap:8px}
+header .logo{font-size:20px;font-weight:750;letter-spacing:-.7px;white-space:nowrap}header .logo b{color:var(--brand)}
+.pill{min-height:36px;display:inline-flex;align-items:center;justify-content:center;background:var(--card);border:1px solid var(--line);font-size:12px;font-weight:600;padding:6px 10px;box-shadow:none}
+#refbtn{min-width:44px;min-height:44px;background:transparent;font-size:18px}
+main{max-width:720px;padding:22px 20px 28px}
+h2{font-size:30px;line-height:1.15;font-weight:750;letter-spacing:-1px;margin:10px 0 20px}h3{font-size:17px;font-weight:650;letter-spacing:-.3px}
+.card,.stat{border:0;border-radius:22px;box-shadow:var(--shadow);padding:20px}
+.card{margin-bottom:16px}.node{margin:0;min-height:88px}.path{gap:12px}
+.hero{background:linear-gradient(130deg,#0066d6,#5856d6);color:#fff;border:0;border-radius:26px;padding:24px;box-shadow:0 8px 24px rgba(0,80,180,.12);margin-bottom:22px}
+.hero .big{font-size:25px;letter-spacing:-.7px;font-weight:700}.hero small{display:block;margin-top:7px;opacity:1;color:#edf3ff;font-weight:400;line-height:1.5}
+.ring b{font-weight:700}.ring{width:92px;max-width:100%}
+.btn{min-height:44px;border-radius:14px;padding:11px 17px;background:var(--soft);color:var(--brand);font-weight:600;border:0;box-shadow:none;transition:transform .15s,opacity .15s}
+.btn.primary{background:var(--pri);color:var(--onpri);box-shadow:none}.btn.ok{background:#248a3d;color:#fff}.btn.bad{background:#d70015;color:#fff}.btn.ghost{background:transparent;color:var(--brand)}
+.btn.big{min-height:50px;border-radius:16px}.btn:disabled{opacity:.4}.btn:active,.node:not(.lock):active{transform:scale(.98)}
+.step{background:var(--soft);padding:14px;border-radius:16px}.step .ic,.node .ic{border:0;border-radius:16px;background:var(--soft)}.step .ic{background:var(--card)}.step.done .ic{background:#248a3d;color:#fff}
+.bar{height:6px;background:var(--line)}.bar i{background:var(--brand)}
+.en{font-weight:650;letter-spacing:-.5px}.mute,.fr{font-weight:400}.tip{background:var(--soft);border-radius:16px;padding:14px;font-size:14px;line-height:1.6}
+.opt{min-height:50px;border:1px solid var(--line);border-radius:16px;padding:15px;font-weight:500}.opt.right{border-color:var(--ok)}.opt.wrong{border-color:var(--bad)}
+.chip{box-shadow:none;border:1px solid var(--line);border-radius:12px;font-weight:500;min-height:44px}.chips{border:1px dashed var(--line);padding:10px}
+.mic{background:var(--pri);color:#fff;box-shadow:0 5px 16px rgba(0,102,214,.18)}.mic.rec{background:#d70015}
+.bubble{padding:14px 16px;line-height:1.55}.bubble.bot{background:var(--soft)}.bubble.you{background:var(--pri);color:#fff}.bubble .btn,.tip .btn{background:var(--card);box-shadow:none}
+input[type=text],input[type=password],select,textarea{min-height:44px;font-weight:400;border:1px solid var(--line);border-radius:12px;background:var(--card);font-size:16px}
+:focus-visible{outline:3px solid var(--brand);outline-offset:3px}input:focus,select:focus,textarea:focus{border-color:var(--brand)}
+nav{background:var(--glass);backdrop-filter:blur(28px) saturate(180%);-webkit-backdrop-filter:blur(28px) saturate(180%);box-shadow:0 -1px 0 var(--line);padding:8px max(8px,calc((100% - 680px)/2)) calc(8px + env(safe-area-inset-bottom));gap:2px;border:0}
+nav button{min-width:0;min-height:52px;max-width:110px;gap:5px;border-radius:14px;font-size:10px;font-weight:500;padding:6px 1px;color:var(--mute)}nav button span{display:flex;transition:none}nav button svg{width:23px;height:23px;stroke-width:1.7}nav button.on{color:var(--brand);background:var(--soft)}nav button.on span{transform:none}
+.stat b{font-weight:700;font-size:30px;color:var(--brand)}.stat{font-size:13px;color:var(--mute)}.bars i{background:var(--brand)}
+#toast{max-width:640px;margin:auto;background:var(--ink);color:var(--bg);box-shadow:0 8px 30px rgba(0,0,0,.15);border-radius:18px}
+a.back{color:var(--brand);font-weight:500;min-height:44px;padding:10px 0;margin:0 0 8px}.stage{background:var(--soft);border-radius:22px}.emma-pic{box-shadow:var(--shadow);border:1px solid var(--line)}
+#hystory{border-radius:20px}.fbk{border-radius:16px}b,strong{font-weight:650}
+@media(hover:hover){.btn:hover,.node:not(.lock):hover{filter:brightness(.97)}}
+@media(max-width:380px){main{padding:18px 16px}header{padding-left:16px;padding-right:16px;gap:5px}header .logo{font-size:18px}.pill{padding:5px 7px;font-size:11px}.hero{padding:20px;gap:12px}.hero .big{font-size:22px}.card{padding:16px}.grid2{gap:8px}.node{gap:10px}.node .ic{width:44px;height:44px;font-size:23px}h2{font-size:28px}}
+@media(prefers-reduced-motion:reduce){*,*::before,*::after{animation:none!important;transition:none!important;scroll-behavior:auto!important}}
 </style>
 </head>
 <body>
@@ -163,8 +150,8 @@ b,strong{font-weight:600}
   <span class="pill" id="xp"></span>
 </header>
 <main id="view"></main>
-<nav id="nav"></nav>
-<div id="toast"></div>
+<nav id="nav" aria-label="Navigation principale"></nav>
+<div id="toast" role="status" aria-live="polite"></div>
 <canvas id="fx"></canvas>
 
 <script>
@@ -791,7 +778,7 @@ const verdict=s=>s>=85?'🎉 Excellent !':s>=60?'👍 Bien, encore une fois pour
 let tab='home',cur=null;
 const _ic=d=>`<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">${d}</svg>`;
 const TABS=[['home',_ic('<path d="M3 11l9-8 9 8"/><path d="M5 10v10h5v-6h4v6h5V10"/>'),'Accueil'],['course',_ic('<path d="M4 5a2 2 0 012-2h13v16H6a2 2 0 00-2 2z"/><path d="M4 19V5"/>'),'Cours'],['chat',_ic('<path d="M21 12a8 8 0 01-11.6 7.1L4 20l1-4.6A8 8 0 1121 12z"/>'),'Tuteur'],['dico',_ic('<circle cx="11" cy="11" r="7"/><path d="M20 20l-4-4"/>'),'Dico'],['cards',_ic('<rect x="3" y="6" width="14" height="14" rx="2"/><path d="M7 3h12a2 2 0 012 2v12"/>'),'Révision'],['prog',_ic('<path d="M4 20V10M10 20V4M16 20v-8M22 20H2"/>'),'Progrès']];
-function drawNav(){$('nav').innerHTML=TABS.map(([k,i,l])=>`<button class="${tab===k?'on':''}" onclick="go('${k}')"><span>${i}</span>${l}</button>`).join('')}
+function drawNav(){$('nav').innerHTML=TABS.map(([k,i,l])=>`<button class="${tab===k?'on':''}" ${tab===k?'aria-current="page"':''} onclick="go('${k}')"><span>${i}</span>${l}</button>`).join('')}
 function go(t){hypStop();tab=t;cur=null;spk++;try{speechSynthesis.cancel()}catch(e){}render()}
 function render(){
   if(cancelListen)cancelListen();
@@ -1687,6 +1674,16 @@ const hypDialogs=job=>UNITS.filter(u=>!!u.job===!!job&&u.dialogue).map(u=>({t:u.
 const HYP_T=['ps','ps','pc','pas','pas','pp','fs','fg','co','pac','pap'],HYP_TL={ps:'présent',pc:'présent continu',pas:'passé',pp:'present perfect',fs:'futur',fg:'futur proche',co:'conditionnel',pac:'passé continu',pap:'plus-que-parfait'};
 const hypClean=s=>s.replace(/\((e|s)\)/g,'').replace('he/she/it','he').replace('il/elle','il').replace('ils/elles','ils').replace(/\s+/g,' ').trim();
 const pick=a=>a[Math.floor(Math.random()*a.length)];
+// Parcourir toutes les histoires avant de recommencer, même après fermeture.
+function hypPickStory(){
+  const known=new Set(HYP_STORY.map(d=>d.t));
+  let seen=Array.isArray(S.hypStories)?S.hypStories.filter(t=>known.has(t)):[];
+  let remaining=HYP_STORY.filter(d=>!seen.includes(d.t));
+  if(!remaining.length){seen=[];remaining=HYP_STORY.filter(d=>d.t!==S.hypLastStory)}
+  const d=pick(remaining.length?remaining:HYP_STORY);
+  S.hypStories=[...seen,d.t];S.hypLastStory=d.t;save();
+  return d;
+}
 const HYP_SRC={
   conj:{t:'Conjugaison',i:'🔁',n:()=>'tous les temps, tous les verbes',g(){const v=pick(VERBS.filter(v=>v.fr&&v.k)),id=pick(HYP_T),k=pick([0,1,2,2,3,4,5]),m=Math.random()<.7?'aff':pick(['neg','q']),f=enForms(v),fd=frData(v.fr,v.k);
     return {en:hypClean(enSentence(f,id,k,m)),fr:hypClean(frSentence(fd,id,k,m)),tag:'to '+v.b+' · '+HYP_TL[id]}}},
@@ -1697,7 +1694,7 @@ const HYP_SRC={
   gen:{t:'Phrases du quotidien',i:'🗣️',n:()=>UNITS.filter(u=>!u.job).reduce((a,u)=>a+u.phrases.length,0)+' phrases',g(){const p=pick(pick(UNITS.filter(u=>!u.job)).phrases);return {en:p[0],fr:p[1],tag:'quotidien'}}},
   dlgj:{t:'Conversations métier',i:'🤝',n:()=>hypDialogs(1).length+' dialogues à deux voix',g(){const d=pick(hypDialogs(1));return {lines:d.lines,en:d.lines[0].en,fr:d.lines[0].fr,tag:d.t}}},
   dlgg:{t:'Conversations du quotidien',i:'💬',n:()=>hypDialogs(0).length+' dialogues à deux voix',g(){const d=pick(hypDialogs(0));return {lines:d.lines,en:d.lines[0].en,fr:d.lines[0].fr,tag:d.t}}},
-  story:{t:'Slow English',hero:1,g(){const d=pick(HYP_STORY);return {story:true,lines:d.lines,en:d.lines[0].en,fr:'–',tag:d.t}}},
+  story:{t:'Slow English',hero:1,g(){const d=hypPickStory();return {story:true,lines:d.lines,en:d.lines[0].en,fr:'–',tag:d.t}}},
   mine:{t:'Mes mots',i:'⭐',n:()=>(S.words||[]).length+' mots',ok:()=>(S.words||[]).length>0,g(){const w=pick(S.words);return {en:w.en,fr:w.fr,tag:'mes mots'}}}
 };
 const HYP_MIX=[['conj',32],['irr',18],['fin',14],['job',9],['gram',11],['gen',4],['dlgj',8],['dlgg',4],['mine',3]];
@@ -1713,9 +1710,9 @@ function vHypno(){
   hypStop();const c=hypCfg();
   const seg=(key,opts)=>`<div class="row" style="margin:6px 0 0">${opts.map(([v,l])=>`<button class="btn ${c[key]===v?'primary':''}" style="padding:8px 12px" onclick="S.hyp.${key}=${JSON.stringify(v)};save();vHypno()">${l}</button>`).join('')}</div>`;
   const srcCard=(k,t,i,sub)=>`<div class="card node" onclick="hypStart('${k}')"><div class="ic">${i}</div><div style="flex:1"><h3>${t}</h3><div class="mute">${sub}</div></div><div style="font-size:22px">▶</div></div>`;
-  $('view').innerHTML=`${atelierBack}<h2>🌙 Hypnose</h2><p class="mute">Écoutez comme une chanson : l’anglais lentement, puis le français, puis l’anglais encore. Tout est tiré au hasard à chaque fois : jamais la même écoute. Fermez les yeux, laissez votre cerveau s’imprégner.</p>
+  $('view').innerHTML=`${atelierBack}<h2>🌙 Hypnose</h2><p class="mute">Écoutez comme une chanson : l’anglais lentement, puis le français, puis l’anglais encore. Les histoires Slow English passent dans un ordre varié, sans répétition avant d’avoir fait le tour. Fermez les yeux, laissez votre cerveau s’imprégner.</p>
   <div class="hero" onclick="hypStart('mix')" style="cursor:pointer;margin-bottom:14px"><div style="font-size:54px">🌀</div><div class="t"><div class="big">Mélange infini</div><small>Conjugaison, verbes irréguliers, finance, grammaire… tout mélangé</small></div></div>
-  <div class="hero" onclick="hypStart('story')" style="cursor:pointer;margin-bottom:14px;background:linear-gradient(160deg,#0f1630,#1d2547);color:#fff"><div style="font-size:54px">🎧</div><div class="t"><div class="big">Slow English</div><small style="color:#cfd6ff">100 % anglais, lentement, avec musique · ${HYP_STORY.length} histoires de la vie et du travail</small></div></div>
+  <div class="hero" onclick="hypStart('story')" style="cursor:pointer;margin-bottom:14px;background:linear-gradient(160deg,#0f1630,#1d2547);color:#fff"><div style="font-size:54px">🎧</div><div class="t"><div class="big">Slow English</div><small style="color:#cfd6ff">100 % anglais, lentement, avec musique · ${HYP_STORY.length} histoires de la vie et du travail · sans répétition avant le tour complet</small></div></div>
   ${Object.entries(HYP_SRC).filter(([k,s])=>!s.hero&&(!s.ok||s.ok())).map(([k,s])=>srcCard(k,s.t,s.i,s.n())).join('')}
   <div class="card"><h3>Réglages</h3>
    <div class="mute" style="margin-top:8px">Vitesse de l’anglais</div>${seg('rate',[[.3,'Ultra lente'],[.45,'Très lente'],[.6,'Lente'],[.8,'Normale']])}
