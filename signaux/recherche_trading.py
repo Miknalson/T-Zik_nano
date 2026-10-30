@@ -177,4 +177,13 @@ def main():
 
 
 if __name__ == '__main__':
-    main()
+    try:
+        main()
+        erreur = Path(s.DOSSIER) / 'recherche_erreur.json'
+        if erreur.exists():
+            erreur.unlink()
+    except Exception as exc:
+        erreur = {'date': str(dt.datetime.now(dt.timezone.utc).date()),
+                  'type': type(exc).__name__, 'message': str(exc)[:1500]}
+        (Path(s.DOSSIER) / 'recherche_erreur.json').write_text(json.dumps(erreur, ensure_ascii=False, indent=2) + '\n')
+        raise
