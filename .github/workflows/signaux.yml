@@ -1,6 +1,12 @@
 name: Signaux quotidiens
 
 on:
+  push:
+    branches:
+      - claude/hello-claude-hi46j6
+    paths:
+      - 'anglais-a2/**'
+      - '.github/workflows/signaux.yml'
   schedule:
     # 7h17, 7h47 et 8h17 à Paris l'été (une heure plus tôt l'hiver). GitHub saute parfois un
     # passage programmé ; le journal garantit qu'une consigne n'est notifiée qu'une fois.
