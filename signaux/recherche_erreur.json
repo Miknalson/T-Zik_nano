@@ -1,5 +1,5 @@
 {
   "date": "2026-10-30",
-  "type": "ValueError",
-  "message": "OHLC incohérents : FLOKI-USD"
+  "type": "TypeError",
+  "message": "Object of type int64 is not JSON serializable"
 }
