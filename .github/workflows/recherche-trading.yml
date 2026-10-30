@@ -1,0 +1,52 @@
+name: Recherche de rentabilité (aucun ordre)
+
+on:
+  push:
+    branches:
+      - claude/hello-claude-hi46j6
+    paths:
+      - '.github/workflows/recherche-trading.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: recherche-trading
+  cancel-in-progress: false
+
+jobs:
+  comparer:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: pip
+          cache-dependency-path: signaux/requirements.txt
+      - run: pip install -r signaux/requirements.txt
+      - name: Vérifier le moteur comparatif
+        run: python signaux/test_recherche.py
+      - name: Calculer sans accès au courtier
+        run: python signaux/recherche_trading.py --snapshots recherche-data
+      - name: Conserver les prix utilisés
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: recherche-prix
+          path: recherche-data
+          if-no-files-found: ignore
+      - name: Enregistrer le résultat ou le diagnostic
+        if: always()
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          if [ -f signaux/recherche_trading.json ]; then git add signaux/recherche_trading.json; fi
+          if [ -f signaux/recherche_erreur.json ]; then git add signaux/recherche_erreur.json; fi
+          git add -u signaux/recherche_erreur.json 2>/dev/null || true
+          if git diff --cached --quiet; then exit 0; fi
+          git commit -m "Résultats comparatifs des stratégies (aucun ordre)"
+          git pull --rebase origin "$GITHUB_REF_NAME"
+          git push origin HEAD:"$GITHUB_REF_NAME"
