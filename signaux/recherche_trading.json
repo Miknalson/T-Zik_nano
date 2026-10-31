@@ -7,7 +7,7 @@
   },
   "final": {
     "debut": "2023-01-01",
-    "fin": "2026-10-29"
+    "fin": "2026-10-30"
   },
   "choisi_sur_selection": "pause_5j",
   "amelioration_descriptive": true,
@@ -2948,14 +2948,14 @@
         ]
       },
       "final": {
-        "capital_final": 3023.755783806233,
-        "rendement": 2.023755783806233,
+        "capital_final": 3000.860871818132,
+        "rendement": 2.000860871818132,
         "drawdown": -0.3233638053665989,
-        "achats": 171,
-        "clotures": 171,
+        "achats": 172,
+        "clotures": 172,
         "gagnantes": 60,
-        "profit_factor": 2.265100288200871,
-        "couts_estimes": 361.7756231371779,
+        "profit_factor": 2.2331391950955917,
+        "couts_estimes": 367.7324706646475,
         "courbe": [
           [
             "2023-01-01",
@@ -8548,18 +8548,22 @@
           [
             "2026-10-29",
             3023.755783806233
+          ],
+          [
+            "2026-10-30",
+            3000.860871818132
           ]
         ]
       },
       "stress": {
-        "capital_final": 2474.889022190074,
-        "rendement": 1.474889022190074,
+        "capital_final": 2451.786897186245,
+        "rendement": 1.451786897186245,
         "drawdown": -0.3555880355562807,
-        "achats": 172,
-        "clotures": 172,
+        "achats": 173,
+        "clotures": 173,
         "gagnantes": 56,
-        "profit_factor": 1.913787349089363,
-        "couts_estimes": 645.9724737992788,
+        "profit_factor": 1.8867814080183045,
+        "couts_estimes": 655.7189272704657,
         "courbe": [
           [
             "2023-01-01",
@@ -14152,6 +14156,10 @@
           [
             "2026-10-29",
             2474.889022190074
+          ],
+          [
+            "2026-10-30",
+            2451.786897186245
           ]
         ]
       }
@@ -17091,14 +17099,14 @@
         ]
       },
       "final": {
-        "capital_final": 2633.3087519642777,
-        "rendement": 1.6333087519642775,
+        "capital_final": 2613.370180060886,
+        "rendement": 1.613370180060886,
         "drawdown": -0.27867398733430726,
-        "achats": 112,
-        "clotures": 112,
+        "achats": 113,
+        "clotures": 113,
         "gagnantes": 41,
-        "profit_factor": 2.3540706077633584,
-        "couts_estimes": 265.26005010911007,
+        "profit_factor": 2.315791090744017,
+        "couts_estimes": 270.44771070399355,
         "courbe": [
           [
             "2023-01-01",
@@ -22691,18 +22699,22 @@
           [
             "2026-10-29",
             2633.3087519642777
+          ],
+          [
+            "2026-10-30",
+            2613.370180060886
           ]
         ]
       },
       "stress": {
-        "capital_final": 2291.4735799758155,
-        "rendement": 1.2914735799758157,
+        "capital_final": 2270.083566681107,
+        "rendement": 1.270083566681107,
         "drawdown": -0.29306675788144454,
-        "achats": 112,
-        "clotures": 112,
+        "achats": 113,
+        "clotures": 113,
         "gagnantes": 37,
-        "profit_factor": 2.0379221368299802,
-        "couts_estimes": 489.66458931615864,
+        "profit_factor": 2.003481151789512,
+        "couts_estimes": 498.6887275411222,
         "courbe": [
           [
             "2023-01-01",
@@ -28295,6 +28307,10 @@
           [
             "2026-10-29",
             2291.4735799758155
+          ],
+          [
+            "2026-10-30",
+            2270.083566681107
           ]
         ]
       }
@@ -31234,14 +31250,14 @@
         ]
       },
       "final": {
-        "capital_final": 3184.047312723431,
-        "rendement": 2.184047312723431,
+        "capital_final": 3159.9387245295165,
+        "rendement": 2.1599387245295167,
         "drawdown": -0.2997164368896402,
-        "achats": 163,
-        "clotures": 163,
+        "achats": 164,
+        "clotures": 164,
         "gagnantes": 60,
-        "profit_factor": 2.470121453766118,
-        "couts_estimes": 352.3068716241242,
+        "profit_factor": 2.430676619517296,
+        "couts_estimes": 358.5794960416517,
         "courbe": [
           [
             "2023-01-01",
@@ -36834,18 +36850,22 @@
           [
             "2026-10-29",
             3184.047312723431
+          ],
+          [
+            "2026-10-30",
+            3159.9387245295165
           ]
         ]
       },
       "stress": {
-        "capital_final": 2638.477626550469,
-        "rendement": 1.6384776265504688,
+        "capital_final": 2613.8484656459386,
+        "rendement": 1.6138484656459386,
         "drawdown": -0.33201129892871395,
-        "achats": 164,
-        "clotures": 164,
+        "achats": 165,
+        "clotures": 165,
         "gagnantes": 55,
-        "profit_factor": 2.0826331124901336,
-        "couts_estimes": 633.3645976802985,
+        "profit_factor": 2.0492833747313464,
+        "couts_estimes": 643.7552855824111,
         "courbe": [
           [
             "2023-01-01",
@@ -42438,6 +42458,10 @@
           [
             "2026-10-29",
             2638.477626550469
+          ],
+          [
+            "2026-10-30",
+            2613.8484656459386
           ]
         ]
       }
@@ -45377,14 +45401,14 @@
         ]
       },
       "final": {
-        "capital_final": 2766.622290482525,
-        "rendement": 1.766622290482525,
+        "capital_final": 2745.674311090756,
+        "rendement": 1.745674311090756,
         "drawdown": -0.27942846388185194,
-        "achats": 154,
-        "clotures": 154,
+        "achats": 155,
+        "clotures": 155,
         "gagnantes": 56,
-        "profit_factor": 2.2225305531101274,
-        "couts_estimes": 324.7283268662501,
+        "profit_factor": 2.190772387274868,
+        "couts_estimes": 330.1786172761978,
         "courbe": [
           [
             "2023-01-01",
@@ -50977,18 +51001,22 @@
           [
             "2026-10-29",
             2766.622290482525
+          ],
+          [
+            "2026-10-30",
+            2745.674311090756
           ]
         ]
       },
       "stress": {
-        "capital_final": 2302.6621369088534,
-        "rendement": 1.3026621369088534,
+        "capital_final": 2281.1676827933397,
+        "rendement": 1.2811676827933396,
         "drawdown": -0.30711908522644016,
-        "achats": 155,
-        "clotures": 155,
+        "achats": 156,
+        "clotures": 156,
         "gagnantes": 51,
-        "profit_factor": 1.8883574026421572,
-        "couts_estimes": 585.8370819143057,
+        "profit_factor": 1.8610772524892265,
+        "couts_estimes": 594.905282215823,
         "courbe": [
           [
             "2023-01-01",
@@ -56581,6 +56609,10 @@
           [
             "2026-10-29",
             2302.6621369088534
+          ],
+          [
+            "2026-10-30",
+            2281.1676827933397
           ]
         ]
       }
@@ -59520,14 +59552,14 @@
         ]
       },
       "final": {
-        "capital_final": 2360.6570575460273,
-        "rendement": 1.3606570575460273,
+        "capital_final": 2342.7829170959103,
+        "rendement": 1.3427829170959105,
         "drawdown": -0.23022809205298467,
-        "achats": 96,
-        "clotures": 96,
+        "achats": 97,
+        "clotures": 97,
         "gagnantes": 38,
-        "profit_factor": 2.357169952962804,
-        "couts_estimes": 223.3034868653124,
+        "profit_factor": 2.3158816451102995,
+        "couts_estimes": 227.9540192369267,
         "courbe": [
           [
             "2023-01-01",
@@ -65120,18 +65152,22 @@
           [
             "2026-10-29",
             2360.6570575460273
+          ],
+          [
+            "2026-10-30",
+            2342.7829170959103
           ]
         ]
       },
       "stress": {
-        "capital_final": 2091.3278326063783,
-        "rendement": 1.0913278326063782,
-        "drawdown": -0.24532260108937343,
-        "achats": 96,
-        "clotures": 96,
+        "capital_final": 2071.806101902629,
+        "rendement": 1.071806101902629,
+        "drawdown": -0.24842511581793225,
+        "achats": 97,
+        "clotures": 97,
         "gagnantes": 34,
-        "profit_factor": 2.0505722097310435,
-        "couts_estimes": 416.8777979109733,
+        "profit_factor": 2.0127472703276363,
+        "couts_estimes": 425.1137346462128,
         "courbe": [
           [
             "2023-01-01",
@@ -70724,6 +70760,10 @@
           [
             "2026-10-29",
             2091.3278326063783
+          ],
+          [
+            "2026-10-30",
+            2071.806101902629
           ]
         ]
       }
@@ -70754,100 +70794,100 @@
     {
       "ticker": "BTC-USD",
       "debut": "2014-10-31",
-      "fin": "2026-10-29",
-      "lignes": 4382,
-      "sha256": "339c485edb62c573cc1ec388f284073da2347abd10eb1403282b53b9e161e15d"
+      "fin": "2026-10-30",
+      "lignes": 4383,
+      "sha256": "7e0b20fbac3bf90a29938913b41aaf2e1a05a67eb7a8c0f79dce1f244dcdbff8"
     },
     {
       "ticker": "ETH-USD",
       "debut": "2017-11-09",
-      "fin": "2026-10-29",
-      "lignes": 3277,
-      "sha256": "35ac9bb15eb9fe9dd3a31a7e0b8ac182ff3a90c9fa682a76778403a087a0134f"
+      "fin": "2026-10-30",
+      "lignes": 3278,
+      "sha256": "7316531b055afec6de598e3a7ae027429d91fd740cd67b9c57ea80d3953d9d99"
     },
     {
       "ticker": "XRP-USD",
       "debut": "2017-11-09",
-      "fin": "2026-10-29",
-      "lignes": 3277,
-      "sha256": "b3d2011b31a7aec74dc640bb9de18fbbd28b9d3058d93c614c6b33b67dc5943a"
+      "fin": "2026-10-30",
+      "lignes": 3278,
+      "sha256": "45b9f1c2bcf8a9be0a0a8415c6334b1e1504db18236d92200acda9de7659b079"
     },
     {
       "ticker": "DOGE-USD",
       "debut": "2017-11-09",
-      "fin": "2026-10-29",
-      "lignes": 3277,
-      "sha256": "8347393924ca6fa8e8012fb77c5a64754d1b42c3d90bb0cb0077f08124528b10"
+      "fin": "2026-10-30",
+      "lignes": 3278,
+      "sha256": "889ad489bf4e34428be75ac83a23f3c2b5b6d95139c43a3565fad7ae6104fa95"
     },
     {
       "ticker": "XLM-USD",
       "debut": "2017-11-09",
-      "fin": "2026-10-29",
-      "lignes": 3277,
-      "sha256": "de640661f39bae4ffc1170242bf83347d755a8ee2cc3fcdd102a5703f4b28d31"
+      "fin": "2026-10-30",
+      "lignes": 3278,
+      "sha256": "dffb3f076212e5457bddc2a44becfd5e24ef3eff615cdaeb24b2bfc3ffbaaaa8"
     },
     {
       "ticker": "VET-USD",
       "debut": "2018-08-03",
-      "fin": "2026-10-29",
-      "lignes": 3010,
-      "sha256": "3935b7525f92cb2caa1a23c4eb089c9b600e01dd8a2fc620c4361df459d0abcc"
+      "fin": "2026-10-30",
+      "lignes": 3011,
+      "sha256": "f53584811c120406c1cb3914e6ee2888245b271db2927399b194166be667eb61"
     },
     {
       "ticker": "SOL-USD",
       "debut": "2020-04-10",
-      "fin": "2026-10-29",
-      "lignes": 2394,
-      "sha256": "13d4878ced75336d660d9d51bbad9a9b5175f29a963cc890c09eb736f7de899f"
+      "fin": "2026-10-30",
+      "lignes": 2395,
+      "sha256": "dc4f9a169b8bbfb11a36c538e731e660c3fa4f82fd2473308aa68cc73196214a"
     },
     {
       "ticker": "BNB-USD",
       "debut": "2017-11-09",
-      "fin": "2026-10-29",
-      "lignes": 3277,
-      "sha256": "b7bc790bfb9e8a466cb4ef463843064a52ea6ba03edc002a097dd98974c5ed3d"
+      "fin": "2026-10-30",
+      "lignes": 3278,
+      "sha256": "db576792df90374242463fbcb5cd4411fe6a3ee77121f38f14bc217f8bbb31a9"
     },
     {
       "ticker": "TRX-USD",
       "debut": "2017-11-09",
-      "fin": "2026-10-29",
-      "lignes": 3277,
-      "sha256": "66500d5e5c8a921e4ee6bbb0a1aedf90f933597767563a828ddb70aab1bbf95e"
+      "fin": "2026-10-30",
+      "lignes": 3278,
+      "sha256": "cfb98f9a9f2a6b5594bd942402ea18de53ef330289face241f309b5610d467b8"
     },
     {
       "ticker": "AVAX-USD",
       "debut": "2020-07-13",
-      "fin": "2026-10-29",
-      "lignes": 2231,
-      "sha256": "62fbd50f9a959f453bad9a8a4beac69b9aec5051c9c9d6314f5d26421604f750"
+      "fin": "2026-10-30",
+      "lignes": 2232,
+      "sha256": "69804f5a69f14bbf8fa8a114b769896c17053e029933156722e1a2142a309d94"
     },
     {
       "ticker": "NEAR-USD",
       "debut": "2020-10-14",
-      "fin": "2026-10-29",
-      "lignes": 2207,
-      "sha256": "4291f7cdf93ab4519cd9940157a5387fe9de28f8353d9399d444e5f57605e35d"
+      "fin": "2026-10-30",
+      "lignes": 2208,
+      "sha256": "643b19ae98df6a1042543415f522d2465f948a177f1b65b56e05342d76d1d313"
     },
     {
       "ticker": "HBAR-USD",
       "debut": "2019-09-17",
-      "fin": "2026-10-29",
-      "lignes": 2600,
-      "sha256": "229601764060303c7d349b188c843fdcd9290714cc2201e89781de078e06c79c"
+      "fin": "2026-10-30",
+      "lignes": 2601,
+      "sha256": "ebe12ec5975a098d9820db39fe4f583787969cac0db51cdda3851606585b4b5d"
     },
     {
       "ticker": "DOT-USD",
       "debut": "2020-08-20",
-      "fin": "2026-10-29",
-      "lignes": 2262,
-      "sha256": "e7812920af6fee00324b202326ac0bc7ce4597ce15384c54d73edd992b57bbd4"
+      "fin": "2026-10-30",
+      "lignes": 2263,
+      "sha256": "a0ee79ad905359b96c35047b303c9d05faa077ecefc22bbae4ffb42fd981186e"
     },
     {
       "ticker": "ALGO-USD",
       "debut": "2019-06-21",
-      "fin": "2026-10-29",
-      "lignes": 2688,
-      "sha256": "077ffb57618284be2f6b4fa46d06717a1bdbaa26e622bf354d27f4ce8af27025"
+      "fin": "2026-10-30",
+      "lignes": 2689,
+      "sha256": "088d478cbf89226d88e4b9ec90d52fdd3a6ddaaca74ecd1545710405d5e2006f"
     }
   ]
 }
