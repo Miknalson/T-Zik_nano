@@ -145,6 +145,19 @@ a.back{color:var(--brand);font-weight:500;min-height:44px;padding:10px 0;margin:
  .hero{padding:30px}.hero .big{font-size:29px}h2{font-size:32px}
 }
 @media(prefers-reduced-motion:reduce){*,*::before,*::after{animation:none!important;transition:none!important;scroll-behavior:auto!important}}
+
+/* Conversation vocale avec Emma */
+.emma-chat{height:calc(100dvh - 190px - env(safe-area-inset-bottom));min-height:440px;display:flex;flex-direction:column;border:1px solid var(--line);border-radius:24px;overflow:hidden;background:var(--card)}
+.emma-chat-head{display:flex;align-items:center;gap:10px;padding:10px 12px;border-bottom:1px solid var(--line);background:var(--soft)}
+.emma-chat-head>div:nth-last-child(2){flex:1}.emma-chat-head .mute{font-size:12px}.emma-chat-avatar{position:relative;flex:0 0 64px;height:72px;overflow:hidden;border-radius:20px;background:linear-gradient(145deg,#fce7e3,#cfece0)}
+.emma-chat-avatar .emma-svg{height:105px;max-width:none;position:absolute;left:-14px;top:0}.emma-chat-avatar .emma-pic{display:none}
+.emma-chat #log{flex:1;min-height:0;max-height:none;overflow-y:auto;padding:16px;overscroll-behavior:contain;background:var(--bg)}
+.emma-chat .bubble{width:fit-content;max-width:85%;margin-top:12px;overflow-wrap:anywhere}.emma-chat .bubble.bot{margin-right:auto;border-radius:18px 18px 18px 4px}.emma-chat .bubble.you{margin-left:auto;background:var(--brand);color:#fff;border-radius:18px 18px 4px 18px}
+.message-author{display:block;font-size:11px;font-weight:700;opacity:.7;margin-bottom:4px}.emma-chat .bubble .btn{font-size:12px;min-height:36px;padding:5px 9px}.emma-chat .tip{max-width:90%;font-size:14px}.emma-composer{padding:10px 12px;border-top:1px solid var(--line);background:var(--card)}
+.emma-composer .row{flex-wrap:nowrap;margin:0;gap:8px}.emma-composer #txt{flex:1;width:0;min-width:0}.emma-composer #status{margin:0;font-size:13px}.emma-composer #status:not(:empty){margin-bottom:8px}.emma-composer .emma-chat-tools{margin-top:8px;flex-wrap:wrap;font-size:12px}.emma-chat-tools .btn{font-size:12px;min-height:34px;padding:4px 8px}.emma-composer #extra{max-height:25dvh;overflow:auto}.emma-empty{margin:28px auto;color:var(--mute);text-align:center;max-width:260px}
+@media(max-width:480px){.emma-chat{height:calc(100dvh - 180px - env(safe-area-inset-bottom));border-radius:18px}.emma-chat-head{gap:6px;padding:8px}.emma-chat #log{padding:10px}.emma-chat .bubble{max-width:92%}.emma-chat-head .mute{max-width:170px}.emma-chat-avatar{flex-basis:52px}}
+@media(prefers-reduced-motion:reduce){.emma-chat .bubble{animation:none}}
+
 </style>
 </head>
 <body>
@@ -781,7 +794,7 @@ let tab='home',cur=null;
 const _ic=d=>`<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">${d}</svg>`;
 const TABS=[['home',_ic('<path d="M3 11l9-8 9 8"/><path d="M5 10v10h5v-6h4v6h5V10"/>'),'Accueil'],['course',_ic('<path d="M4 5a2 2 0 012-2h13v16H6a2 2 0 00-2 2z"/><path d="M4 19V5"/>'),'Cours'],['chat',_ic('<path d="M21 12a8 8 0 01-11.6 7.1L4 20l1-4.6A8 8 0 1121 12z"/>'),'Tuteur'],['dico',_ic('<circle cx="11" cy="11" r="7"/><path d="M20 20l-4-4"/>'),'Dico'],['cards',_ic('<rect x="3" y="6" width="14" height="14" rx="2"/><path d="M7 3h12a2 2 0 012 2v12"/>'),'Révision'],['prog',_ic('<path d="M4 20V10M10 20V4M16 20v-8M22 20H2"/>'),'Progrès']];
 function drawNav(){$('nav').innerHTML=TABS.map(([k,i,l])=>`<button class="${tab===k?'on':''}" ${tab===k?'aria-current="page"':''} onclick="go('${k}')"><span>${i}</span>${l}</button>`).join('')}
-function go(t){hypStop();tab=t;cur=null;spk++;try{speechSynthesis.cancel()}catch(e){}render()}
+function go(t){if(tab==='chat'&&t!=='chat'){chatSession++;busy=false;chatListening=false;emmaTalk(false)}hypStop();tab=t;cur=null;spk++;try{speechSynthesis.cancel()}catch(e){}render()}
 function render(){
   if(cancelListen)cancelListen();
   $('view').dataset.tab=tab;head();drawNav();window.scrollTo(0,0);
@@ -1129,6 +1142,10 @@ function rstGo(){const b=$('rst');if(b.dataset.ok){try{localStorage.removeItem(K
 
 /* ============================ TUTEUR IA ============================ */
 let chat=[],logHTML='',fb=[],scen='free',hands=false,busy=false;
+let chatOpen=false,chatListening=false,chatSession=0;
+function openEmma(){chatOpen=true;vChat();if(!chat.length)send('[start]',null,true)}
+function closeEmma(){chatSession++;chatOpen=false;chatListening=false;hands=false;if(cancelListen)cancelListen();spk++;try{speechSynthesis.cancel()}catch(e){}emmaTalk(false);busy=false;vChat()}
+function resetEmma(){if(busy||chatListening)return;chatSession++;chat=[];logHTML='';fb=[];chatOpen=false;vChat()}
 async function api(system,messages,max=900){
   const r=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',
     headers:{'content-type':'application/json','x-api-key':S.key,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},
@@ -1188,47 +1205,58 @@ function vChat(){
     <textarea id="pp" readonly style="width:100%;min-height:120px;border-radius:14px;border:2px solid var(--line);background:var(--bg);color:var(--ink);font:inherit;font-size:13px;padding:10px">${esc(profPrompt())}</textarea>
     <button class="btn primary big" style="margin-top:10px" onclick="copyProf()">📋 Copier les instructions du professeur</button></div>`;return}
   const opts=[['basics','🧑‍🏫 Apprendre les bases (débutant)'],['free','Conversation libre']].concat((S.job||'').trim()?[['metier','💼 Mon métier']]:[]).concat(UNITS.filter((u,i)=>unlocked(i)).map(u=>[u.id,u.icon+' '+u.title]));
-  $('view').innerHTML=`<h2>🧑‍🏫 Emma, votre tutrice</h2>${stageHTML}<div class="card">
-   <div class="row" style="margin:0 0 10px"><select id="scen" style="flex:1" onchange="scen=this.value;chat=[];logHTML='';fb=[];vChat()">${opts.map(([k,l])=>`<option value="${k}" ${k===scen?'selected':''}>${l}</option>`).join('')}</select><button class="btn" onclick="chat=[];logHTML='';fb=[];vChat()" title="Nouvelle conversation">↺</button></div>
+  if(chatOpen){vEmmaConversation();return}
+  $('view').innerHTML=`<h2>Emma, votre tutrice</h2>${stageHTML}<div class="card">
+   <p>Un moment pour parler anglais, simplement. Emma vous parle et ses messages s’affichent à gauche. Vos réponses vocales ou écrites apparaissent à droite.</p>
+   <div class="row" style="margin:0 0 10px"><select id="scen" style="flex:1" onchange="scen=this.value;resetEmma()">${opts.map(([k,l])=>`<option value="${k}" ${k===scen?'selected':''}>${l}</option>`).join('')}</select><button class="btn" onclick="resetEmma()" title="Nouvelle conversation">↺</button></div>
    <details style="margin:0 0 10px"><summary style="cursor:pointer;font-weight:800;color:var(--brand)">⚙️ Réglages du tuteur</summary>
     <div class="row" style="margin:10px 0 0"><select onchange="S.tutorLvl=this.value===''?null:+this.value;save();toast('Niveau du tuteur enregistré ✅',1800)" title="Niveau enseigné">${[['5','Débutant complet'],['15','Débutant (A1)'],['28','Élémentaire (A2)'],['','Mon niveau mesuré']].map(([v,l])=>`<option value="${v}" ${(S.tutorLvl==null?'':String(S.tutorLvl))===v?'selected':''}>${l}</option>`).join('')}</select>
     <select onchange="S.speed=this.value;save()">${[['auto','Voix : auto'],['.55','Très lente'],['.7','Lente'],['.85','Moyenne'],['1','Normale']].map(([v,l])=>`<option value="${v}" ${S.speed===v?'selected':''}>${l}</option>`).join('')}</select></div>
     <div class="row" style="margin:8px 0 0"><label class="mute"><input type="checkbox" ${hands?'checked':''} onchange="hands=this.checked"> Mains libres</label>
     <label class="mute"><input type="checkbox" ${S.fr?'checked':''} onchange="S.fr=this.checked;save()"> Traduction FR</label>
     <label class="mute"><input type="checkbox" ${S.blur?'checked':''} onchange="S.blur=this.checked;save();vChat()"> Texte flouté</label></div></details>
-   <div id="log" class="${S.blur?'blurtxt':''}">${logHTML||'<div class="mute">Appuyez sur « Commencer » : le tuteur parle en premier. Répondez avec 🎤 ou en écrivant. Bloqué ? Le bouton 💡 vous propose des réponses.</div>'}</div>
-   <div class="score" id="status"></div>
-   <div class="row">${chat.length?'':'<button class="btn primary" onclick="send(\'[start]\',null,true)">Commencer</button>'}
-    <button class="mic" id="mic" onclick="talk()">🎤</button>
-    <input type="text" lang="en" id="txt" placeholder="…ou écrivez en anglais" style="flex:1;min-width:120px" onkeydown="if(event.key==='Enter')sendTxt()"><button class="btn" onclick="sendTxt()">➤</button></div>
-   ${STANDALONE?'<div class="mute" style="margin-top:8px">🎤 Si le micro de l’app ne répond pas : touchez le champ ci-dessus puis le micro du clavier iPhone pour dicter en anglais.</div>':''}
-   ${chat.length?`<div class="row"><button class="btn" onclick="hint()">💡 Aide : que répondre ?</button><button class="btn" onclick="bilan()">📝 Terminer et faire le bilan</button></div>`:''}<div id="extra"></div></div>`;
+   <button class="btn primary big" onclick="openEmma()">${chat.length?'Reprendre la conversation':'Commencer'}</button></div>`;
+  emmaMount($('stage'));
+}
+function vEmmaConversation(){
+  $('view').innerHTML=`<section class="emma-chat" aria-label="Conversation avec Emma">
+   <div class="emma-chat-head"><button class="btn" onclick="closeEmma()" aria-label="Retour aux réglages">←</button><div id="stage" class="emma-chat-avatar"></div><div><b>Emma</b><div class="mute">Votre tutrice d’anglais · conversation vocale</div></div><button class="btn" onclick="resetEmma()" aria-label="Nouvelle conversation" ${busy?'disabled':''}>↺</button></div>
+   <div id="log" role="log" aria-label="Messages" aria-live="polite" class="${S.blur?'blurtxt':''}">${logHTML||'<div class="emma-empty">Emma va vous parler. Prenez votre temps pour répondre.</div>'}</div>
+   <div class="emma-composer"><div class="score" id="status" role="status"></div>
+    <div class="row"><button class="mic" id="mic" onclick="talk()" aria-label="Parler à Emma">🎤</button><input type="text" lang="en" id="txt" placeholder="Parlez ou écrivez en anglais…" aria-label="Votre message en anglais" onkeydown="if(event.key==='Enter')sendTxt()"><button class="btn primary" onclick="sendTxt()" aria-label="Envoyer le message">➤</button></div>
+    <div class="row emma-chat-tools"><button class="btn" onclick="hint()">💡 Une idée ?</button><button class="btn" onclick="bilan()">Bilan</button><label class="mute"><input type="checkbox" ${hands?'checked':''} onchange="hands=this.checked"> Mains libres</label></div>
+    ${STANDALONE?'<small class="mute">Vous pouvez aussi dicter avec le micro du clavier iPhone.</small>':''}
+    <div id="extra"></div></div></section>`;
   const l=$('log');l.scrollTop=l.scrollHeight;emmaMount($('stage'));
 }
+
 function saveKey(){const k=$('key').value.trim();if(!k)return;S.key=k;save();vChat()}
-function sendTxt(){const t=$('txt'),v=t.value.trim();if(v){t.value='';send(v,null)}}
+function sendTxt(){if(busy||chatListening)return;const t=$('txt'),v=t.value.trim();if(v){t.value='';send(v,null)}}
 const setStatus=h=>{const e=$('status');if(e)e.innerHTML=h};
 function addLog(h){logHTML+=h;const l=$('log');if(l){l.innerHTML=logHTML;l.scrollTop=l.scrollHeight}}
 async function talk(){
   if(busy)return;
+  if(chatListening){if(cancelListen)cancelListen();return}
   if(kbMode()){setStatus('⌨️ Touchez le champ, puis le micro du clavier iPhone pour dicter en anglais, puis ➤.');try{$('txt').focus()}catch(e){}return}
   if(!canMic()){setStatus(esc(errMsg(srDead?'service-not-allowed':'unsupported'))+' Vous pouvez écrire votre réponse ci-dessous.');return}
-  spk++;const m=$('mic');if(m)m.classList.add('rec');setStatus('🎤 Je vous écoute… parlez maintenant.');
-  try{const a=await listen();setStatus('');if(m)m.classList.remove('rec');await send(a[0],a.conf)}
-  catch(e){setStatus(esc(errMsg(e)));const m2=$('mic');if(m2)m2.classList.remove('rec')}
+  const session=chatSession;chatListening=true;spk++;try{speechSynthesis.cancel()}catch(e){}emmaTalk(false);emmaGesture('listen');const m=$('mic');if(m)m.classList.add('rec');setStatus('🎤 Je vous écoute… parlez maintenant.');
+  try{const a=await listen();if(session!==chatSession||tab!=='chat')return;chatListening=false;setStatus('');if(m)m.classList.remove('rec');await send(a[0],a.conf)}
+  catch(e){if(session===chatSession&&tab==='chat')setStatus(e==='cancelled'?'':esc(errMsg(e)))}
+  finally{if(session===chatSession){chatListening=false;const m2=$('mic');if(m2)m2.classList.remove('rec')}}
 }
 async function send(text,conf,hidden){
-  if(busy)return;busy=true;
-  if(!hidden){addLog(`<div class="bubble you">${esc(text)}${conf!=null?`<div class="sub">Clarté estimée : ${Math.round(conf*100)}%</div>`:''}</div>`);dayRec().turns++}
+  if(busy||chatListening)return;busy=true;const session=chatSession;
+  if(!hidden){addLog(`<div class="bubble you"><small class="message-author">Vous</small>${esc(text)}${conf!=null?`<div class="sub">Clarté estimée : ${Math.round(conf*100)}%</div>`:''}</div>`);dayRec().turns++}
   chat.push({role:'user',content:text+(conf!=null?`\n[speech recognition confidence: ${conf.toFixed(2)}]`:'')});
   setStatus('🤔 Le tuteur réfléchit…');
   let d,raw;
   try{const n=chat.length;raw=await api(sysPrompt(),chat.slice(n>15?n-15:0),2000);d=parseAI(raw)}
-  catch(e){chat.pop();if(!hidden)dayRec().turns--;busy=false;setStatus(`⚠️ ${esc(e.message)}${/auth|key|401|x-api-key/i.test(e.message)?' — vérifiez votre clé (Progrès → 🔑).':''}`);return}
+  catch(e){if(session!==chatSession)return;chat.pop();if(!hidden)dayRec().turns--;busy=false;setStatus(`⚠️ ${esc(e.message)}${/auth|key|401|x-api-key/i.test(e.message)?' — vérifiez votre clé (Progrès → 🔑).':''}${hidden?' <button class="btn" onclick="send(\'[start]\',null,true)">Réessayer</button>':''}`);return}
+  if(session!==chatSession)return;
   chat.push({role:'assistant',content:raw});setStatus('');
   const ri=T(d.reply);
   const showFr=S.fr&&scen!=='basics'&&d.reply_fr,script=normalizeScript(d);
-  let h=`<div class="bubble bot" onclick="this.classList.add('open')">🧑‍🏫 <span class="bt">${esc(d.reply)}</span>${d.reply_fr?`<div class="sub" ${showFr?'':'hidden'}>${esc(d.reply_fr)}</div>`:''}
+  let h=`<div class="bubble bot" onclick="this.classList.add('open')"><small class="message-author">Emma</small><span class="bt">${esc(d.reply)}</span>${d.reply_fr?`<div class="sub" ${showFr?'':'hidden'}>${esc(d.reply_fr)}</div>`:''}
    <div class="row" style="margin:6px 0 0"><button class="btn" onclick="event.stopPropagation();emmaPerform(_t[${T(script)}])">🎬 Revoir Emma</button><button class="btn" onclick="event.stopPropagation();say(_t[${ri}],true)">🐢</button>${d.reply_fr&&!showFr?`<button class="btn ghost" onclick="event.stopPropagation();this.closest('.bubble').querySelector('.sub').hidden=false;this.remove()">🇫🇷</button>`:''}</div></div>`;
   const cs=(d.corrections||[]).filter(c=>c&&c.better);
   if(!hidden&&(cs.length||d.pronunciation||d.praise)){
@@ -1245,10 +1273,10 @@ async function send(text,conf,hidden){
   if((d.new_words||[]).length)h+=`<div class="mute">📝 Ajouté à la révision : ${d.new_words.map(w=>esc(w.en)+' = '+esc(w.fr||'')).join(' · ')}</div>`;
   addLog(h);
   if(!hidden&&typeof d.score==='number'){bump((d.score-S.lvl)*.1);addXP(4)}else save();
-  head();busy=false;
-  if(tab==='chat'&&hidden){const l=logHTML;vChat();logHTML=l}
-  if(tab==='chat'&&document.getElementById('emma'))await emmaPerform(script);else await say(d.reply);
-  if(hands&&tab==='chat')setTimeout(talk,300);
+  head();
+  try{if(tab==='chat'&&chatOpen&&document.getElementById('emma')){setStatus('Emma parle…');await emmaPerform(script)}}
+  finally{if(session===chatSession){busy=false;setStatus('')}}
+  if(session===chatSession&&hands&&tab==='chat'&&chatOpen)setTimeout(()=>{if(session===chatSession&&hands&&chatOpen)talk()},300);
 }
 async function hint(){
   const last=[...chat].reverse().find(m=>m.role==='assistant');if(!last||busy)return;
@@ -1283,7 +1311,7 @@ async function bilan(){
     ${(d.strengths||[]).length?'<b>Points forts</b><ul style="margin:4px 0 8px;padding-left:20px">'+d.strengths.map(x=>`<li>${esc(x)}</li>`).join('')+'</ul>':''}
     ${(d.focus||[]).length?'<b>À retravailler</b>'+d.focus.map(f=>`<div class="tip" style="background:var(--card)"><b>${esc(f.en)}</b><div class="mute">${esc(f.why||'')}</div></div>`).join('')+'<div class="mute">Ces phrases sont ajoutées à votre révision.</div>':''}
     ${d.homework?`<p><b>Devoir pour demain :</b> ${esc(d.homework)}</p>`:''}
-    <p class="mute">Niveau estimé : <b>${lvlName()}</b> (${Math.round(S.lvl)}/100) · +15 points</p><button class="btn primary" onclick="chat=[];logHTML='';fb=[];vChat()">Nouvelle conversation</button></div>`;
+    <p class="mute">Niveau estimé : <b>${lvlName()}</b> (${Math.round(S.lvl)}/100) · +15 points</p><button class="btn primary" onclick="resetEmma()">Nouvelle conversation</button></div>`;
   }catch(e){el.innerHTML=`<div class="mute">⚠️ ${esc(e.message)}</div>`}
 }
 
@@ -2942,7 +2970,7 @@ async function listenCloud(dbg){
 }
 
 /* ============================ EMMA : tutrice animée ============================ */
-const SKIN='#f3c9a5',SKIN2='#dca67f',HAIR='#4a2e22',HAIR2='#6b4432',SHIRT='#10a37f';
+const SKIN='#f5d4c5',SKIN2='#d69c8c',HAIR='#352a42',HAIR2='#79596f',SHIRT='#377e74';
 function emmaSVG(){
   const FL=[25,27,25,22,18];
   const finger=(i)=>`<rect class="fg" data-i="${i}" x="-3" y="4" width="6" height="${FL[i]}" rx="3" fill="${SKIN}" stroke="${SKIN2}" stroke-width=".8" visibility="hidden"/>`;
@@ -2951,11 +2979,11 @@ function emmaSVG(){
     <path d="M-7.6 -2 Q-10 6 -9.4 16 Q-8.8 22 0 22 Q8.8 22 9.4 16 Q10 6 7.6 -2Z" fill="${SKIN}" stroke="${SKIN2}" stroke-width=".9"/>
     <path d="M7.5 5 Q16 9 14 19.5 Q12 24 7.5 19Z" fill="${SKIN}" stroke="${SKIN2}" stroke-width=".9" stroke-linejoin="round"/></g>`;
   const arm=(id,x,flip)=>`<g transform="translate(${x} 170) scale(${flip?-1:1} 1)"><g id="a${id}1"><line x1="0" y1="0" x2="0" y2="62" stroke="${SHIRT}" stroke-width="22" stroke-linecap="round"/><g transform="translate(0 62)"><g id="a${id}2"><line x1="0" y1="10" x2="0" y2="52" stroke="${SKIN}" stroke-width="12" stroke-linecap="round"/><line x1="0" y1="0" x2="0" y2="13" stroke="${SHIRT}" stroke-width="18" stroke-linecap="round"/><g transform="translate(0 52)">${hand(id)}</g></g></g></g></g>`;
-  const eye=(cx,id,lid)=>`<g transform="translate(${cx} 93)"><ellipse rx="9" ry="8.6" fill="#fff"/><g id="${id}"><circle r="5.6" fill="#6b4328"/><circle r="5.6" fill="none" stroke="#3b2418" stroke-width="1"/><circle r="2.7" fill="#1d120d"/><circle cx="1.8" cy="-2" r="1.6" fill="#fff"/></g><rect id="${lid}" x="-11" y="-12" width="22" height="0" fill="url(#skG)"/><path d="M-9.5 -1.5 Q0 -12 9.5 -1.5" stroke="#2a1812" stroke-width="2.4" fill="none" stroke-linecap="round"/><path d="M-9.5 -1.5 L-12 -4.5M9.5 -1.5 L12 -4.5" stroke="#2a1812" stroke-width="1.6" stroke-linecap="round"/></g>`;
-  return `<svg id="emma" viewBox="-38 0 276 282" class="emma-svg" role="img" aria-label="Emma, votre tutrice">
+  const eye=(cx,id,lid)=>`<g transform="translate(${cx} 93)"><path d="M-11 0 Q-3 -14 9 -4 Q13 3 7 10 Q-3 15 -10 5Z" fill="#fffaf8"/><g id="${id}"><ellipse cy="1" rx="6.5" ry="9" fill="#64aa9a"/><ellipse cy="3" rx="5" ry="6" fill="#376d68"/><ellipse cy="1" rx="2.8" ry="6.5" fill="#25333f"/><circle cx="-2.5" cy="-3" r="2.8" fill="#fff"/><circle cx="3" cy="5" r="1.5" fill="#d6fff2"/></g><rect id="${lid}" x="-14" y="-14" width="28" height="0" fill="url(#skG)"/><path d="M-12 0 Q-3 -14 10 -4" stroke="#382a3d" stroke-width="3" fill="none" stroke-linecap="round"/><path d="M-10 -2 L-14 -6 M-6 -6 L-8 -10 M11 -3 L13 -6" stroke="#382a3d" stroke-width="1.8" stroke-linecap="round"/><path d="M-7 9 Q0 13 7 9" fill="none" stroke="#be8b88" stroke-width="1"/></g>`;
+  return `<svg id="emma" viewBox="-38 0 276 282" class="emma-svg" role="img" aria-label="Emma, votre tutrice au style manga">
   <defs>
-   <linearGradient id="skG" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#f7d3b1"/><stop offset="1" stop-color="#eebb94"/></linearGradient>
-   <linearGradient id="hrG" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="${HAIR2}"/><stop offset=".55" stop-color="${HAIR}"/><stop offset="1" stop-color="#2f1b14"/></linearGradient>
+   <linearGradient id="skG" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ffe9de"/><stop offset="1" stop-color="#edbfb0"/></linearGradient>
+   <linearGradient id="hrG" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="${HAIR2}"/><stop offset=".55" stop-color="${HAIR}"/><stop offset="1" stop-color="#292537"/></linearGradient>
   </defs>
   <g id="eBody">
    <path d="M26 282 Q26 196 60 172 Q80 160 92 157 L108 157 Q120 160 140 172 Q174 196 174 282Z" fill="${SHIRT}"/>
@@ -2964,21 +2992,24 @@ function emmaSVG(){
    <path d="M80 158 Q100 192 120 158 Q100 166 80 158Z" fill="url(#skG)"/>
    <path d="M76 157 Q100 198 124 157" stroke="#fff" stroke-opacity=".5" stroke-width="3" fill="none" stroke-linecap="round"/>
    <path d="M62 180 Q70 240 66 282M138 180 Q130 240 134 282" stroke="#000" stroke-opacity=".07" stroke-width="3" fill="none"/>
+   <path d="M80 162 L94 180 L88 194 L72 164 M120 162 L106 180 L112 194 L128 164" fill="#f9f1e9"/><path d="M100 180 L100 277" stroke="#215e59" stroke-width="1.5"/><circle cx="100" cy="204" r="2" fill="#e9c79d"/><circle cx="100" cy="227" r="2" fill="#e9c79d"/>
    <g id="eHead">
     <path d="M46 92 Q36 156 66 168 L80 112Z" fill="url(#hrG)"/><path d="M154 92 Q164 156 134 168 L120 112Z" fill="url(#hrG)"/>
     <ellipse cx="100" cy="82" rx="56" ry="58" fill="url(#hrG)"/>
     <ellipse cx="55.5" cy="100" rx="5" ry="9" fill="${SKIN}"/><ellipse cx="144.5" cy="100" rx="5" ry="9" fill="${SKIN}"/>
-    <path d="M100 52 Q60 54 56 98 Q58 138 100 144 Q142 138 144 98 Q140 54 100 52Z" fill="url(#skG)"/>
+    <path d="M100 48 Q61 49 57 91 Q55 116 75 132 Q89 143 100 146 Q111 143 125 132 Q145 116 143 91 Q139 49 100 48Z" fill="url(#skG)" stroke="#c48f87" stroke-width=".8"/>
     <path d="M58 98 Q60 136 100 144 Q140 136 142 98 Q136 128 100 134 Q64 128 58 98Z" fill="#c9835f" opacity=".16"/>
-    <path d="M52 94 Q56 34 102 38 Q146 38 148 94 Q140 66 118 58 Q100 72 84 60 Q62 68 52 94Z" fill="url(#hrG)"/>
-    <path d="M70 52 Q96 36 128 50" stroke="#a87a5e" stroke-opacity=".5" stroke-width="2.4" fill="none" stroke-linecap="round"/>
-    <path d="M88 44 Q74 70 56 100M112 44 Q130 66 144 100" stroke="#2f1b14" stroke-opacity=".35" stroke-width="1.4" fill="none"/>
-    <circle cx="71" cy="108" r="9" fill="#ff8a8a" opacity=".22"/><circle cx="129" cy="108" r="9" fill="#ff8a8a" opacity=".22"/>
+    <path d="M49 110 Q37 67 57 42 Q78 16 111 25 Q153 24 155 71 L150 118 Q140 91 135 67 Q120 72 106 51 Q91 77 69 80 L76 58 Q62 88 49 110Z" fill="url(#hrG)"/>
+    <path d="M54 91 Q53 52 80 36 M61 83 Q69 47 91 33 M114 34 Q141 42 147 82" stroke="#b68a9b" stroke-opacity=".55" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+    <path d="M103 32 Q101 62 74 75 M112 39 Q123 66 137 67" stroke="#272333" stroke-width="1.5" fill="none"/>
+    <path d="M136 73 L146 69 M137 78 L147 74" stroke="#e8c69a" stroke-width="3" stroke-linecap="round"/>
+    <circle cx="56" cy="112" r="3" fill="#e9c79d"/><circle cx="144" cy="112" r="3" fill="#e9c79d"/>
+    <circle cx="71" cy="108" r="10" fill="#ed8691" opacity=".24"/><circle cx="129" cy="108" r="10" fill="#ed8691" opacity=".24"/>
     ${eye(82,'pL','lidL')}${eye(118,'pR','lidR')}
-    <path id="bL" d="M69 78 Q81 70 95 76" stroke="${HAIR}" stroke-width="3.4" fill="none" stroke-linecap="round"/>
-    <path id="bR" d="M105 76 Q119 70 131 78" stroke="${HAIR}" stroke-width="3.4" fill="none" stroke-linecap="round"/>
-    <path d="M100 94 Q96 108 93 111 Q100 115 107 111 Q104 108 100 94" fill="#d89a76" opacity=".45"/>
-    <path d="M93 111 Q100 116 107 111" stroke="#b97a58" stroke-width="2" fill="none" stroke-linecap="round"/>
+    <path id="bL" d="M69 78 Q81 70 95 76" stroke="${HAIR}" stroke-width="2.2" fill="none" stroke-linecap="round"/>
+    <path id="bR" d="M105 76 Q119 70 131 78" stroke="${HAIR}" stroke-width="2.2" fill="none" stroke-linecap="round"/>
+    <path d="M100 100 Q97 108 98 111 L102 112" fill="none" stroke="#cb968e" stroke-width="1.3" stroke-linecap="round"/>
+    <ellipse cx="101" cy="114" rx="4" ry="1.5" fill="#e6a5a0" opacity=".4"/>
     <path id="eMouth" d="M88 121 Q100 126 112 121" fill="#7a2433" stroke="#c4566a" stroke-width="3.2" stroke-linejoin="round" stroke-linecap="round"/>
    </g>
    ${arm('L',60,false)}${arm('R',140,true)}
@@ -3401,3 +3432,4 @@ if(location.hash==='#mictest'){head();drawNav();vMicTest()}else render();
 </script>
 </body>
 </html>
+
