@@ -728,20 +728,33 @@ async function say(text,slow){
 // Mode vocal : « auto » = micro intégré puis clavier après 2 échecs ; « keyboard » = dictée du clavier iPhone ; « mic » = micro intégré seul.
 const vMode=()=>S.voiceMode||(cloudOK()?'cloud':(STANDALONE?'keyboard':'auto'));
 const kbMode=()=>{const m=vMode();if(m==='cloud'&&cloudOK())return false;return m==='keyboard'||((m==='auto'||m==='cloud')&&(micFails>=2||srDead||!SR))};
-let REC=null,lastMic={err:'',stage:0},cancelListen=null,micPrev=Promise.resolve(),SID=0,micFails=0,finishListen=null;
+let REC=null,lastMic={err:'',stage:0},cancelListen=null,micPrev=Promise.resolve(),SID=0,micFails=0,finishListen=null,micRequest=0;
 // Reconnaissance vocale : suit chaque étape (micro ouvert, son, voix, texte) et enchaîne proprement les écoutes
 // (iOS ne rend pas le micro tout de suite : on attend la vraie fin de l'écoute précédente avant de redémarrer).
 function micLine(m){const e=$('res')||$('status');if(e&&!e.dataset.keep)e.textContent=m}
-function listen(dbg,conversation=false){return micPrev.then(()=>vMode()==='cloud'&&cloudOK()?listenCloud(dbg,conversation):conversation?listenConversation(dbg):listenNow(dbg))}
+function cancelMic(){micRequest++;if(cancelListen)cancelListen()}
+async function listen(dbg,conversation=false){
+  cancelMic();const request=micRequest;
+  const start=()=>{if(request!==micRequest)throw 'cancelled';return vMode()==='cloud'&&cloudOK()?listenCloud(dbg,conversation):conversation?listenConversation(dbg):listenNow(dbg)};
+  await micPrev;
+  try{return await start()}catch(e){
+    if(e!=='audio-capture'||request!==micRequest)throw e;
+    // Safari peut conserver brièvement le micro après l'arrêt de la reconnaissance.
+    if(dbg)dbg('Micro occupé : libération puis nouvelle tentative');
+    await micPrev;await wait(600);return start();
+  }
+}
 // Conversation : envoi manuel, ou après 5 secondes de silence en mains libres.
 function listenConversation(dbg){
   return new Promise((resolve,reject)=>{
     if(!SR||srDead){reject('unsupported');return}
-    let r,done=false,finishing=false,parts=[],partial='',restartTimer,limitTimer,finishTimer,silenceTimer;
+    let r,done=false,finishing=false,parts=[],partial='',restartTimer,limitTimer,finishTimer,silenceTimer,releaseMic;
+    const released=new Promise(resolve=>releaseMic=resolve);
+    micPrev=released.then(()=>wait(600));
     const text=()=>[...parts,partial].filter(Boolean).join(' ').trim();
     const log=m=>{if(dbg)dbg(m)};
-    const clean=()=>{clearTimeout(restartTimer);clearTimeout(limitTimer);clearTimeout(finishTimer);clearTimeout(silenceTimer);if(cancelListen===cancel)cancelListen=null;if(finishListen===finish)finishListen=null;micPrev=wait(600)};
-    const settle=(error)=>{if(done)return;done=true;clean();try{r&&r.abort()}catch(e){}if(error){reject(error);return}const value=text();if(!value){reject('nomatch');return}micFails=0;const a=[value];a.conf=null;resolve(a)};
+    const clean=()=>{clearTimeout(restartTimer);clearTimeout(limitTimer);clearTimeout(finishTimer);clearTimeout(silenceTimer);if(cancelListen===cancel)cancelListen=null;if(finishListen===finish)finishListen=null};
+    const settle=(error)=>{if(done)return;done=true;clean();setTimeout(releaseMic,1800);try{if(r)r.abort();else releaseMic()}catch(e){releaseMic()}if(error){reject(error);return}const value=text();if(!value){reject('nomatch');return}micFails=0;const a=[value];a.conf=null;resolve(a)};
     const cancel=()=>settle('cancelled');
     const finish=()=>{if(done||finishing)return;finishing=true;clearTimeout(restartTimer);clearTimeout(silenceTimer);micLine('⏳ Je termine votre message…');try{r.stop()}catch(e){settle()}finishTimer=setTimeout(()=>settle(),1800)};
     const armSilence=()=>{clearTimeout(silenceTimer);if(hands&&text()&&!done&&!finishing)silenceTimer=setTimeout(()=>{if(hands)finish()},5000)};
@@ -761,7 +774,7 @@ function listenConversation(dbg){
           lastMic.stage=3;armSilence();micLine('🎤 '+text()+(hands?' — Envoi après 5 secondes de silence.':' — Touchez ■ pour envoyer.'));
         };
         r.onerror=e=>{if(done)return;const code=e.error||'error';if(code==='no-speech'||code==='aborted')return;settle(code)};
-        r.onend=()=>{if(done)return;if(partial.trim()){parts.push(partial.trim());partial=''}if(finishing){settle();return}log('Reprise de l’écoute après une pause');restartTimer=setTimeout(start,350)};
+        r.onend=()=>{if(done){releaseMic();return}if(partial.trim()){parts.push(partial.trim());partial=''}if(finishing){settle();releaseMic();return}log('Reprise de l’écoute après une pause');restartTimer=setTimeout(start,350)};
         r.start();
       }catch(e){settle('start')}
     };
@@ -772,7 +785,6 @@ function listenNow(dbg){
   return new Promise((res,rej)=>{
     lastMic={err:'',stage:0};
     if(!SR||srDead){rej('unsupported');return}
-    try{REC&&REC.abort()}catch(e){}
     const sid=++SID;
     let done=false,tm,r,interim='';
     const log=m=>{if(dbg&&sid===SID)dbg(m)};
@@ -783,16 +795,16 @@ function listenNow(dbg){
       try{graceful?r.stop():r.abort()}catch(e){}
       setTimeout(()=>{try{r.abort()}catch(e){}endRes()},graceful?1800:400);
     };
-    const fin=(f,graceful)=>{if(done)return;done=true;settle(graceful);f()};
+    const fin=(f,graceful)=>{if(done)return;done=true;if(cancelListen===cancel)cancelListen=null;settle(graceful);f()};
     const fail=c=>fin(()=>{lastMic.err=c;if(c!=='cancelled'){if(lastMic.stage<=1)micFails++}if(cancelListen===cancel)cancelListen=null;rej(c)},false);
     const cancel=()=>fail('cancelled');cancelListen=cancel;
     try{r=new SR()}catch(e){endRes();rej('unsupported');return}
     REC=r;r.lang='en-US';r.interimResults=true;r.maxAlternatives=3;r.continuous=false;
     tm=setTimeout(()=>fail('timeout'),lastMic.stage>=2?14000:9000);
     setTimeout(()=>{if(!done&&lastMic.stage<2)micLine('⏳ Je n’entends rien… parlez plus près, ou touchez ⌨️ pour dicter au clavier.')},5000);
-    r.onaudiostart=()=>{lastMic.stage=Math.max(lastMic.stage,1);if(!done){micLine('🎙️ Micro ouvert : parlez maintenant…');log('audiostart (micro ouvert)')}};
-    r.onsoundstart=()=>{lastMic.stage=Math.max(lastMic.stage,2);try{clearTimeout(tm);tm=setTimeout(()=>fail('timeout'),14000)}catch(e){}if(!done){micLine('👂 Je capte du son…');log('soundstart (son capté)')}};
-    r.onspeechstart=()=>{lastMic.stage=Math.max(lastMic.stage,3);if(!done){micLine('🗣️ Je vous entends…');log('speechstart (voix détectée)')}};
+    r.onaudiostart=()=>{if(done)return;lastMic.stage=Math.max(lastMic.stage,1);if(!done){micLine('🎙️ Micro ouvert : parlez maintenant…');log('audiostart (micro ouvert)')}};
+    r.onsoundstart=()=>{if(done)return;lastMic.stage=Math.max(lastMic.stage,2);try{clearTimeout(tm);tm=setTimeout(()=>fail('timeout'),14000)}catch(e){}if(!done){micLine('👂 Je capte du son…');log('soundstart (son capté)')}};
+    r.onspeechstart=()=>{if(done)return;lastMic.stage=Math.max(lastMic.stage,3);if(!done){micLine('🗣️ Je vous entends…');log('speechstart (voix détectée)')}};
     r.onresult=e=>{
       try{
         const rs=e.results[e.results.length-1];
@@ -803,13 +815,13 @@ function listenNow(dbg){
     r.onerror=e=>{log('erreur : '+((e&&e.error)||'?'));if(!done)fail((e&&e.error)||'error');else endRes()};
     r.onnomatch=()=>{log('aucune correspondance');if(!done)fail('nomatch')};
     r.onend=()=>{log('fin de l’écoute');endRes();setTimeout(()=>{if(done)return;if(interim){const a=[interim];a.conf=null;micFails=0;fin(()=>res(a),false)}else fail('nomatch')},300)};
-    const go=()=>{try{r.start();log('démarrage demandé')}catch(e){log('start() refusé : '+e.message);fail('start')}};
+    const go=()=>{if(done)return;try{r.start();log('démarrage demandé')}catch(e){log('start() refusé : '+e.message);fail('start')}};
     let speaking=false;try{speaking=speechSynthesis.speaking||speechSynthesis.pending}catch(e){}
     if(speaking){try{speechSynthesis.cancel()}catch(e){}setTimeout(go,300)}else go();
   });
 }
 // on libère le micro dès que l'application passe en arrière-plan
-document.addEventListener('visibilitychange',()=>{if(document.hidden&&cancelListen)cancelListen()});
+document.addEventListener('visibilitychange',()=>{if(document.hidden)cancelMic()});
 const NUMW=['zero','one','two','three','four','five','six','seven','eight','nine','ten','eleven','twelve','thirteen','fourteen','fifteen','sixteen','seventeen','eighteen','nineteen','twenty'];
 const norm=s=>s.toLowerCase().replace(/[’']/g,"'").replace(/(\d),(\d)/g,'$1$2').replace(/[^a-z0-9' ]/g,' ').split(/\s+/).filter(Boolean).map(w=>/^\d+$/.test(w)&&+w<=20?NUMW[+w]:w);
 function compare(target,heard){
@@ -838,7 +850,7 @@ function errMsg(e){
     ?'Le micro vocal est bloqué. Sur iPhone : Réglages → Général → Clavier → activez « Activer la dictée » (et Siri), puis rechargez. En attendant, utilisez l’écriture ou l’auto-évaluation.'
     :'Micro refusé. Autorisez-le : Safari → AA → Réglages du site → Micro → Autoriser, puis rechargez.'}
   if(e==='unsupported')return 'Reconnaissance vocale indisponible ici. Utilisez Safari, Chrome ou Edge, ou tapez votre réponse.';
-  if(e==='audio-capture')return 'Aucun micro détecté.'+code;
+  if(e==='audio-capture')return 'Safari n’arrive pas à ouvrir le micro. Il peut être encore occupé. Arrêtez toute dictée ou tout enregistrement, puis touchez de nouveau 🎤. Si cela persiste, rechargez avec 🔄 et vérifiez l’autorisation Micro dans les réglages du site.'+code;
   if(e==='network')return 'La reconnaissance vocale a besoin d’internet (Safari envoie votre voix à Apple). Vérifiez votre connexion.'+code;
   if(e==='start')return 'Safari a refusé d’ouvrir le micro. Fermez l’onglet, rouvrez-le et appuyez sur 🎤 directement.'+code;
   const st=lastMic.stage;
@@ -857,7 +869,7 @@ const TABS=[['home',_ic('<path d="M3 11l9-8 9 8"/><path d="M5 10v10h5v-6h4v6h5V1
 function drawNav(){$('nav').innerHTML=TABS.map(([k,i,l])=>`<button class="${tab===k?'on':''}" ${tab===k?'aria-current="page"':''} onclick="go('${k}')"><span>${i}</span>${l}</button>`).join('')}
 function go(t){document.body.classList.remove('emma-conversation-open');if(tab==='chat'&&t!=='chat'){chatSession++;busy=false;chatListening=false;emmaTalk(false)}hypStop();tab=t;cur=null;spk++;try{speechSynthesis.cancel()}catch(e){}render()}
 function render(){
-  if(cancelListen)cancelListen();
+  cancelMic();
   $('view').dataset.tab=tab;head();drawNav();window.scrollTo(0,0);
   if(!S.tested){return vWelcome()}
   ({home:vHome,course:vCourse,chat:vChat,dico:vDico,cards:vCards,prog:vProg})[tab]();
@@ -1205,7 +1217,7 @@ function rstGo(){const b=$('rst');if(b.dataset.ok){try{localStorage.removeItem(K
 let chat=[],logHTML='',fb=[],scen='free',hands=false,busy=false;
 let chatOpen=false,chatListening=false,chatSession=0;
 function openEmma(){chatOpen=true;vChat();if(!chat.length)send('[start]',null,true)}
-function closeEmma(){chatSession++;chatOpen=false;chatListening=false;hands=false;if(cancelListen)cancelListen();spk++;try{speechSynthesis.cancel()}catch(e){}emmaTalk(false);busy=false;vChat()}
+function closeEmma(){chatSession++;chatOpen=false;chatListening=false;hands=false;cancelMic();spk++;try{speechSynthesis.cancel()}catch(e){}emmaTalk(false);busy=false;vChat()}
 function resetEmma(){if(busy||chatListening)return;chatSession++;chat=[];logHTML='';fb=[];chatOpen=false;vChat()}
 async function api(system,messages,max=900){
   const r=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',
@@ -2973,10 +2985,13 @@ async function listenCloud(dbg,conversation=false){
   lastMic={err:'',stage:0};
   const log=m=>{if(dbg)dbg(m)};
   try{speechSynthesis.cancel()}catch(e){}
-  let stream,ac,rec,stopped=false,cancelled=false;
+  let stream,ac,rec,stopped=false,cancelled=false,releaseMic;
+  const released=new Promise(resolve=>releaseMic=resolve);micPrev=released.then(()=>wait(600));
+  try{
   const cancel=()=>{cancelled=true;stopped=true;try{rec&&rec.state==='recording'&&rec.stop()}catch(e){}};
   const finish=()=>{stopped=true;try{rec&&rec.state==='recording'&&rec.stop()}catch(e){}};
   cancelListen=cancel;if(conversation)finishListen=finish;
+  try{
   try{
     stream=await navigator.mediaDevices.getUserMedia({audio:{echoCancellation:true,noiseSuppression:true}});
   }catch(e){if(finishListen===finish)finishListen=null;cancelListen=null;lastMic.err=(e&&e.name)||'denied';log('micro refusé : '+lastMic.err);throw (e&&e.name==='NotAllowedError'?'not-allowed':'audio-capture')}
@@ -3010,7 +3025,7 @@ async function listenCloud(dbg,conversation=false){
   await Promise.race([done,wait(1200)]);
   try{stream.getTracks().forEach(t=>t.stop())}catch(e){}try{ac&&ac.close()}catch(e){}
   if(cancelListen===cancel)cancelListen=null;if(finishListen===finish)finishListen=null;
-  micPrev=wait(300);
+  releaseMic();
   if(cancelled){throw 'cancelled'}
   if(an&&(!heard||speechMs<=250)){lastMic.err='stt-nospeech';micFails++;log('aucune voix');throw 'stt-nospeech'}
   micLine('⏳ Transcription en cours…');log('envoi à OpenAI ('+Math.round(speechMs)+' ms de voix)');
@@ -3032,6 +3047,13 @@ async function listenCloud(dbg,conversation=false){
   if(!text){lastMic.err='stt-nospeech';throw 'stt-nospeech'}
   micFails=0;lastMic.stage=3;
   const a=[text];a.conf=null;return a;
+  }finally{if(cancelListen===cancel)cancelListen=null;if(finishListen===finish)finishListen=null}
+  }finally{
+    try{if(rec&&rec.state==='recording')rec.stop()}catch(e){}
+    try{if(stream)stream.getTracks().forEach(t=>t.stop())}catch(e){}
+    try{if(ac)await ac.close()}catch(e){}
+    releaseMic();
+  }
 }
 
 /* ============================ EMMA : tutrice animée ============================ */
