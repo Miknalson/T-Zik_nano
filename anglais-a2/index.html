@@ -733,29 +733,32 @@ let REC=null,lastMic={err:'',stage:0},cancelListen=null,micPrev=Promise.resolve(
 // (iOS ne rend pas le micro tout de suite : on attend la vraie fin de l'écoute précédente avant de redémarrer).
 function micLine(m){const e=$('res')||$('status');if(e&&!e.dataset.keep)e.textContent=m}
 function listen(dbg,conversation=false){return micPrev.then(()=>vMode()==='cloud'&&cloudOK()?listenCloud(dbg,conversation):conversation?listenConversation(dbg):listenNow(dbg))}
-// Dans la conversation, seul « Terminer » envoie la phrase : une pause reste une pause.
+// Conversation : envoi manuel, ou après 5 secondes de silence en mains libres.
 function listenConversation(dbg){
   return new Promise((resolve,reject)=>{
     if(!SR||srDead){reject('unsupported');return}
-    let r,done=false,finishing=false,parts=[],partial='',restartTimer,limitTimer,finishTimer;
+    let r,done=false,finishing=false,parts=[],partial='',restartTimer,limitTimer,finishTimer,silenceTimer;
     const text=()=>[...parts,partial].filter(Boolean).join(' ').trim();
     const log=m=>{if(dbg)dbg(m)};
-    const clean=()=>{clearTimeout(restartTimer);clearTimeout(limitTimer);clearTimeout(finishTimer);if(cancelListen===cancel)cancelListen=null;if(finishListen===finish)finishListen=null;micPrev=wait(600)};
+    const clean=()=>{clearTimeout(restartTimer);clearTimeout(limitTimer);clearTimeout(finishTimer);clearTimeout(silenceTimer);if(cancelListen===cancel)cancelListen=null;if(finishListen===finish)finishListen=null;micPrev=wait(600)};
     const settle=(error)=>{if(done)return;done=true;clean();try{r&&r.abort()}catch(e){}if(error){reject(error);return}const value=text();if(!value){reject('nomatch');return}micFails=0;const a=[value];a.conf=null;resolve(a)};
     const cancel=()=>settle('cancelled');
-    const finish=()=>{if(done||finishing)return;finishing=true;clearTimeout(restartTimer);micLine('⏳ Je termine votre message…');try{r.stop()}catch(e){settle()}finishTimer=setTimeout(()=>settle(),1800)};
+    const finish=()=>{if(done||finishing)return;finishing=true;clearTimeout(restartTimer);clearTimeout(silenceTimer);micLine('⏳ Je termine votre message…');try{r.stop()}catch(e){settle()}finishTimer=setTimeout(()=>settle(),1800)};
+    const armSilence=()=>{clearTimeout(silenceTimer);if(hands&&text()&&!done&&!finishing)silenceTimer=setTimeout(()=>{if(hands)finish()},5000)};
     cancelListen=cancel;finishListen=finish;
     lastMic={err:'',stage:0};
     const start=()=>{
       if(done||finishing)return;
       try{
         r=new SR();REC=r;r.lang='en-US';r.continuous=true;r.interimResults=true;r.maxAlternatives=1;
-        r.onaudiostart=()=>{lastMic.stage=Math.max(1,lastMic.stage);micLine('🎤 Prenez votre temps. Touchez ■ quand vous avez fini.')};
+        r.onaudiostart=()=>{lastMic.stage=Math.max(1,lastMic.stage);micLine(hands?'🎤 Je vous écoute. Envoi après 5 secondes de silence.':'🎤 Prenez votre temps. Touchez ■ quand vous avez fini.')};
+        r.onspeechstart=()=>{clearTimeout(silenceTimer)};
+        r.onspeechend=()=>armSilence();
         r.onresult=e=>{
           if(done)return;
           partial='';
           for(let i=e.resultIndex||0;i<e.results.length;i++){const rs=e.results[i];if(rs.isFinal)parts.push(rs[0].transcript);else partial+=rs[0].transcript+' '}
-          lastMic.stage=3;micLine('🎤 '+text()+' — Touchez ■ pour envoyer.');
+          lastMic.stage=3;armSilence();micLine('🎤 '+text()+(hands?' — Envoi après 5 secondes de silence.':' — Touchez ■ pour envoyer.'));
         };
         r.onerror=e=>{if(done)return;const code=e.error||'error';if(code==='no-speech'||code==='aborted')return;settle(code)};
         r.onend=()=>{if(done)return;if(partial.trim()){parts.push(partial.trim());partial=''}if(finishing){settle();return}log('Reprise de l’écoute après une pause');restartTimer=setTimeout(start,350)};
@@ -1299,7 +1302,7 @@ async function talk(){
   if(chatListening){if(finishListen)finishListen();return}
   if(kbMode()){setStatus('⌨️ Touchez le champ, puis le micro du clavier iPhone pour dicter en anglais, puis ➤.');try{$('txt').focus()}catch(e){}return}
   if(!canMic()){setStatus(esc(errMsg(srDead?'service-not-allowed':'unsupported'))+' Vous pouvez écrire votre réponse ci-dessous.');return}
-  const session=chatSession;chatListening=true;spk++;try{speechSynthesis.cancel()}catch(e){}emmaTalk(false);emmaGesture('listen');const m=$('mic');if(m){m.classList.add('rec');m.textContent='■';m.setAttribute('aria-label','Terminer et envoyer mon message')}setStatus('🎤 Prenez votre temps. Retouchez le micro quand vous avez fini (2 min maximum).');
+  const session=chatSession;chatListening=true;spk++;try{speechSynthesis.cancel()}catch(e){}emmaTalk(false);emmaGesture('listen');const m=$('mic');if(m){m.classList.add('rec');m.textContent='■';m.setAttribute('aria-label','Terminer et envoyer mon message')}setStatus(hands?'🎤 Je vous écoute. Envoi après 5 secondes de silence (2 min maximum).':'🎤 Prenez votre temps. Retouchez le micro quand vous avez fini (2 min maximum).');
   try{const a=await listen(null,true);if(session!==chatSession||tab!=='chat')return;chatListening=false;setStatus('');if(m){m.classList.remove('rec');m.textContent='🎤';m.setAttribute('aria-label','Parler à Emma')}await send(a[0],a.conf)}
   catch(e){if(session===chatSession&&tab==='chat')setStatus(e==='cancelled'?'':esc(errMsg(e)))}
   finally{if(session===chatSession){chatListening=false;const m2=$('mic');if(m2){m2.classList.remove('rec');m2.textContent='🎤';m2.setAttribute('aria-label','Parler à Emma')}}}
@@ -2978,7 +2981,7 @@ async function listenCloud(dbg,conversation=false){
     stream=await navigator.mediaDevices.getUserMedia({audio:{echoCancellation:true,noiseSuppression:true}});
   }catch(e){if(finishListen===finish)finishListen=null;cancelListen=null;lastMic.err=(e&&e.name)||'denied';log('micro refusé : '+lastMic.err);throw (e&&e.name==='NotAllowedError'?'not-allowed':'audio-capture')}
   if(cancelled){stream.getTracks().forEach(t=>t.stop());if(finishListen===finish)finishListen=null;throw 'cancelled'}
-  lastMic.stage=1;micLine(conversation?'🎤 Prenez votre temps. Touchez ■ quand vous avez fini.':'🎙️ Micro ouvert : parlez maintenant…');log('micro ouvert');
+  lastMic.stage=1;micLine(conversation?(hands?'🎤 Je vous écoute. Envoi après 5 secondes de silence.':'🎤 Prenez votre temps. Touchez ■ quand vous avez fini.'):'🎙️ Micro ouvert : parlez maintenant…');log('micro ouvert');
   const mt=MediaRecorder.isTypeSupported('audio/mp4')?'audio/mp4':(MediaRecorder.isTypeSupported('audio/webm;codecs=opus')?'audio/webm;codecs=opus':(MediaRecorder.isTypeSupported('audio/webm')?'audio/webm':''));
   rec=mt?new MediaRecorder(stream,{mimeType:mt}):new MediaRecorder(stream);
   const chunks=[];rec.ondataavailable=e=>{if(e.data&&e.data.size)chunks.push(e.data)};
@@ -2994,9 +2997,9 @@ async function listenCloud(dbg,conversation=false){
       if(an){an.getByteTimeDomainData(buf);let m=0;for(const v of buf)m=Math.max(m,Math.abs(v-128)/128);
         if(el<350)base=Math.max(base,m*1.3);
         const voice=m>Math.max(.045,base*2.2);
-        if(voice){if(!heard){heard=true;lastMic.stage=3;micLine(conversation?'🎤 Je vous écoute. Touchez ■ pour envoyer.':'🗣️ Je vous entends…');log('voix détectée à '+Math.round(el)+' ms')}speechMs+=40;lastVoice=now}
+        if(voice){if(!heard){heard=true;lastMic.stage=3;micLine(conversation?(hands?'🎤 Je vous écoute. Envoi après 5 secondes de silence.':'🎤 Je vous écoute. Touchez ■ pour envoyer.'):'🗣️ Je vous entends…');log('voix détectée à '+Math.round(el)+' ms')}speechMs+=40;lastVoice=now}
       }
-      if(!conversation&&heard&&now-lastVoice>1000&&speechMs>250){stopped=true;res();return}
+      if(heard&&speechMs>250&&((!conversation&&now-lastVoice>1000)||(conversation&&hands&&now-lastVoice>=5000))){stopped=true;res();return}
       if(!conversation&&!heard&&el>6500){stopped=true;res();return}
       if(el>(conversation?120000:9500)){stopped=true;res();return}
       setTimeout(tick,40);
