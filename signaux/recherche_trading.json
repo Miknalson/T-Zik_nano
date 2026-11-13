@@ -1,6 +1,6 @@
 {
   "schema": 1,
-  "date": "2026-11-12",
+  "date": "2026-11-13",
   "selection": {
     "debut": "2021-01-01",
     "fin": "2022-12-31"
@@ -71273,10 +71273,10 @@
   "sources": [
     {
       "ticker": "BTC-USD",
-      "debut": "2014-11-12",
+      "debut": "2014-11-13",
       "fin": "2026-11-11",
-      "lignes": 4383,
-      "sha256": "254495d3d5204bd5aec01cde510a82a91f27ac1d20c4b9ab5a77eb785a551f2a"
+      "lignes": 4382,
+      "sha256": "330070a89e78f90c8407056b4cef74be141e996830d9990724686fadcd332095"
     },
     {
       "ticker": "ETH-USD",
